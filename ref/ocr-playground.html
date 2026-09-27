@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Document Intelligence — Playground</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1d1d1c;
+    --rail: #151514;
+    --panel: #232322;
+    --panel-2: #2a2a28;
+    --panel-3: #323230;
+    --line: #302f2d;
+    --line-2: #3b3b38;
+    --tx: #f0efec;
+    --tx-2: #b0b0aa;
+    --tx-3: #8a8a84;
+    --accent: #5b5bdf;
+    --accent-2: #6b6bec;
+    --green: #4cb782;
+    --red: #eb5757;
+    --amber: #d99a3c;
+    --sans: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    --mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+    --r: 8px;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--tx);
+    font-family: var(--sans); font-size: 13px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  }
+  ::selection { background: rgba(91, 91, 223, 0.35); }
+  svg { display: block; flex: 0 0 auto; }
+
+  /* ---------- shell ---------- */
+  .app {
+    display: grid;
+    grid-template-columns: 268px minmax(0, 1fr);
+    grid-template-rows: 52px minmax(0, 1fr);
+    height: 100dvh;
+  }
+
+  /* ---------- top bar ---------- */
+  .topbar {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; gap: 10px;
+    padding: 0 16px;
+    background: var(--rail);
+    border-bottom: 1px solid var(--line);
+  }
+  .mark {
+    width: 22px; height: 22px; border-radius: 6px; flex: 0 0 auto;
+    background: linear-gradient(180deg, #6b6bf0, #4a4acf);
+    display: grid; place-items: center; color: #fff;
+  }
+  .crumb { display: flex; align-items: center; gap: 9px; min-width: 0; }
+  .crumb b { font-weight: 500; font-size: 13px; letter-spacing: -0.01em; }
+  .crumb .sep { color: var(--line-2); }
+  .crumb .tail { color: var(--tx-3); font-size: 13px; }
+  .top-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 11.5px; font-weight: 400; color: var(--tx-2);
+    background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 999px; padding: 4px 11px; white-space: nowrap;
+  }
+  .pill .mono { font-family: var(--mono); font-size: 11px; color: var(--tx-3); }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--tx-3); flex: 0 0 auto; }
+  .pill.run { color: var(--amber); border-color: rgba(217, 154, 60, 0.28); background: rgba(217, 154, 60, 0.08); }
+  .pill.run .dot { background: var(--amber); animation: pulse 1.3s ease-in-out infinite; }
+  .pill.ok { color: var(--green); border-color: rgba(76, 183, 130, 0.28); background: rgba(76, 183, 130, 0.08); }
+  .pill.ok .dot { background: var(--green); }
+  .pill.bad { color: var(--red); border-color: rgba(235, 87, 87, 0.28); background: rgba(235, 87, 87, 0.08); }
+  .pill.bad .dot { background: var(--red); }
+  @keyframes pulse { 50% { opacity: 0.35; } }
+
+  /* ---------- sidebar ---------- */
+  .sidebar {
+    background: var(--rail);
+    border-right: 1px solid var(--line);
+    display: flex; flex-direction: column; min-height: 0; overflow-y: auto;
+  }
+  .side-scroll { padding: 14px 12px 0; flex: 0 0 auto; }
+  .side-foot { margin-top: auto; padding: 12px; flex: 0 0 auto; }
+  .rail-head {
+    font-size: 11px; font-weight: 500; color: var(--tx-3);
+    letter-spacing: 0.04em; text-transform: uppercase;
+    padding: 6px 8px 8px;
+  }
+  .navitem {
+    display: flex; align-items: center; gap: 9px;
+    padding: 6px 8px; border-radius: 6px; color: var(--tx-2);
+    font-size: 13px; margin-bottom: 1px;
+  }
+  .navitem.on { background: var(--panel-2); color: var(--tx); }
+  .navitem .k { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--tx-3); }
+  .hr { height: 1px; background: var(--line); margin: 12px 0; }
+
+  .field { margin-bottom: 12px; }
+  .field > label:not(.drop) {
+    display: block; font-size: 11px; font-weight: 500; color: var(--tx-3);
+    margin-bottom: 6px; letter-spacing: 0.01em;
+  }
+  .in-wrap { position: relative; }
+  input[type="text"], input[type="password"] {
+    width: 100%; padding: 7px 10px; font-family: var(--sans); font-size: 13px;
+    color: var(--tx); background: var(--rail); border: 1px solid var(--line);
+    border-radius: 6px; outline: none;
+    transition: border-color 140ms ease, background 140ms ease;
+  }
+  input::placeholder { color: #6b6b66; }
+  input:focus { border-color: var(--line-2); background: #1a1a19; }
+  .in-wrap.mono input { font-family: var(--mono); font-size: 12px; }
+  .peek {
+    position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+    background: none; border: 0; cursor: pointer; color: var(--tx-3);
+    padding: 5px; border-radius: 5px; display: grid; place-items: center;
+  }
+  .peek:hover { color: var(--tx-2); background: var(--panel-3); }
+
+  .drop {
+    display: block; cursor: pointer; position: relative;
+    border: 1px solid var(--line); border-radius: 6px; background: var(--rail);
+    padding: 14px 12px; text-align: center; overflow: hidden;
+    transition: border-color 140ms ease, background 140ms ease;
+  }
+  .drop:hover, .drop.over { border-color: var(--line-2); background: #1a1a19; }
+  .drop.over { border-color: var(--accent); }
+  .drop input { display: none; }
+  .drop svg { margin: 0 auto 8px; color: var(--tx-3); }
+  .drop .name { font-size: 12.5px; color: var(--tx); word-break: break-all; line-height: 1.4; }
+  .drop .meta { font-family: var(--mono); font-size: 11px; color: var(--tx-3); margin-top: 3px; }
+
+  .log {
+    background: var(--rail); border: 1px solid var(--line); border-radius: 6px;
+    font-family: var(--mono); font-size: 11px; line-height: 1.65; color: var(--tx-2);
+    padding: 10px 11px; overflow-y: auto; height: 100%;
+  }
+  .log .row { display: flex; gap: 9px; }
+  .log .t { color: #6e6e68; flex: 0 0 auto; }
+  .log .m { min-width: 0; word-break: break-word; }
+  .log .m.err { color: var(--red); }
+  .log .m.ok { color: var(--green); }
+  .logbox { padding: 0 12px 12px; flex: 1 1 auto; min-height: 90px; display: flex; }
+
+  .user {
+    display: flex; align-items: center; gap: 9px; padding: 7px 8px;
+    border-radius: 6px; border-top: 1px solid var(--line); margin-top: 10px; padding-top: 11px;
+  }
+  .avatar {
+    width: 22px; height: 22px; border-radius: 50%; flex: 0 0 auto;
+    background: #232328; color: var(--tx-2);
+    display: grid; place-items: center; font-size: 10px; font-weight: 600; letter-spacing: 0.02em;
+  }
+  .user .who { font-size: 12.5px; color: var(--tx-2); }
+  .user .who small { display: block; font-size: 11px; color: var(--tx-3); }
+
+  /* ---------- main ---------- */
+  .main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .pagehead {
+    display: flex; align-items: flex-start; gap: 20px; flex-wrap: wrap;
+    padding: 20px 24px 18px; border-bottom: 1px solid var(--line); flex: 0 0 auto;
+    position: relative; isolation: isolate; overflow: hidden;
+  }
+  .pagehead::before {
+    content: ""; position: absolute; inset: 0;
+    background: url("hero.png") 50% -430px / 1900px auto no-repeat;
+    opacity: .12; z-index: -1; pointer-events: none;
+    -webkit-mask-image: linear-gradient(180deg, #000 0%, rgba(0,0,0,.55) 62%, transparent 100%);
+            mask-image: linear-gradient(180deg, #000 0%, rgba(0,0,0,.55) 62%, transparent 100%);
+    animation: pagehead-drift 26s ease-in-out infinite alternate;
+  }
+  @keyframes pagehead-drift {
+    from { background-size: 1900px auto; background-position: 50% -430px; }
+    to   { background-size: 2020px auto; background-position: 50% -458px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .pagehead::before { animation: none; } }
+  .pagehead h1 { font-size: 22px; font-weight: 500; letter-spacing: -0.015em; margin: 0; }
+  .pagehead p { margin: 3px 0 0; color: var(--tx-2); font-size: 13px; }
+  .head-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+    font-family: var(--sans); font-size: 12.5px; font-weight: 450; color: var(--tx);
+    background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 6px; padding: 6px 12px; cursor: pointer;
+    transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+  }
+  .btn:hover:not(:disabled) { background: var(--panel-3); border-color: var(--line-2); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: var(--accent-2); border-color: var(--accent-2); }
+  .btn-ghost { background: transparent; }
+
+  .body {
+    flex: 1 1 auto; min-height: 0; overflow: hidden; padding: 20px 24px 24px;
+    display: flex; flex-direction: column;
+  }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--r);
+    display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto;
+  }
+  .card-head {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px; border-bottom: 1px solid var(--line);
+  }
+  .card-head h2 { font-size: 13px; font-weight: 500; margin: 0; letter-spacing: -0.005em; }
+  .card-head .right { margin-left: auto; display: flex; gap: 6px; }
+
+  .stats {
+    display: grid; gap: 1px; background: var(--line);
+    border: 1px solid var(--line); border-radius: var(--r);
+    grid-template-columns: repeat(4, minmax(0, 1fr)); overflow: hidden; margin-bottom: 16px;
+    flex: 0 0 auto;
+  }
+  .stat { background: var(--panel); padding: 13px 15px; min-width: 0; }
+  .stat .k { display: flex; align-items: center; gap: 7px; color: var(--tx-2); font-size: 12px; }
+  .stat .v { font-size: 25px; font-weight: 500; letter-spacing: -0.02em; line-height: 1.25; margin-top: 5px; }
+  .stat .sub { font-size: 11.5px; color: var(--tx-3); margin-top: 1px; }
+  .stat .sub.warn { color: var(--amber); }
+  .ic { width: 14px; height: 14px; color: var(--tx-3); }
+  .ic.blue { color: #5b8def; }
+  .ic.amber { color: var(--amber); }
+  .ic.green { color: var(--green); }
+  .ic.red { color: var(--red); }
+
+  pre.text {
+    margin: 0; padding: 16px 18px; font-family: var(--mono); font-size: 12px; line-height: 1.7;
+    color: var(--tx-2); white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere;
+    height: 100%; overflow-y: auto;
+  }
+  pre.text:empty::before { content: 'No document analyzed yet. Select a PDF and run Analyze.'; color: #6e6e68; }
+  .outwrap { padding: 0; display: flex; min-height: 0; position: relative; flex: 1 1 auto; }
+  .outwrap pre { flex: 1 1 auto; min-height: 0; }
+  .outwrap.busy pre.text:empty::before { content: ''; }
+
+  .stage {
+    position: absolute; inset: 0; z-index: 2;
+    background: var(--panel);
+  }
+  .stage[hidden] { display: none; }
+  .stage canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; }
+  .stage-cap {
+    position: absolute; left: 0; right: 0; bottom: 20px; margin: 0; text-align: center;
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em;
+    color: var(--tx-3);
+  }
+
+  ::-webkit-scrollbar { width: 9px; height: 9px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #3a3a36; border-radius: 5px; border: 2px solid var(--bg); }
+  ::-webkit-scrollbar-thumb:hover { background: #4a4a45; }
+
+  /* ---------- stack on small screens ---------- */
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; grid-template-rows: 52px auto; height: auto; min-height: 100dvh; }
+    .sidebar { border-right: 0; border-bottom: 1px solid var(--line); overflow: visible; }
+    .logbox { height: 180px; }
+    .body { overflow: visible; height: auto; }
+    pre.text { height: auto; max-height: 420px; }
+    .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .head-actions { margin-left: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <div class="topbar">
+    <div class="mark">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
+    </div>
+    <div class="crumb">
+      <b>Document Intelligence</b>
+      <span class="sep">/</span>
+      <span class="tail">Playground</span>
+    </div>
+    <div class="top-right">
+      <span class="pill" id="pill"><span class="dot"></span><span id="pillText">Idle</span></span>
+      <span class="pill"><span class="mono" id="topElapsed"></span></span>
+    </div>
+  </div>
+
+  <aside class="sidebar">
+    <div class="side-scroll">
+      <div class="rail-head">Connection</div>
+      <div class="navitem on">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>
+        Endpoint
+      </div>
+      <div class="navitem">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Key
+        <span class="k" id="keyState">unset</span>
+      </div>
+      <div class="hr"></div>
+
+      <div class="field">
+        <label for="base">Base URL</label>
+        <div class="in-wrap mono">
+          <input type="text" id="base" spellcheck="false" placeholder="https://resource.cognitiveservices.azure.com">
+        </div>
+      </div>
+      <div class="field">
+        <label for="key">API key</label>
+        <div class="in-wrap mono">
+          <input type="password" id="key" spellcheck="false" placeholder="Ocp-Apim-Subscription-Key">
+          <button class="peek" id="peek" title="Show key" aria-label="Show key">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="ver">API version</label>
+        <div class="in-wrap mono">
+          <input type="text" id="ver" spellcheck="false" value="2024-11-30">
+        </div>
+      </div>
+      <div class="hr"></div>
+
+      <div class="field">
+        <label>Document</label>
+        <label class="drop" id="drop">
+          <input type="file" id="file" accept=".pdf,application/pdf">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="m9.5 14.5 2.5-2.5 2.5 2.5"/></svg>
+          <div class="name" id="fileName">Select a PDF</div>
+          <div class="meta" id="fileMeta">or drop one here</div>
+        </label>
+      </div>
+    </div>
+
+    <div class="logbox">
+      <div class="log" id="console"><div class="row"><span class="t">--:--:--</span><span class="m">Waiting for a document.</span></div></div>
+    </div>
+
+    <div class="side-foot">
+      <div class="user">
+        <div class="avatar">DI</div>
+        <div class="who">Local session<small>Key stays in memory</small></div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="pagehead">
+      <div>
+        <h1>Read a PDF, end to end</h1>
+        <p>Raw binary POST, Operation-Location header, two-second poll. Same contract as internal/processing/ocr.</p>
+      </div>
+      <div class="head-actions">
+        <button class="btn" id="stop" disabled>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 7h10v10H7z"/></svg>
+          Stop
+        </button>
+        <button class="btn btn-primary" id="run">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+          Analyze
+        </button>
+      </div>
+    </div>
+
+    <div class="body">
+      <div class="stats">
+        <div class="stat">
+          <div class="k"><svg class="ic amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Status</div>
+          <div class="v" id="sStatus">Idle</div>
+          <div class="sub" id="sHint">Waiting for input</div>
+        </div>
+        <div class="stat">
+          <div class="k"><svg class="ic blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>Pages</div>
+          <div class="v" id="sPages">0</div>
+          <div class="sub">analyzeResult.pages</div>
+        </div>
+        <div class="stat">
+          <div class="k"><svg class="ic green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>Characters</div>
+          <div class="v" id="sChars">0</div>
+          <div class="sub">analyzeResult.content</div>
+        </div>
+        <div class="stat">
+          <div class="k"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>Elapsed</div>
+          <div class="v" id="sTime">0s</div>
+          <div class="sub">No timeout</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>Extracted text</h2>
+          <div class="right">
+            <button class="btn btn-ghost" id="copy">Copy</button>
+            <button class="btn btn-ghost" id="save">Save .txt</button>
+          </div>
+        </div>
+        <div class="outwrap" id="outwrap">
+          <pre class="text" id="out"></pre>
+          <div class="stage" id="stage" hidden>
+            <canvas id="nebula"></canvas>
+            <p class="stage-cap" id="stageCap">Waiting</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+</div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var baseEl = $('base'), keyEl = $('key'), verEl = $('ver'), fileEl = $('file');
+  var runEl = $('run'), stopEl = $('stop'), pill = $('pill'), pillText = $('pillText');
+  var consoleEl = $('console'), outEl = $('out'), drop = $('drop');
+  var PAGES = { running: 2000, default: 2000 };
+  var current = null, cancel = false, startedAt = 0, text = '';
+
+  var nebula = (function () {
+    var cvs = $('nebula'), ctx = cvs.getContext('2d');
+    var W = 0, H = 0, raf = 0, t0 = 0, last = 0;
+    var COUNT = 2500, RD_MAX = 2.0, RINGS = 17;
+    var SIZES = [3.1, 5.1];
+    var TINTS = ['#627bfc', '#627bfc', '#627bfc', '#627bfc', '#8fa4ff', '#4a5fd4', '#b9c6ff'];
+    var pts = [], sprites = [], i;
+
+    function fit() {
+      var r = Math.min(window.devicePixelRatio || 1, 2);
+      W = cvs.clientWidth || 640; H = cvs.clientHeight || 280;
+      cvs.width = Math.round(W * r); cvs.height = Math.round(H * r);
+      ctx.setTransform(r, 0, 0, r, 0, 0);
+    }
+    fit();
+    window.addEventListener('resize', fit);
+
+    // Triangles are baked once per size/tint and blitted per frame. Rebuilding
+    // 2500 paths every frame costs ~5x the draw calls for an identical result.
+    (function bake() {
+      var sz, ti, s, sp, g;
+      for (sz = 0; sz < SIZES.length; sz++) {
+        sprites[sz] = [];
+        s = SIZES[sz];
+        for (ti = 0; ti < TINTS.length; ti++) {
+          sp = document.createElement('canvas');
+          sp.width = sp.height = Math.ceil(s) + 1;
+          g = sp.getContext('2d');
+          g.fillStyle = TINTS[ti];
+          g.beginPath();
+          g.moveTo(s / 2, 0);
+          g.lineTo(s, s);
+          g.lineTo(0, s);
+          g.closePath();
+          g.fill();
+          sprites[sz][ti] = sp;
+        }
+      }
+    })();
+
+    // Ripple: everything streams out of a point just below the bottom edge. Speed
+    // and angle stay random so the rings never read as a mechanical pulse.
+    function mk() {
+      return {
+        a0: -Math.PI + Math.random() * Math.PI,
+        rd: Math.random() * RD_MAX,
+        dr: 0.07 + Math.random() * 0.049,
+        jit: 0.004 + Math.random() * 0.01,
+        sp: sprites[Math.random() < 0.12 ? 1 : 0][(Math.random() * TINTS.length) | 0],
+        a: 0.14 + Math.random() * 0.64,
+        ph: Math.random() * 6.28, tf: 0.42 + Math.random() * 1.54
+      };
+    }
+    for (i = 0; i < COUNT; i++) pts.push(mk());
+
+    function frame(now) {
+      var t = (now - t0) / 1000;
+      var dt = Math.min(t - last, 0.05); last = t;
+      var hw = W / 2, hh = H / 2, oy = H * 1.08;
+      var k, p, rd, w, a;
+
+      ctx.clearRect(0, 0, W, H);
+
+      for (k = 0; k < pts.length; k++) {
+        p = pts[k];
+        rd = p.rd + p.dr * dt;
+        if (rd > RD_MAX) rd -= RD_MAX;
+        p.rd = rd;
+        rd += p.jit * Math.sin(t * 0.7 + p.ph);
+
+        // concentric bands travelling outward, dimming with distance
+        w = 0.5 + 0.5 * Math.sin(rd * RINGS - t * 3.1);
+        a = p.a * (0.12 + 0.88 * w) * (1 - Math.min(rd / RD_MAX, 1) * 0.55);
+        a *= 0.75 + 0.25 * Math.sin(t * p.tf + p.ph);
+
+        ctx.globalAlpha = a;
+        ctx.drawImage(p.sp,
+          hw + Math.cos(p.a0) * rd * hw - p.sp.width / 2,
+          oy + Math.sin(p.a0) * rd * hh - p.sp.height / 2);
+      }
+
+      ctx.globalAlpha = 1;
+      raf = requestAnimationFrame(frame);
+    }
+
+    return {
+      start: function () {
+        if (raf) return;
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        fit();
+        t0 = performance.now();
+        last = 0;
+        raf = requestAnimationFrame(frame);
+      },
+      stop: function () { if (raf) { cancelAnimationFrame(raf); raf = 0; ctx.clearRect(0, 0, W, H); } }
+    };
+  })();
+
+  baseEl.value = localStorage.getItem('di.base') || '';
+  verEl.value = localStorage.getItem('di.ver') || '2024-11-30';
+
+  function stamp() { return new Date().toTimeString().slice(0, 8); }
+  function log(msg, kind) {
+    var row = document.createElement('div');
+    row.className = 'row';
+    var t = document.createElement('span'); t.className = 't'; t.textContent = stamp();
+    var m = document.createElement('span'); m.className = 'm' + (kind ? ' ' + kind : ''); m.textContent = msg;
+    row.append(t, m);
+    consoleEl.appendChild(row);
+    consoleEl.scrollTop = consoleEl.scrollHeight;
+  }
+  function setState(state, label, hint) {
+    pill.className = 'pill' + (state ? ' ' + state : '');
+    pillText.textContent = label;
+    $('sStatus').textContent = label;
+    $('sHint').textContent = hint || '';
+    $('sHint').className = 'sub' + (state === 'run' ? ' warn' : '');
+    var busy = state === 'run';
+    $('stage').hidden = !busy;
+    $('outwrap').classList.toggle('busy', busy);
+    if (busy) { $('stageCap').textContent = hint || 'Working'; nebula.start(); } else { nebula.stop(); }
+  }
+  function tick() {
+    if (!startedAt) return;
+    var s = ((Date.now() - startedAt) / 1000).toFixed(1);
+    $('topElapsed').textContent = s + 's elapsed';
+    $('sTime').textContent = s + 's';
+  }
+  var ticker = setInterval(tick, 100);
+
+  ['dragenter', 'dragover'].forEach(function (e) {
+    drop.addEventListener(e, function (ev) { ev.preventDefault(); drop.classList.add('over'); });
+  });
+  ['dragleave', 'drop'].forEach(function (e) {
+    drop.addEventListener(e, function (ev) { ev.preventDefault(); drop.classList.remove('over'); });
+  });
+  drop.addEventListener('drop', function (ev) { if (ev.dataTransfer.files[0]) setFile(ev.dataTransfer.files[0]); });
+  fileEl.addEventListener('change', function () { if (fileEl.files[0]) setFile(fileEl.files[0]); });
+
+  function setFile(f) {
+    current = f;
+    $('fileName').textContent = f.name;
+    $('fileMeta').textContent = (f.size / 1024).toFixed(0) + ' KB';
+    setState('', 'Idle', 'Ready to run');
+  }
+
+  $('peek').addEventListener('click', function () {
+    keyEl.type = keyEl.type === 'password' ? 'text' : 'password';
+    $('peek').style.color = keyEl.type === 'text' ? 'var(--tx)' : '';
+  });
+  keyEl.addEventListener('input', function () {
+    $('keyState').textContent = keyEl.value.trim() ? 'set' : 'unset';
+  });
+
+  function headers() { return { 'Ocp-Apim-Subscription-Key': keyEl.value.trim(), 'Content-Type': 'application/pdf' }; }
+  function analyzeURL() {
+    return baseEl.value.trim().replace(/\/+$/, '') + '/documentintelligence/documentModels/prebuilt-read:analyze?api-version=' + encodeURIComponent(verEl.value.trim());
+  }
+  function fail(msg) {
+    clearInterval(ticker);
+    startedAt = 0;
+    $('topElapsed').textContent = '';
+    setState('bad', 'Failed', 'See event log');
+    log(msg, 'err');
+    runEl.disabled = false; stopEl.disabled = true; cancel = true;
+  }
+
+  async function run() {
+    if (!current) return fail('No document selected.');
+    if (!keyEl.value.trim()) return fail('API key is empty.');
+    var b = baseEl.value.trim();
+    if (!/^https:\/\//i.test(b)) return fail('Base URL must start with https://');
+    localStorage.setItem('di.base', b);
+    localStorage.setItem('di.ver', verEl.value.trim());
+
+    cancel = false; startedAt = Date.now();
+    clearInterval(ticker);
+    ticker = setInterval(tick, 100);
+    text = '';
+    outEl.textContent = '';
+    $('sPages').textContent = '0';
+    $('sChars').textContent = '0';
+    runEl.disabled = true; stopEl.disabled = false;
+    setState('run', 'Submitting', 'Uploading PDF');
+    log('POST ' + analyzeURL());
+
+    var response;
+    try {
+      response = await fetch(analyzeURL(), { method: 'POST', headers: headers(), body: current, credentials: 'omit' });
+    } catch (e) {
+      return fail('Network or CORS failure. Serve this file over http:// and check the resource CORS policy. (' + e.message + ')');
+    }
+
+    if (response.status !== 202) {
+      return fail('Expected 202, got ' + response.status + ' ' + (await response.text()).slice(0, 500));
+    }
+    var location = response.headers.get('Operation-Location');
+    if (!location) return fail('202 but no Operation-Location header. The response is not CORS-exposed to this origin.');
+    log('202 Accepted. Operation-Location: ' + location, 'ok');
+
+    setState('run', 'Running', 'Polling every 2s');
+    var interval = PAGES.running;
+    while (!cancel) {
+      await sleep(interval);
+      if (cancel) break;
+
+      var poll;
+      try {
+        poll = await fetch(location, { method: 'GET', headers: { 'Ocp-Apim-Subscription-Key': keyEl.value.trim() }, credentials: 'omit' });
+      } catch (e) {
+        return fail('Poll network or CORS failure. (' + e.message + ')');
+      }
+      if (poll.status !== 200) return fail('Poll returned ' + poll.status + ' ' + (await poll.text()).slice(0, 500));
+
+      var body = await poll.json();
+      var retry = poll.headers.get('Retry-After');
+      interval = retry ? Math.max(PAGES.default, parseInt(retry, 10) * 1000 || PAGES.default) : PAGES.running;
+
+      if (body.status === 'succeeded') return done(body);
+      if (body.status === 'failed' || body.status === 'canceled') {
+        var err = body.error || {};
+        return fail('Run ' + body.status + ': ' + (err.code || 'unknown') + ' — ' + (err.message || ''));
+      }
+    }
+    if (cancel) { clearInterval(ticker); startedAt = 0; $('topElapsed').textContent = ''; setState('', 'Stopped', 'Run cancelled'); log('Stopped by user.'); runEl.disabled = false; stopEl.disabled = true; }
+  }
+
+  function done(body) {
+    clearInterval(ticker);
+    var result = body.analyzeResult || {};
+    text = result.content || '';
+    var pages = Array.isArray(result.pages) ? result.pages.length : 0;
+    $('sPages').textContent = pages;
+    $('sChars').textContent = text.length.toLocaleString();
+    $('sTime').textContent = ((Date.now() - startedAt) / 1000).toFixed(1) + 's';
+    outEl.textContent = text;
+    setState('ok', 'Succeeded', pages + (pages === 1 ? ' page' : ' pages'));
+    $('topElapsed').textContent = '';
+    log('Done. ' + pages + ' page(s), ' + text.length + ' characters.', 'ok');
+    startedAt = 0;
+    runEl.disabled = false; stopEl.disabled = true;
+  }
+
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+  runEl.addEventListener('click', run);
+  stopEl.addEventListener('click', function () { cancel = true; });
+  $('copy').addEventListener('click', function () {
+    navigator.clipboard.writeText(text).then(function () { log('Copied to clipboard.'); });
+  });
+  $('save').addEventListener('click', function () {
+    var url = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = (current.name || 'document').replace(/\.pdf$/i, '') + '.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+})();
+</script>
+</body>
+</html>
