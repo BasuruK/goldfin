@@ -23,24 +23,40 @@ Naming the Stage responsible for a wrong value. The reason Goldfin can run a Sta
 _Avoid_: Debugging, Diagnosis, Root cause analysis
 
 **Field**:
-A single named value a Dataset expects from each document, with a declared type and a normalization rule.
+A single named value a Dataset version expects from each Document, with a declared type, a Normalization chain, and a Comparator.
 _Avoid_: Attribute, Column, Property, Key — _key_ is reserved for Connector credentials
 
+**Field group**:
+A named set of Fields that together answer one question, such as a beneficiary address split across line, city, postcode and country. Grouping changes presentation only: every member is an ordinary Field with its own Verdict, and the group's score is derived from those, never stored. It is the only source of a `partial` in the deterministic path.
+_Avoid_: Composite Field, Nested Field, Sub-value
+
+**Comparator**:
+What decides a Match: deterministic — normalize both sides, then compare — or Judge, for an answer that is not string-comparable. Chosen per Field, so a single Dataset can carry both.
+_Avoid_: Scorer, Strategy, Mode, Matcher
+
+**Manifest**:
+The Ground truth a customer supplies when ingesting a Dataset, before Goldfin owns a copy. One artifact: it declares the Fields and carries their values at once.
+_Avoid_: Sidecar, Import file, CSV
+
 **Ground truth**:
-The value a Field is expected to hold, supplied by the customer. Goldfin never infers it.
+The value a Field is expected to hold, supplied by the customer. Goldfin never infers it. A Manifest is where it arrives; a parsed copy inside a Dataset version is what a Run reads.
 _Avoid_: Expected value, Label, Answer, Correct output
 
 **Normalization**:
-The rule that makes two representations of the same value comparable before matching, such as date format or currency symbol. Deterministic scoring cannot exist without it.
-_Avoid_: Canonicalization, Cleaning, Formatting
+The ordered chain of named rules that makes two representations of the same value comparable before matching, such as a date format or a currency symbol. The catalog is closed and ships with Goldfin; a Field names a chain, never code. Where a format is ambiguous, it is declared, never inferred. Deterministic scoring cannot exist without it.
+_Avoid_: Canonicalization, Cleaning, Formatting, Normalizer
 
 **Match**:
-The verdict that a normalized Extraction equals its Ground truth. Three outcomes, not two: match, partial, miss.
+The verdict that a normalized Extraction equals its Ground truth. Five outcomes, and the fact that failure has three distinct shapes is the point: `match`, `partial`, `missing` (no Extraction), `unparseable` (an Extraction the type did not accept), `wrong` (a well-formed Extraction of a different value). The three ways of failing are never indistinguishable to the user, but they do not score differently — a score is always matched over Coverage.
 _Avoid_: Correct, Pass, Diff
 
 **Verdict**:
-The persisted record of one Match, including what was compared, so a score can be reproduced later.
+The persisted record of one Match: both raw values, both normalized values, the resolved chain, the reason, the comparator, and the Goldfin version that scored it. Frozen when the Run executes, so a score cannot change after it has been shown; rescoring is a new Run over a new Dataset version.
 _Avoid_: Result, Score, Evidence
+
+**Coverage**:
+The count of Documents a score was actually computed over, carried with the score itself. A Field score reads "47 of 50", never a percentage with a hidden denominator, because Runs with different Coverage are not comparable.
+_Avoid_: Sample size, Denominator, Completeness
 
 **Judge**:
 The LLM that validates a non-string-comparable answer. An escape hatch, never the primary scorer.
@@ -48,9 +64,17 @@ _Avoid_: Validator, Reviewer, Grader
 
 ### The objects a user makes
 
+**Document**:
+One file a Dataset version holds, carrying the source bytes the Pipeline runs over. Goldfin owns those bytes — they are copied in at ingest, never referenced where they happen to sit. The unit a Run iterates and the denominator of Coverage.
+_Avoid_: File, Page, Item, Record
+
 **Dataset**:
-A set of documents with their Ground truth, declaring the Fields to be scored.
+A named container of Dataset versions, holding the Documents with their Ground truth and declaring the Fields to be scored.
 _Avoid_: Test set, Corpus, Benchmark, Fixture
+
+**Dataset version**:
+One immutable revision of a Dataset — its Documents, Fields and Ground truth together. A Run points at a version, never at a mutable Dataset, exactly as it points at a Prompt version. A version stays editable until a Run references it.
+_Avoid_: Snapshot, Revision, Iteration, Dataset v2
 
 **Prompt**:
 The system prompt being evaluated. Versions are immutable; a new version is a new thing.
