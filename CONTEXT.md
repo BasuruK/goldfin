@@ -14,12 +14,16 @@ _Avoid_: Flow, Chain, Pipeline run
 One step of the pipeline, executed on its own as well as in sequence. Goldfin runs stages individually so a failure can be attributed rather than guessed at.
 _Avoid_: Step, Phase, Stage result
 
+**State**:
+Where a Document sits in the Pipeline. Five of them: `pending` (not reached — also where a Run resumes), `running`, `scored`, `failed` (terminal, and records which Stage and why), `cancelled` (aborted by a user at a checkpoint). There is no `skipped` state — a document the Run never reached is `pending`, and a second word for the same thing is how a state machine grows a state nobody can explain.
+_Avoid_: Status, Phase, Step, Outcome
+
 **Extraction**:
-The structured values a Stage pulls out of a document, matched against ground truth.
+The structured values a Stage pulls out of a document, matched against ground truth. Whatever the prompt made the model produce — Goldfin sends no output schema, so malformed output is a real, reportable result rather than something to be prevented. It may also carry keys the Manifest never declared; those are kept as evidence of the prompt, not scored.
 _Avoid_: Prediction, Result, Output, OCR result
 
 **Attribution**:
-Naming the Stage responsible for a wrong value. The reason Goldfin can run a Stage alone.
+Naming the Stage responsible for a value. The reason Goldfin can run a Stage alone. Only what was **measured** may be attributed: a Document that died, and the Stage it died at; a `missing` value, which is the extraction Stage's on evidence, since the OCR Stage returned text and the extraction did not. A `wrong` value is **not** attributed by a pipeline Run — the run cannot tell whether OCR misread a digit or the extraction read what OCR gave it — and gets an owner only when a single-stage re-run measures one.
 _Avoid_: Debugging, Diagnosis, Root cause analysis
 
 **Field**:
@@ -47,7 +51,7 @@ The ordered chain of named rules that makes two representations of the same valu
 _Avoid_: Canonicalization, Cleaning, Formatting, Normalizer
 
 **Match**:
-The verdict that a normalized Extraction equals its Ground truth. Five outcomes, and the fact that failure has three distinct shapes is the point: `match`, `partial`, `missing` (no Extraction), `unparseable` (an Extraction the type did not accept), `wrong` (a well-formed Extraction of a different value). The three ways of failing are never indistinguishable to the user, but they do not score differently — a score is always matched over Coverage.
+The verdict that a normalized Extraction equals its Ground truth. Five outcomes, and the fact that failure has three distinct shapes is the point: `match`, `partial`, `missing` (the Pipeline ran and the Stage returned no value), `unparseable` (an Extraction the type did not accept), `wrong` (a well-formed Extraction of a different value). The three ways of failing are never indistinguishable to the user, but they do not score differently — a score is always matched over Coverage. A Document that never produced an Extraction writes **no Match at all**: absence at the document level is not absence at the field level, and the two are reconciled on a document-level line rather than by inventing rows. The Field's declared **type** is the only arbiter of what counts as a value: an absent key or an explicit `null` is `missing` before the type is consulted, while `""` is a value handed to Normalization, where `text` accepts it and a typed Field rejects it as `unparseable`. `unparseable` is terminal — the Judge never rescues a value that will not normalize, and a malformed or truncated answer is not retried, because a Run scores one attempt at the customer's deployment, not Goldfin's best of two.
 _Avoid_: Correct, Pass, Diff
 
 **Verdict**:
@@ -55,7 +59,7 @@ The persisted record of one Match: both raw values, both normalized values, the 
 _Avoid_: Result, Score, Evidence
 
 **Coverage**:
-The count of Documents a score was actually computed over, carried with the score itself. A Field score reads "47 of 50", never a percentage with a hidden denominator, because Runs with different Coverage are not comparable.
+The count of Documents a score was actually computed over, carried with the score itself. A Field score reads "47 of 50", never a percentage with a hidden denominator, because Runs with different Coverage are not comparable. The denominator is fixed at the Dataset version's Document count: a Document the Run never reached counts as a miss, exactly as a Document that ran and yielded nothing does. A Run that ended early — cancelled, or stopped on the token cap — is **flagged incomplete**, because a stopped Run and a clean one otherwise produce identically shaped scores.
 _Avoid_: Sample size, Denominator, Completeness
 
 **Judge**:
