@@ -27,7 +27,7 @@ Naming the Stage responsible for a value. The reason Goldfin can run a Stage alo
 _Avoid_: Debugging, Diagnosis, Root cause analysis
 
 **Field**:
-A single named value a Dataset version expects from each Document, with a declared type, a Normalization chain, and a Comparator.
+A single named value a Dataset version expects from each Document, with a declared type, a Normalization chain, and a Comparator. **`required`** is annotation-side and two-state: `true` is a promise that every Document has a value, and a blank cell under it is a self-contradicting Manifest that fails at ingest; `false` is the customer saying absence is intended on some Documents, and those blank cells are scored rather than skipped.
 _Avoid_: Attribute, Column, Property, Key — _key_ is reserved for Connector credentials
 
 **Field group**:
@@ -43,7 +43,7 @@ The Ground truth a customer supplies when ingesting a Dataset, before Goldfin ow
 _Avoid_: Sidecar, Import file, CSV
 
 **Ground truth**:
-The value a Field is expected to hold, supplied by the customer. Goldfin never infers it. A Manifest is where it arrives; a parsed copy inside a Dataset version is what a Run reads.
+The value a Field is expected to hold, supplied by the customer. Goldfin never infers it. A Manifest is where it arrives; a parsed copy inside a Dataset version is what a Run reads. **A blank cell is part of the claim, not a gap in it**: it asserts that the Document carries no such value, and it is scored like any other, so Goldfin never has to guess what an annotator meant or how far they got.
 _Avoid_: Expected value, Label, Answer, Correct output
 
 **Normalization**:
@@ -51,7 +51,7 @@ The ordered chain of named rules that makes two representations of the same valu
 _Avoid_: Canonicalization, Cleaning, Formatting, Normalizer
 
 **Match**:
-The verdict that a normalized Extraction equals its Ground truth. Five outcomes, and the fact that failure has three distinct shapes is the point: `match`, `partial`, `missing` (the Pipeline ran and the Stage returned no value), `unparseable` (an Extraction the type did not accept), `wrong` (a well-formed Extraction of a different value). The three ways of failing are never indistinguishable to the user, but they do not score differently — a score is always matched over Coverage. A Document that never produced an Extraction writes **no Match at all**: absence at the document level is not absence at the field level, and the two are reconciled on a document-level line rather than by inventing rows. The Field's declared **type** is the only arbiter of what counts as a value: an absent key or an explicit `null` is `missing` before the type is consulted, while `""` is a value handed to Normalization, where `text` accepts it and a typed Field rejects it as `unparseable`. `unparseable` is terminal — the Judge never rescues a value that will not normalize, and a malformed or truncated answer is not retried, because a Run scores one attempt at the customer's deployment, not Goldfin's best of two.
+The verdict that a normalized Extraction equals its Ground truth. Five outcomes, and the fact that failure has three distinct shapes is the point: `match`, `partial`, `missing` (the Pipeline ran and the Stage returned no value), `unparseable` (an Extraction the type did not accept), `wrong` (a well-formed Extraction of a different value). The three ways of failing are never indistinguishable to the user, but they do not score differently — a score is always matched over Coverage. A Document that never produced an Extraction writes **no Match at all**: absence at the document level is not absence at the field level, and the two are reconciled on a document-level line rather than by inventing rows. The Field's declared **type** is the only arbiter of what counts as a value *against a Ground truth that exists*: an absent key or an explicit `null` is `missing` before the type is consulted, while `""` is a value handed to Normalization, where `text` accepts it and a typed Field rejects it as `unparseable`. Against an **absent** Ground truth the type is not consulted at all, because there is nothing to normalize toward: an absent Extraction is a `match`, so a prompt that correctly declines to invent is rewarded, and anything the model emits is a `wrong` — with the single exception of `""` on a `text` Field, which says the same thing absence does. Every Match against an absent Ground truth carries a **`ground_truth_absent`** condition, which is how the UI separates a fabrication from a misread without inventing a sixth reason. `unparseable` is terminal — the Judge never rescues a value that will not normalize, and a malformed or truncated answer is not retried, because a Run scores one attempt at the customer's deployment, not Goldfin's best of two.
 _Avoid_: Correct, Pass, Diff
 
 **Verdict**:
