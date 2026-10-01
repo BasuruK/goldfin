@@ -5,3 +5,7 @@ node_modules/
 
 # local agent runtime artefacts (canvas assets etc.)
 .mavis/
+
+
+#Ignore vscode AI rules
+.github/instructions/codacy.instructions.md
