@@ -55,7 +55,7 @@ The verdict that a normalized Extraction equals its Ground truth. Five outcomes,
 _Avoid_: Correct, Pass, Diff
 
 **Verdict**:
-The persisted record of one Match: both raw values, both normalized values, the resolved chain, the reason, the comparator, and the Goldfin version that scored it. Frozen when the Run executes, so a score cannot change after it has been shown; rescoring is a new Run over a new Dataset version.
+The persisted record of one Match: both raw values, both normalized values, the resolved chain, the reason, the comparator, and the Goldfin version that scored it. A reason may carry **conditions** — `ground_truth_absent`, when the Manifest asserted the Document had no such value, and `judge_unsure`, when the Judge abstained rather than decide — so a miss never becomes indistinguishable from another miss, and **failure never invents a new outcome**. Frozen when the Run executes, so a score cannot change after it has been shown; rescoring is a new Run over a new Dataset version.
 _Avoid_: Result, Score, Evidence
 
 **Coverage**:
@@ -63,7 +63,7 @@ The count of Documents a score was actually computed over, carried with the scor
 _Avoid_: Sample size, Denominator, Completeness
 
 **Judge**:
-The LLM that validates a non-string-comparable answer. An escape hatch, never the primary scorer.
+The LLM that validates a non-string-comparable answer. An escape hatch, never the primary scorer, and never consulted unless the Field's `scoring` says `judge`. It returns `match`, `wrong`, or `unsure` with a persisted rationale — **no number of any kind**, and a self-reported confidence is worse than none because it is uncalibrated. An `unsure` scores as a `wrong` carrying a `judge_unsure` condition: the value was never confirmed, and the condition says so. Goldfin ships the Judge's prompt, versioned and uneditable, because the Judge grades the customer's prompt and the grader must not belong to the graded. The Judge is final within a Run; a user who does not believe it re-runs against a new Dataset version with `scoring: deterministic`.
 _Avoid_: Validator, Reviewer, Grader
 
 ### The objects a user makes
@@ -111,8 +111,12 @@ A Connector that calls a model by base URL and API key. Carries credentials and 
 _Avoid_: Model, Provider, Model config
 
 **Credential**:
-Any secret held by a Connector. Never logged, never returned to a client, never in git.
+A named, versioned secret owned by one Connector. A Connector references it as `{{credential}}` in its URL, headers or body template, and the value is substituted at the last moment before the call — so it lives in exactly one place and redaction is a property of the shape. Encrypted at rest; never logged, never returned to a client (not even a last-4 — the only thing returned is when it was set), never in git. Defends the database file, backups and image layers; does **not** defend a compromised host, and says so.
 _Avoid_: API key, Secret, Token — use the specific one in conversation
+
+**Credential generation**:
+One immutable revision of a Credential. Rotation appends one and marks the previous `superseded`; it never rewrites, because a Run that crashed must be able to resume on the value it started with. A Run pins the generation it began with, so a rotation never changes a Run already in flight. A generation a Run has referenced cannot be destroyed; an unreferenced one can be **tombstoned**, which keeps its label and id and drops the value, so a burned key can actually be burned. Every generation carries a required customer-supplied label.
+_Avoid_: Version, Revision, Key version, Credential version
 
 **Attestable**:
 A score whose inputs are all persisted, so a Run can be reproduced exactly later. Required of every Judge verdict and every Verdict.
