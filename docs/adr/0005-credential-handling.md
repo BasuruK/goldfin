@@ -159,8 +159,12 @@ refusal is a guard rail, not a control over systems Goldfin does not run.
 
 A customer gateway that performs OCR **and** the LLM in a single POST, returning both,
 is already covered credential-wise — an `X-Api-Key` header is an ordinary header, and a
-Connector with no credential at all is legal. But it breaks a different premise: the
-Pipeline is split into two Stages precisely so a failure can be attributed, and in that
-shape the system prompt lives inside the customer's gateway with no separable OCR result
-to attribute against. That is a Pipeline decision, not a credential one, and it is
-tracked on the wayfinder map.
+Connector with no credential at all is legal. Whether that shape is supported at all is
+a Pipeline decision, not a credential one, and it was tracked on the wayfinder map. It
+is settled by [ADR 0009](0009-a-fused-gateway-is-supported.md): the shape is supported,
+and the prompt reaches the model as an ordinary `{{prompt}}` template parameter.
+
+An earlier version of this note claimed that in that shape "the system prompt lives
+inside the customer's gateway". That was wrong — it was read off a connector's name
+rather than its body — and it is corrected here because three tickets were about to
+build on it. The credential conclusion below was right for the wrong reason.

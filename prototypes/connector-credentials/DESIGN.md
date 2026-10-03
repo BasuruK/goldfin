@@ -68,12 +68,17 @@ All from #7's grill. Each is visible in the prototype rather than described in p
 
 The *Combined extract* connector exists in the fixture because it is a real customer
 shape: one POST where the gateway runs OCR and the LLM and returns both. Credential-wise
-it is already covered — an `X-Api-Key` header and its own key. But it collides with a
-settled premise on the map: the pipeline is split into two Stages precisely so a failure
-can be attributed, and the system prompt is the knob. In the combined shape **the system
-prompt is inside the customer's gateway** and there is no separable OCR result to
-attribute against. That is a map-level decision, parked in *Not yet specified* on
-[#1](https://github.com/BasuruK/goldfin/issues/1), deliberately not ticketed here.
+it is already covered — an `X-Api-Key` header and its own key.
+
+The Pipeline question it raised — whether a fused gateway is supported — was parked on
+the wayfinder map and settled in [ADR 0009](../../docs/adr/0009-a-fused-gateway-is-supported.md):
+**it is supported.** The prompt is an ordinary `{{prompt}}` template parameter, so it
+reaches the model by the same path a document does, and a fused Run can still vary it.
+What a fused Run loses is attribution of a `wrong` value, never a `missing` one, and
+the Run says so in words.
+
+An earlier version of this file claimed the system prompt lived inside the customer's
+gateway. It did not — see the fixture below, which this file got wrong.
 
 ## Deliberate limitations
 
