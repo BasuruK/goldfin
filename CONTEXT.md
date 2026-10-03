@@ -100,14 +100,18 @@ _Avoid_: Evaluation, Test run, Experiment, Job
 The diff between two Runs. A first-class question, not a report Goldfin happens to print.
 _Avoid_: Diff, Delta, Regression report
 
+**Probe**:
+One call to one Connector with one system prompt and one Document, returning the raw result and nothing else — no Field, no Match, no Verdict, no Coverage, so no denominator and nothing to compare. It answers *does this parse, what did it cost, what came back*, which is a different question from *is v2 better than v1* and is answered by a Run. A Probe's output **never becomes a Verdict**: it was run by a person, against a prompt they were still editing, and promoting it to a score is Goldfin grading its own homework.
+_Avoid_: Test, Try it, Quick run, Smoke test
+
 ### Talking to the outside
 
 **Connector**:
-A registered, reusable configuration for reaching an external service. Two types: `rest` and `llm`. Connectors are entities, not settings — created once and referenced by many Runs. They stay **editable in place**, and it is the Run that remembers: it copies the definition it used at start — method, URL, headers, body, response path, with `{{credential}}` still a placeholder — so a fix to a response path never silently changes what an earlier Run measured. A Connector may be **fused**, serving both Stages in one call; that is a supported shape, not a degraded one, and it is not detectable from the definition, so Goldfin neither flags nor refuses it.
+A registered, reusable configuration for reaching an external service, in one of three **kinds**: `ocr`, `llm` and `fused`. Connectors are entities, not settings — created once and referenced by many Runs. The create form asks only for a model id, a base URL and a Credential, because that is what most Connectors are — a **preset over the shape, not a fork in it**, exactly as a Field's Comparator is a choice rather than a second Field kind. They stay **editable in place**, and it is the Run that remembers: it copies the definition it used at start — method, URL, headers, body, response path, with `{{credential}}` still a placeholder — so a fix to a response path never silently changes what an earlier Run measured. A Connector may be **fused**, serving both Stages in one call; that is a supported shape, not a degraded one, and it is not detectable from the definition, so Goldfin neither flags nor refuses it. A Connector screen holds **no relationship to a Run**: which definition a Run measured against is answered on the Run, because that is where the number was sold.
 _Avoid_: Integration, Adapter, Provider, Endpoint
 
 **REST connector**:
-A Connector that calls an arbitrary endpoint: method, URL, auth, request body, and the path to the text in the response. How a customer reaches the OCR service their internal platform team fronts.
+A Connector that calls an arbitrary endpoint: method, URL, auth, request body, and the path to the text in the response. How a customer reaches the OCR service their internal platform team fronts, and the shape a `fused` Connector takes.
 _Avoid_: HTTP connector, Custom endpoint, Webhook
 
 **LLM connector**:
@@ -121,6 +125,10 @@ _Avoid_: API key, Secret, Token — use the specific one in conversation
 **Credential generation**:
 One immutable revision of a Credential. Rotation appends one and marks the previous `superseded`; it never rewrites, because a Run that crashed must be able to resume on the value it started with. A Run pins the generation it began with, so a rotation never changes a Run already in flight. A generation a Run has referenced cannot be destroyed; an unreferenced one can be **tombstoned**, which keeps its label and id and drops the value, so a burned key can actually be burned. Every generation carries a required customer-supplied label.
 _Avoid_: Version, Revision, Key version, Credential version
+
+**Connector check**:
+A single outbound call that confirms a Connector's own parameters — base URL, Credential, model id — and it returns a **finding rather than a boolean**, because the three kinds are verifiable to three different depths. An `llm` check makes a minimal completion and so can confirm all three. An `ocr` check confirms only what that provider offers a cheap way to confirm. A `fused` check confirms **almost nothing**: a gateway that answers a POST with 200 and `{"error":"invalid key"}` in the body is an ordinary shape, so a status code proves the port is open and says nothing at all about the configuration. **A finding names what was proven, and a check that proves less never renders as a pass.** It is executed by the worker, so it is a queued job rather than a request, and it returns no response body.
+_Avoid_: Test, Test connection, Ping, Health check
 
 **Attestable**:
 A score whose inputs are all persisted, so a Run can be reproduced exactly later. Required of every Judge verdict and every Verdict.

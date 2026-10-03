@@ -1,5 +1,7 @@
 # A Credential is a named, versioned value that only the worker ever decrypts
 
+> **Amended** — the framework named below is **Go**, not Laravel, per [ADR 0010](0010-go-api-postgres-three-containers.md), and `APP_KEY` becomes a Go environment variable. More important: **the obligations in this document are decided but not yet implemented.** v1 stores the value in one AES-GCM-encrypted `bytea` column keyed from the environment, and nothing else. Specifically **not built in v1**: `{{credential}}` interpolation across URL, headers and body; the save-time refusal of a credential-shaped query parameter; the central scrubber over the log channel and the exception renderer; and the fixed Connector-test result shape. The *decisions* all stand and the schema has to leave room for them — a tombstone must exist from the first migration — but a reader must not assume any of the above is running.
+
 A Connector carries a customer's key to their own internal platform. For a financial
 institution that key is a lost customer if it reaches a log line, a support screenshot,
 or a backup that leaves the building. This ADR settles where a Credential lives, what
