@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Connector credentials — prototype</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><text y='19' font-size='20'>🔑</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Urbanist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* THROWAWAY PROTOTYPE. Three structural positions on the Connector-credential
+   surface, switchable via ?variant=A|B|C. Rendered in the mlsvc-tester-2a
+   design system — tokens and components copied verbatim so the variants can be
+   judged against real app furniture rather than in a vacuum.
+   NOTE: this system names its accent colour --key (a JSON-syntax colour).
+   Here "key" also means credential. The collision is the system's, kept as-is
+   rather than renamed, so the prototype stays a faithful drop-in. */
+
+  body {
+    --ubg: #111214; --usurf: #17181b; --uwell: #141518; --uline: #2a2c31;
+    --ufg: #f3f4f6; --ufg2: #b9bec6; --ufg3: #8c929b;
+    --uprim: #f3f4f6; --uprimfg: #111214; --upill: #212328;
+    --uout: #121d17; --uoutline: #1f3a2b; --uhl: #1d2a3d;
+    --uprompt: #121212; --upwell: #0d0d0d; --uresult: #1c1c1c;
+    --uhead: #1b1c1e; --urun: #2c2d30; --urunfield: #38393c; --urunwell: #232427; --urunline: #45474b;
+    --umenu: #414245;
+    --key: #60a5fa; --str: #cbd5e1; --num: #fbbf24; --ok: #34d399; --bad: #f87171; --p: #858d98; --cnt: #858d98;
+    --badbg: rgba(248,113,113,.10); --okbg: rgba(52,211,153,.10);
+    --runtext: #eaf1ff; --runchip: rgba(63,116,216,.16); --runchipfg: #8fb4ff;
+    --uheadshadow: 0 1px 2px rgba(0,0,0,.08), 0 4px 10px rgba(0,0,0,.06), 0 10px 24px rgba(0,0,0,.04);
+    --urunshadow: -2px 0 4px rgba(0,0,0,.14), -8px 0 16px rgba(0,0,0,.12), -20px 0 40px rgba(0,0,0,.08);
+    --upwellshadow: inset 0 1px 3px rgba(0,0,0,.35);
+    --umenushadow: 0 12px 32px rgba(0,0,0,.4);
+  }
+  body[data-theme="light"] {
+    --ubg: #ffffff; --usurf: #f7f8f9; --uwell: #fbfbfc; --uline: #e4e6ea;
+    --ufg: #0f1115; --ufg2: #3f4650; --ufg3: #646b75;
+    --uprim: #111317; --uprimfg: #ffffff; --upill: #eff1f3;
+    --uout: #f1f8f3; --uoutline: #d3e8da; --uhl: #e3ebf9;
+    --uprompt: #f4f5f7; --upwell: #ffffff; --uresult: #ffffff; --uhead: #ffffff;
+    --urun: #ffffff; --urunfield: #ffffff; --urunwell: #f7f8f9; --urunline: #e4e6ea; --umenu: #ffffff;
+    --key: #1d4ed8; --str: #334155; --num: #9a5a06; --ok: #047857; --bad: #c81e1e; --p: #6b7280;
+    --badbg: #fdeded; --okbg: #e5f5ee; --runchip: #e6eefc; --runchipfg: #1d4ed8;
+    --upwellshadow: 0 1px 2px rgba(0,0,0,.06);
+    --uheadshadow: 0 1px 3px rgba(0,0,0,.08), 0 2px 8px rgba(0,0,0,.04);
+    --urunshadow: -3px 0 6px rgba(0,0,0,.08), -8px 0 20px rgba(0,0,0,.06);
+    --umenushadow: 0 6px 12px rgba(0,0,0,.10), 0 16px 32px rgba(0,0,0,.08);
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0; background: var(--ubg); color: var(--ufg2);
+    font: 400 13px/1.5 'Urbanist', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased; padding-bottom: 76px;
+  }
+  button { font-family: inherit; }
+  :focus-visible { outline: 2px solid var(--key); outline-offset: 1px; }
+  .mono { font: 400 12.5px/1.6 'IBM Plex Mono', monospace; }
+
+  /* ---------- shell ---------- */
+  .app { display: grid; grid-template-rows: 56px minmax(0,1fr); min-height: 100dvh; }
+  .hdr {
+    position: relative; z-index: 0; overflow: hidden;
+    display: flex; align-items: center; gap: 12px; padding: 0 18px;
+    border-bottom: 1px solid var(--uline); background: var(--uhead);
+  }
+  .hdr-orb {
+    position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%;
+    object-fit: cover; object-position: 51% 84%; pointer-events: none;
+    -webkit-mask-image: linear-gradient(90deg,#000 0%,rgba(0,0,0,.85) 35%,rgba(0,0,0,.35) 60%,transparent 78%);
+    mask-image: linear-gradient(90deg,#000 0%,rgba(0,0,0,.85) 35%,rgba(0,0,0,.35) 60%,transparent 78%);
+  }
+  .hdr-title, .hdr-sub { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.35); }
+  .hdr-title { font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
+  .hdr-sub { font-size: 13px; font-weight: 500; color: rgba(255,255,255,.7); }
+  .spacer { flex: 1; }
+
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px; height: 28px; padding: 0 11px;
+    border-radius: 999px; background: var(--chip-bg); color: var(--chip-fg);
+    font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  .chip-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--chip-fg); flex: none; }
+  .chip[data-tone="ok"] { --chip-bg: var(--okbg); --chip-fg: var(--ok); }
+  .chip[data-tone="running"] { --chip-bg: var(--runchip); --chip-fg: var(--runchipfg); }
+  .chip[data-tone="stopped"] { --chip-bg: var(--upill); --chip-fg: var(--ufg3); }
+  .chip[data-tone="error"] { --chip-bg: var(--badbg); --chip-fg: var(--bad); }
+
+  .theme-btn {
+    position: relative; overflow: hidden; width: 34px; height: 34px; padding: 0;
+    border: 1px solid var(--uline); border-radius: 8px; background: transparent;
+    color: var(--ufg2); cursor: pointer; box-shadow: inset 0 1px 3px rgba(0,0,0,.12);
+  }
+  .theme-btn:hover { color: var(--ufg); }
+  .theme-icon { position: absolute; inset: 0; display: grid; place-items: center; transition: transform 520ms cubic-bezier(.22,1,.32,1), opacity 420ms ease; }
+  .theme-icon.sun { transform: translateX(-100%); opacity: 0; }
+  .theme-icon.moon { transform: translateX(0); opacity: 1; }
+  .theme-btn:hover .theme-icon.sun, .theme-btn:focus-visible .theme-icon.sun { transform: translateX(0); opacity: 1; }
+  .theme-btn:hover .theme-icon.moon, .theme-btn:focus-visible .theme-icon.moon { transform: translateX(100%); opacity: 0; }
+
+  /* ---------- layout ---------- */
+  .scroll { overflow: auto; min-height: 0; }
+  .col-main { padding: 18px; max-width: 1000px; }
+  .col-main.wide { max-width: none; }
+  .stack { display: flex; flex-direction: column; gap: 16px; }
+  .split { display: grid; gap: 1px; background: var(--uline); min-height: 100%; }
+  .split > * { background: var(--ubg); min-width: 0; }
+  .master { padding: 14px 12px; }
+  .detail { padding: 18px; }
+
+  .panel {
+    border: 1px solid var(--uline); border-radius: 10px; background: var(--usurf);
+  }
+  .panel > .phead {
+    display: flex; align-items: center; gap: 10px; padding: 13px 16px;
+    border-bottom: 1px solid var(--uline);
+  }
+  .pbody { padding: 16px; }
+
+  /* ---------- run surface (variant C) ---------- */
+  .col-run {
+    display: flex; flex-direction: column; min-width: 0;
+    background: var(--urun); box-shadow: var(--urunshadow);
+    clip-path: inset(0 0 0 -80px);
+  }
+  .run-title { display: flex; align-items: center; min-height: 56px; padding: 0 18px; border-bottom: 1px solid var(--urunline); }
+  .run-scroll { display: flex; flex-direction: column; gap: 18px; padding: 18px; }
+
+  /* ---------- components lifted from the system ---------- */
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 11px;
+    border: 1px solid var(--uline); border-radius: 7px; background: var(--ubg);
+    color: var(--ufg); font: 600 13px 'Urbanist', sans-serif; cursor: pointer; white-space: nowrap;
+  }
+  .btn:hover { border-color: var(--ufg3); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .btn.icon { width: 30px; padding: 0; justify-content: center; color: var(--ufg2); }
+  .btn.link { height: auto; padding: 0; border: 0; background: transparent; color: var(--key); }
+  .btn.text { height: 26px; padding: 0 9px; border: 0; border-radius: 6px; background: transparent; color: var(--ufg3); }
+  .btn.text:hover { color: var(--ufg); background: var(--upill); }
+  .btn.danger { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 40%, transparent); }
+  .btn.danger:hover { background: var(--badbg); }
+  .btn.prim { background: var(--uprim); border-color: var(--uprim); color: var(--uprimfg); }
+
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 10px;
+    border: 0; border-radius: 7px; background: var(--upill);
+    font: 600 13.5px 'Urbanist', sans-serif; color: var(--ufg); white-space: nowrap;
+  }
+  .pill.inverted { background: var(--uprim); color: var(--uprimfg); }
+  .pill.missing { background: var(--badbg); color: var(--bad); font-weight: 700; }
+  .pill.good { background: var(--okbg); color: var(--ok); font-weight: 700; }
+  .pill .mono { font: 500 12.5px 'IBM Plex Mono', monospace; }
+
+  .seg { display: flex; gap: 2px; padding: 2px; border-radius: 7px; background-color: var(--upill); }
+  .seg-btn { height: 24px; padding: 0 10px; border: 0; border-radius: 5px; background: transparent; color: var(--ufg3); font: 700 12.5px 'Urbanist', sans-serif; cursor: pointer; }
+  .seg-btn[aria-pressed="true"] { background: var(--ubg); color: var(--ufg); }
+
+  .field { display: flex; flex-direction: column; gap: 7px; }
+  .field > .label { font-size: 13px; font-weight: 700; color: var(--ufg2); }
+  .label-row { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+  .label-row .value { font: 500 12.5px 'IBM Plex Mono', monospace; color: var(--ufg); }
+  .input {
+    height: 36px; padding: 0 10px; outline: 0; width: 100%;
+    border: 1px solid var(--urunline); border-radius: 8px; background: var(--urunfield); color: var(--ufg);
+    font: 400 13px 'IBM Plex Mono', monospace;
+  }
+  .input:focus-visible { border-color: var(--ufg3); box-shadow: 0 0 0 2px var(--key); }
+  .input[readonly] { color: var(--ufg2); background: var(--urunwell); }
+  .input::placeholder { color: var(--ufg3); }
+
+  .rowline { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .rowline .read { font: 400 12.5px 'IBM Plex Mono', monospace; color: var(--ufg3); }
+
+  .section { display: flex; flex-direction: column; gap: 10px; padding-top: 16px; border-top: 1px solid var(--urunline); }
+  .section:first-child { padding-top: 0; border-top: 0; }
+  .section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .section-head .asideline { display: flex; align-items: center; gap: 8px; font: 400 11.5px 'IBM Plex Mono', monospace; color: var(--ufg3); }
+  .title { font-size: 16px; font-weight: 700; color: var(--ufg); }
+
+  .jsonbox {
+    position: relative; overflow: auto; padding: 10px 0;
+    border: 1px solid var(--uoutline); border-radius: 10px; background: var(--uout);
+    font: 400 12.5px/1.7 'IBM Plex Mono', monospace;
+  }
+  .jline { padding: 0 16px; white-space: pre-wrap; word-break: break-word; }
+  .jline + .jline { margin-top: 2px; }
+  .k-key { color: var(--key); }
+  .k-str { color: var(--str); }
+  .k-num { color: var(--num); }
+  .k-ok { color: var(--ok); font-weight: 500; }
+  .k-bad { color: var(--bad); text-decoration: line-through; opacity: .7; }
+  .k-p { color: var(--p); }
+  .k-cnt { color: var(--cnt); }
+
+  .note {
+    display: flex; gap: 9px; padding: 11px 13px; border-radius: 9px;
+    background: var(--urunwell); border: 1px solid var(--urunline);
+    font-size: 12.5px; color: var(--ufg3);
+  }
+  .note.bad { background: var(--badbg); border-color: color-mix(in srgb, var(--bad) 35%, transparent); color: var(--bad); }
+  .note.ok { background: var(--okbg); border-color: color-mix(in srgb, var(--ok) 35%, transparent); color: var(--ok); }
+
+  /* list rows */
+  .list { display: flex; flex-direction: column; }
+  .item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-bottom: 1px solid var(--uline); }
+  .item:last-child { border-bottom: 0; }
+  .item .grow { flex: 1; min-width: 0; }
+  .item .nm { font-size: 14px; font-weight: 600; color: var(--ufg); }
+  .item .sub { font: 400 11.5px 'IBM Plex Mono', monospace; color: var(--ufg3); margin-top: 2px; }
+  .item.pick { cursor: pointer; background: transparent; border-left: 2px solid transparent; width: 100%; text-align: left; font: inherit; color: inherit; }
+  .item.pick:hover { background: var(--usurf); }
+  .item.pick[aria-current="true"] { background: var(--usurf); border-left-color: var(--ufg); }
+  .btn-reset { display: block; width: 100%; }
+
+  /* ---------- variant switcher ---------- */
+  .switcher {
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 60;
+    display: flex; align-items: center; gap: 6px; padding: 5px 7px;
+    background: var(--umenu); border: 1px solid var(--urunline); border-radius: 12px;
+    box-shadow: var(--umenushadow);
+  }
+  .switcher .lv { font: 600 13px 'Urbanist', sans-serif; color: var(--ufg); padding: 0 8px; min-width: 260px; text-align: center; }
+  .switcher .lv em { font-style: normal; color: var(--ufg3); font-weight: 500; }
+  .banner {
+    display: flex; align-items: center; gap: 10px; padding: 9px 18px;
+    background: var(--uhl); border-bottom: 1px solid var(--uline);
+    font-size: 12.5px; color: var(--runchipfg);
+  }
+  .banner b { color: #fff; }
+  .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  @media (max-width: 900px) { .g2, .g3, .split { grid-template-columns: 1fr; } }
+</style>
+</head>
+
+<body data-theme="dark">
+<div class="app">
+  <header class="hdr">
+    <img class="hdr-orb" src="assets/header-orb.png" alt="">
+    <span class="hdr-title">Connectors</span>
+    <span class="hdr-sub" id="hdr-sub"></span>
+    <span class="spacer"></span>
+    <span class="chip" data-tone="stopped"><span class="chip-dot"></span>PROTOTYPE</span>
+    <button class="theme-btn" id="theme" title="Switch theme" aria-label="Switch theme">
+      <span class="theme-icon sun"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></span>
+      <span class="theme-icon moon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 14.2A8.5 8.5 0 1 1 9.8 3.5a6.8 6.8 0 0 0 10.7 10.7z"></path></svg></span>
+    </button>
+  </header>
+
+  <div class="banner">
+    <b>Question:</b>
+    <span>what should the Connector + credential surface look like, and does the generation lifecycle — rotate → supersede → tombstone — feel right in your hands?</span>
+  </div>
+
+  <div id="root"></div>
+</div>
+
+<div class="switcher">
+  <button class="btn icon" id="prev" aria-label="Previous variant">←</button>
+  <span class="lv" id="vlabel"></span>
+  <button class="btn icon" id="next" aria-label="Next variant">→</button>
+</div>
+
+<script>
+/* =========================================================================
+   THROWAWAY. State is in memory only — persistence is not what this
+   prototype is checking. Generations are immutable; rotation appends one.
+   A Run pins a generation id, which is what makes tombstoning conditional.
+   ========================================================================= */
+const SECRET = 'sk-live-c41d8e2f77b0a915';
+
+const S = {
+  credentials: [
+    { id: 'gateway-key', name: 'Internal gateway key', where: 'Internal OCR gateway',
+      generations: [
+        { id: 'g1', label: 'prod gateway key, rotated 3 Aug',  setAt: '2026-08-03', status: 'superseded' },
+        { id: 'g2', label: 'prod gateway key, rotated 12 Sep', setAt: '2026-09-12', status: 'active' }
+      ] },
+    { id: 'platform-key', name: 'Combined platform key', where: 'Combined extract',
+      generations: [
+        { id: 'g1', label: 'platform key, issued 1 Jun', setAt: '2026-06-01', status: 'active' }
+      ] }
+  ],
+  connectors: [
+    { id: 'ocr', name: 'Internal OCR gateway', stage: 'OCR stage', method: 'POST',
+      url: 'https://ocr.internal.corp/v2/process',
+      headers: { 'X-Api-Key': '{{gateway-key}}', 'Content-Type': 'application/json' },
+      body: '{"file":"{{document}}","features":"text"}', responsePath: 'result.text',
+      credentialId: 'gateway-key', note: 'Returns OCR text only.' },
+    { id: 'combined', name: 'Combined extract', stage: 'one call, both stages', method: 'POST',
+      url: 'https://platform.internal.corp/extract',
+      headers: { 'X-Api-Key': '{{platform-key}}' },
+      body: '{"file":"{{document}}","prompt":"{{prompt}}"}', responsePath: 'result',
+      credentialId: 'platform-key', note: "Customer's gateway runs OCR and the LLM in one POST and returns both." },
+    { id: 'local', name: 'Local test gateway', stage: 'OCR stage', method: 'POST',
+      url: 'http://ocr.local:8080/v2/process', headers: {},
+      body: '{"file":"{{document}}"}', responsePath: 'text',
+      credentialId: null, note: 'Internal testing, no auth. A Connector with no Credential is legal.' }
+  ],
+  run: { id: 'run-1842', promptVersion: 'prompt v4', status: 'stopped_on_connector_fault',
+    pinned: { ocr: 'g1', combined: 'g1' },
+    fault: 'Internal OCR gateway returned 401 on 3 consecutive calls' },
+  ui: { sel: 'gateway-key', test: null, flashes: {} }
+};
+
+const VARIANTS = { A: 'Inline on the Connector', B: 'Registry', C: 'Point of use' };
+const variant = ['A', 'B', 'C'].includes(new URLSearchParams(location.search).get('variant'))
+  ? new URLSearchParams(location.search).get('variant') : 'A';
+const el = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/* ---------------- pure helpers (the tested surface) ---------------- */
+const cred = id => S.credentials.find(c => c.id === id) || null;
+const conn = id => S.connectors.find(c => c.id === id) || null;
+const gen = (cid, gid) => { const c = cred(cid); return c ? c.generations.find(g => g.id === gid) || null : null; };
+const activeGen = cid => { const c = cred(cid); return c ? c.generations.find(g => g.status === 'active') || null : null; };
+const runsUsing = (cid, gid) => Object.entries(S.run.pinned)
+  .filter(([connId, pinnedGid]) => conn(connId)?.credentialId === cid && pinnedGid === gid)
+  .length;
+
+const SECRETISH = /([?&](?:api[_-]?key|apikey|token|access[_-]?token|sig|signature|subscription[_-]?key|x-amz-signature|key)=)|(x-amz-signature)/i;
+function urlCheck(url) {
+  if (!url) return { ok: false, why: 'A Connector needs a URL.' };
+  if (!/^https?:\/\//i.test(url)) return { ok: false, why: 'A Connector URL must be absolute http or https.' };
+  if (SECRETISH.test(url)) return { ok: false, why:
+    'A credential-shaped query parameter was found in this URL, so it is refused. A URL is the one surface that leaks by default into proxy records, referrers and your gateway’s own access log. Put the value in a Credential and reference it as {{credential}}.' };
+  return { ok: true };
+}
+
+/* Structure keeps the key out of the log; this is the backstop for when a
+   third-party library prints its own exception with the request attached. */
+function scrub(s) {
+  if (!s) return s;
+  let out = s.split(SECRET).join('«redacted»');
+  out = out.replace(/([?&](?:api[_-]?key|apikey|token|access[_-]?token|sig|signature|subscription[_-]?key)=)[^&\s"',}]+/gi, '$1«redacted»');
+  out = out.replace(/((?:x-)?(?:api[-_]?key|authorization|ocp-apim-subscription-key)\s*[:=]\s*)[^\s&,"'}]+/gi, '$1«redacted»');
+  return out;
+}
+function logLine(txt) {
+  const safe = scrub(txt);
+  if (safe === txt) return `<div class="jline">${esc(txt)}</div>`;
+  const parts = safe.split('«redacted»');
+  let out = '', rest = txt;
+  parts.forEach((part, i) => {
+    if (i > 0) {
+      const at = rest.indexOf(SECRET);
+      out += `<span class="k-bad">${esc(SECRET)}</span><span class="k-ok">«redacted»</span>`;
+      rest = at >= 0 ? rest.slice(at + SECRET.length) : '';
+    }
+    out += `<span class="k-str">${esc(part)}</span>`;
+    rest = rest.slice(part.length);
+  });
+  return `<div class="jline">${out}</div>`;
+}
+
+const LOG = [
+  '[worker] outbound POST https://ocr.internal.corp/v2/process',
+  '[worker] request headers {"X-Api-Key":"' + SECRET + '","Content-Type":"application/json"}',
+  '[worker] cURL error 28: Operation timed out after 60001 ms for https://ocr.internal.corp/v2/process?api_key=' + SECRET,
+  '[worker] GatewayException: upstream rejected request (x-api-key=' + SECRET + ', attempt 3)',
+  '[worker] VERDICT ocr:unparseable — provider said "invalid api_key ' + SECRET + '"'
+];
+
+/* ---------------- mutations ---------------- */
+const flash = (k, m) => { S.ui.flashes[k] = m; render(); };
+const flashAt = k => S.ui.flashes[k] ? `<div class="note bad">${esc(S.ui.flashes[k])}</div>` : '';
+
+function rotate(cid) {
+  const c = cred(cid); if (!c) return;
+  c.generations.forEach(g => { if (g.status === 'active') g.status = 'superseded'; });
+  const d = new Date().toISOString().slice(0, 10);
+  c.generations.push({ id: 'g' + (c.generations.length + 1), label: 'rotated ' + d, setAt: d, status: 'active' });
+  render();
+}
+function tombstone(cid, gid) {
+  const g = gen(cid, gid); if (!g) return;
+  if (runsUsing(cid, gid) > 0) {
+    flash('ref-' + cid + '-' + gid, 'Refused. ' + S.run.id + ' pinned this generation, and a Verdict that shaped a score is never silently destroyed. A generation no Run references can be burned.');
+    return;
+  }
+  g.status = 'tombstoned';
+  render();
+}
+function runTest(connId) {
+  const c = conn(connId);
+  const u = urlCheck(c.url);
+  if (!u.ok) { S.ui.test = { connId, refused: true, why: u.why }; render(); return; }
+  const a = c.credentialId ? activeGen(c.credentialId) : null;
+  if (c.credentialId && !a) { S.ui.test = { connId, refused: true, why: 'This Connector has no usable generation — its only one has been tombstoned. Rotate to mint a new one.' }; render(); return; }
+  const authHdr = c.credentialId ? (Object.keys(c.headers).find(h => /key|token|auth/i.test(h)) || 'X-Api-Key') : null;
+  S.ui.test = { connId, refused: false, status: 200, latency: 412, attempts: 1,
+    redactedUrl: c.url, authHeader: authHdr ? authHdr + ': «sent, never displayed»' : 'no credential on this Connector',
+    genLabel: a ? a.label : null };
+  render();
+}
+function selectCred(id) { S.ui.sel = id; S.ui.test = null; render(); }
+function liveUrlCheck() {
+  const v = urlCheck(el('urlcheck').value);
+  el('urlcheck-out').innerHTML = v.ok
+    ? '<div class="note ok">Clean. Any key travels in a header or body, referenced as <code>{{credential}}</code>.</div>'
+    : '<div class="note bad">' + esc(v.why) + '</div>';
+}
+
+/* ---------------- shared fragments ---------------- */
+const TONE = { active: 'ok', superseded: 'stopped', tombstoned: 'error' };
+
+function genItem(cid, g) {
+  const used = runsUsing(cid, g.id);
+  return `<div class="item">
+    <div class="grow">
+      <div class="rowline" style="justify-content:flex-start">
+        <span class="nm">${esc(g.label)}</span>
+        <span class="chip" data-tone="${TONE[g.status]}"><span class="chip-dot"></span>${g.status}</span>
+        ${used ? `<span class="chip" data-tone="running"><span class="chip-dot"></span>pinned by ${esc(S.run.id)}</span>` : ''}
+        ${g.status === 'tombstoned' ? '<span class="chip" data-tone="stopped"><span class="chip-dot"></span>value destroyed</span>' : ''}
+      </div>
+      <div class="sub">${esc(cid)} / ${esc(g.id)} · set ${esc(g.setAt)}</div>
+      ${flashAt('ref-' + cid + '-' + g.id)}
+    </div>
+    <button class="btn" onclick="rotate('${cid}')">Rotate</button>
+    <button class="btn danger" ${g.status === 'tombstoned' ? 'disabled' : ''} onclick="tombstone('${cid}','${g.id}')">Tombstone</button>
+  </div>`;
+}
+
+function credField(cid) {
+  const a = cid ? activeGen(cid) : null;
+  return `<div class="field">
+    <div class="label-row">
+      <span class="label">Value — write only, never read back</span>
+      ${a ? `<span class="value">set ${esc(a.setAt)}</span>` : ''}
+    </div>
+    <input class="input" type="password" placeholder="${a ? 'unchanged — ' + esc(a.label) : 'no value set'}">
+    <span class="rowline"><span class="read">Nothing derived from the value is ever returned — not a last-4, not a hash prefix. Leave blank to keep it.</span></span>
+  </div>`;
+}
+
+function testPanel(c) {
+  const t = S.ui.test;
+  if (!t || t.connId !== c.id) {
+    return `<div class="field">
+      <button class="btn prim" onclick="runTest('${c.id}')">Test connector</button>
+      <span class="rowline"><span class="read">Executed by the worker — the web container never decrypts a credential.${c.credentialId ? '' : ' This Connector has no credential.'}</span></span>
+    </div>`;
+  }
+  if (t.refused) return `<div class="note bad"><span>Test refused. ${esc(t.why)}</span></div>`;
+  return `<div class="panel"><div class="phead"><span class="title">Test result</span>
+      <span class="spacer"></span><span class="chip" data-tone="ok"><span class="chip-dot"></span>passed</span></div>
+    <div class="pbody stack" style="gap:8px">
+      <div class="rowline"><span class="read">status</span><span class="value"><span class="pill good">200 OK</span> <span class="read">after ${t.attempts} attempt</span></span></div>
+      <div class="rowline"><span class="read">latency</span><span class="value">${t.latency} ms</span></div>
+      <div class="rowline"><span class="read">response path</span><span class="value"><span class="k-key">${esc(c.responsePath)}</span> <span class="pill good">resolved</span></span></div>
+      <div class="rowline"><span class="read">request url</span><span class="value">${esc(t.redactedUrl)}</span></div>
+      <div class="rowline"><span class="read">auth header</span><span class="value">${esc(t.authHeader)}</span></div>
+      <div class="rowline"><span class="read">key used</span><span class="value">${t.genLabel ? esc(t.genLabel) : '<span class="k-p">none</span>'}</span></div>
+      <div class="note"><span>Response body is not returned, by decision. A gateway that reflects the auth header back is exactly how a key comes home into our UI.</span></div>
+    </div></div>`;
+}
+
+function urlPanel(c) {
+  const v = urlCheck(c.url);
+  return `<div class="panel"><div class="phead"><span class="title">Does the URL carry a credential?</span></div>
+    <div class="pbody stack" style="gap:9px">
+      <div class="field"><span class="label">Connector URL — live check</span>
+        <input class="input" id="urlcheck" value="${esc(c.url)}" oninput="liveUrlCheck()"></div>
+      <div id="urlcheck-out">${v.ok
+        ? '<div class="note ok">Clean. Any key travels in a header or body, referenced as <code>{{credential}}</code>.</div>'
+        : '<div class="note bad">' + esc(v.why) + '</div>'}</div>
+      <span class="rowline"><span class="read">try a pasted curl line: <span class="k-bad">https://ocr.internal.corp/v2/process?api_key=sk-live-9f2a</span></span></span>
+    </div></div>`;
+}
+
+function logPanel() {
+  return `<div class="panel"><div class="phead"><span class="title">What the scrubber catches</span>
+      <span class="spacer"></span><span class="read" style="font:400 11.5px 'IBM Plex Mono',monospace;color:var(--ufg3)">structure keeps it out · this is the backstop</span></div>
+    <div class="pbody">
+      <div class="jsonbox">${LOG.map(logLine).join('')}</div>
+      <div class="note" style="margin-top:12px"><span>Every string leaving the log channel and the exception renderer is matched against the plaintext values the worker currently holds. There are a handful of credentials, so it costs nothing — and it is the only thing that survives a library printing its own exception.</span></div>
+    </div></div>`;
+}
+
+function reqPanel(c) {
+  const hs = Object.entries(c.headers);
+  return `<div class="section">
+    <div class="section-head"><span class="title">Request</span><span class="asideline">${esc(c.method)} · <span class="k-p">${esc(c.stage)}</span></span></div>
+    <div class="g2">
+      <div class="field"><span class="label">URL</span><input class="input" value="${esc(c.url)}" readonly></div>
+      <div class="field"><span class="label">Response path</span><input class="input" value="${esc(c.responsePath)}" readonly></div>
+    </div>
+    <div class="field"><span class="label">Body template</span><input class="input" value="${esc(c.body)}" readonly></div>
+    <div class="field">
+      <span class="label">Headers</span>
+      ${hs.length ? hs.map(([k, v]) => `<div class="rowline" style="gap:8px">
+          <input class="input mono" style="flex:0 0 180px" value="${esc(k)}" readonly>
+          <input class="input mono grow" value="${esc(v)}" readonly></div>`).join('')
+        : '<div class="note"><span>No headers. This Connector carries no Credential.</span></div>'}
+    </div>
+  </div>`;
+}
+
+/* =========================================================================
+   A — Inline on the Connector. Request config and its key are one thing, on
+   one screen; the generation history is a strip underneath the field.
+   ========================================================================= */
+function VariantA() {
+  const c = S.connectors[0];
+  return `<div class="scroll col-main wide">
+    <div class="g2" style="align-items:start;gap:16px">
+      <div class="stack">
+        <div class="panel">
+          <div class="phead"><span class="title">All connectors</span></div>
+          <div class="list">
+            ${S.connectors.map(x => `<button class="item pick" aria-current="${x.id === c.id}">
+              <div class="grow"><div class="nm">${esc(x.name)}</div><div class="sub">${esc(x.method)} ${esc(x.url)}</div></div>
+              <span class="pill">${x.credentialId ? 'key' : 'no key'}</span></button>`).join('')}
+          </div>
+        </div>
+        <div class="note"><span>${esc(c.note)}</span></div>
+      </div>
+
+      <div class="panel">
+        <div class="phead"><span class="title">${esc(c.name)}</span><span class="spacer"></span>
+          <button class="btn prim" onclick="runTest('${c.id}')">Test connector</button></div>
+        <div class="pbody stack">
+          ${reqPanel(c)}
+          <div class="section">
+            <div class="section-head"><span class="title">Credential</span><span class="asideline">${esc(c.credentialId)}</span></div>
+            ${credField(c.credentialId)}
+          </div>
+        </div>
+        <div class="phead" style="border-top:1px solid var(--uline)"><span class="title">Generations</span></div>
+        <div class="list">${cred(c.credentialId).generations.map(g => genItem(c.credentialId, g)).join('')}</div>
+      </div>
+    </div>
+    <div class="stack" style="margin-top:16px">
+      ${testPanel(c)}
+      ${urlPanel(c)}
+      ${logPanel()}
+    </div>
+  </div>`;
+}
+
+/* =========================================================================
+   B — Registry. Credentials are top-level entities; a Connector references one
+   by name and holds no key UI. Rotation and burning are vault operations.
+   ========================================================================= */
+function VariantB() {
+  const c = cred(S.ui.sel);
+  const a = activeGen(c.id);
+  const users = S.connectors.filter(x => x.credentialId === c.id);
+  return `<div class="split" style="grid-template-columns:340px minmax(0,1fr)">
+    <div class="master stack" style="background:var(--ubg)">
+      <div class="panel">
+        <div class="phead"><span class="title">Credentials</span></div>
+        <div class="list">
+          ${S.credentials.map(x => {
+            const ax = activeGen(x.id);
+            return `<button class="item pick" aria-current="${x.id === c.id}" onclick="selectCred('${x.id}')">
+              <div class="grow"><div class="nm">${esc(x.name)}</div><div class="sub">${esc(x.where)}</div></div>
+              ${ax ? `<span class="pill">${x.generations.length} gen</span>` : '<span class="pill missing">burned</span>'}
+            </button>`;
+          }).join('')}
+        </div>
+      </div>
+      <div class="panel">
+        <div class="phead"><span class="title">Who uses what</span></div>
+        <div class="list">
+          ${S.connectors.map(x => `<div class="item"><div class="grow">
+            <div class="nm">${esc(x.name)}</div><div class="sub">${esc(x.method)} ${esc(x.url)}</div></div>
+            ${x.credentialId ? `<span class="pill">${esc(cred(x.credentialId).name)}</span>` : '<span class="pill">no credential</span>'}
+          </div>`).join('')}
+        </div>
+      </div>
+    </div>
+
+    <div class="detail stack" style="background:var(--ubg)">
+      <div class="panel">
+        <div class="phead"><span class="title">${esc(c.name)}</span>
+          <span class="read" style="font:400 11.5px 'IBM Plex Mono',monospace;color:var(--ufg3)">${esc(c.where)}</span>
+          <span class="spacer"></span>
+          <button class="btn prim" onclick="rotate('${c.id}')">Rotate key</button></div>
+        <div class="pbody stack">
+          ${credField(c.id)}
+          ${flashAt('ref-' + c.id + '-' + (a ? a.id : 'none'))}
+        </div>
+        <div class="phead" style="border-top:1px solid var(--uline)"><span class="title">Generations</span>
+          <span class="spacer"></span><span class="read" style="font:400 11.5px 'IBM Plex Mono',monospace;color:var(--ufg3)">retained while a Run references one</span></div>
+        <div class="list">${c.generations.map(g => genItem(c.id, g)).join('')}</div>
+      </div>
+
+      <div class="panel">
+        <div class="phead"><span class="title">Referenced by</span></div>
+        <div class="list">
+          ${users.length ? users.map(u => `<div class="item"><div class="grow">
+            <div class="nm">${esc(u.name)}</div><div class="sub">${esc(u.url)}</div></div>
+            ${S.run.pinned[u.id] ? `<span class="chip" data-tone="running"><span class="chip-dot"></span>${esc(S.run.id)} pinned ${esc(S.run.pinned[u.id])}</span>`
+              : '<span class="chip" data-tone="stopped"><span class="chip-dot"></span>no run yet</span>'}
+          </div>`).join('') : '<div class="item"><span class="read">Nothing yet.</span></div>'}
+        </div>
+      </div>
+
+      ${testPanel(users[0] || S.connectors[0])}
+      ${urlPanel(S.connectors[0])}
+      ${logPanel()}
+    </div>
+  </div>`;
+}
+
+/* =========================================================================
+   C — Point of use. The connector config holds only a reference; the pin, the
+   key label and the fault line surface on the Run, where the consequence is
+   actually felt.
+   ========================================================================= */
+function VariantC() {
+  const r = S.run;
+  const unbound = S.connectors.filter(c => !r.pinned[c.id]);
+  return `<div class="split" style="grid-template-columns:minmax(0,1fr) 460px">
+    <div class="detail stack" style="background:var(--ubg)">
+      <div class="panel">
+        <div class="phead"><span class="title">Call log — what the worker wrote</span>
+          <span class="spacer"></span><span class="read" style="font:400 11.5px 'IBM Plex Mono',monospace;color:var(--ufg3)">structure keeps the key out · this is the backstop</span></div>
+        <div class="pbody"><div class="jsonbox">${LOG.map(logLine).join('')}</div></div>
+      </div>
+      ${urlPanel(S.connectors[0])}
+      <div class="panel">
+        <div class="phead"><span class="title">Connector configuration</span>
+          <span class="spacer"></span><span class="read" style="font:400 11.5px 'IBM Plex Mono',monospace;color:var(--ufg3)">holds a reference, not a key</span></div>
+        <div class="pbody stack">
+          ${S.connectors.map(c => `<div class="section">
+            <div class="section-head"><span class="title" style="font-size:14px">${esc(c.name)}</span>
+              <span class="asideline">${c.credentialId ? `<span class="k-key">${esc(c.credentialId)}</span>` : '<span class="k-p">no credential</span>'}</span></div>
+            <div class="rowline"><span class="read">${esc(c.method)} ${esc(c.url)}</span></div>
+            ${Object.entries(c.headers).map(([k, v]) => `<div class="rowline"><span class="read">${esc(k)}</span><span class="value">${esc(v)}</span></div>`).join('')}
+          </div>`).join('')}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-run">
+      <div class="run-title"><span class="title" style="color:var(--runtext)">${esc(r.id)}</span>
+        <span class="spacer"></span>
+        <span class="chip" data-tone="error"><span class="chip-dot"></span>${esc(r.status.replace(/_/g, ' '))}</span></div>
+      <div class="run-scroll">
+        <div class="field">
+          <span class="label" style="color:#eaf1ff">Fault</span>
+          <div class="note bad"><span>${esc(r.fault)}</span></div>
+        </div>
+        <div class="section" style="border-color:var(--urunline)">
+          <div class="section-head"><span class="title" style="color:#eaf1ff">Bound at start</span></div>
+          ${Object.entries(r.pinned).map(([cid, gid]) => {
+            const c = conn(cid), cr = c ? cred(c.credentialId) : null, g = cr ? gen(cr.id, gid) : null;
+            return `<div class="item" style="padding-left:0;padding-right:0;border-color:var(--urunline)">
+              <div class="grow"><div class="nm">${esc(c.name)}</div>
+                <div class="sub">${c.credentialId ? `${esc(cr.name)} → ${esc(g ? g.label : gid)} · set ${esc(g ? g.setAt : '?')}` : 'no credential on this Connector'}</div></div>
+            </div>`;
+          }).join('')}
+          ${unbound.map(c => `<div class="item" style="padding-left:0;padding-right:0;border-color:var(--urunline);opacity:.6">
+            <div class="grow"><div class="nm">${esc(c.name)}</div>
+              <div class="sub">not in this run${c.credentialId && activeGen(c.credentialId) ? ` · would pin ${esc(activeGen(c.credentialId).label)}` : ''}</div></div>
+          </div>`).join('')}
+          <div class="note"><span>A rotation after this Run started touches nothing here. That is the pin: half a corpus on key v1 and half on v2 is never a thing, so the confound lands between two Runs where it is visible, not inside one where it is invisible.</span></div>
+        </div>
+        <div class="section" style="border-color:var(--urunline)">
+          <div class="section-head"><span class="title" style="color:#eaf1ff">Generations now</span></div>
+          <div class="list" style="background:transparent">
+            ${cred('gateway-key').generations.map(g => genItem('gateway-key', g)).join('')}
+          </div>
+        </div>
+        ${testPanel(S.connectors[0])}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---------------- render ---------------- */
+function render() {
+  el('root').innerHTML = variant === 'A' ? VariantA() : variant === 'B' ? VariantB() : VariantC();
+  el('vlabel').innerHTML = variant + ' <em>' + esc(VARIANTS[variant]) + '</em>';
+  el('hdr-sub').textContent = '— ' + VARIANTS[variant];
+}
+function go(d) {
+  const k = ['A', 'B', 'C'], i = k.indexOf(variant);
+  location.search = '?variant=' + k[(i + d + k.length) % k.length];
+}
+el('prev').onclick = () => go(-1);
+el('next').onclick = () => go(1);
+document.addEventListener('keydown', e => {
+  const t = e.target.tagName;
+  if (t === 'INPUT' || t === 'TEXTAREA' || e.target.isContentEditable) return;
+  if (e.key === 'ArrowLeft') go(-1);
+  if (e.key === 'ArrowRight') go(1);
+});
+el('theme').onclick = () => {
+  document.body.dataset.theme = document.body.dataset.theme === 'light' ? 'dark' : 'light';
+};
+render();
+</script>
+</body>
+</html>

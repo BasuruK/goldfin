@@ -1,0 +1,8 @@
+{
+  "name": "mlsvc-tester-prototype-2a",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  }
+}

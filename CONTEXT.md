@@ -11,7 +11,7 @@ The full OCR-then-LLM path a document travels through. The unit Goldfin scores.
 _Avoid_: Flow, Chain, Pipeline run
 
 **Stage**:
-One step of the pipeline, executed on its own as well as in sequence. Goldfin runs stages individually so a failure can be attributed rather than guessed at.
+One step of the pipeline, executed on its own as well as in sequence. Goldfin runs stages individually so a failure can be attributed rather than guessed at. A **fused gateway** collapses both Stages into one Connector's single call; the Stages still exist as the thing being measured, but only one of them can be re-run alone, which is why attribution there is partial rather than absent.
 _Avoid_: Step, Phase, Stage result
 
 **State**:
@@ -23,7 +23,7 @@ The structured values a Stage pulls out of a document, matched against ground tr
 _Avoid_: Prediction, Result, Output, OCR result
 
 **Attribution**:
-Naming the Stage responsible for a value. The reason Goldfin can run a Stage alone. Only what was **measured** may be attributed: a Document that died, and the Stage it died at; a `missing` value, which is the extraction Stage's on evidence, since the OCR Stage returned text and the extraction did not. A `wrong` value is **not** attributed by a pipeline Run — the run cannot tell whether OCR misread a digit or the extraction read what OCR gave it — and gets an owner only when a single-stage re-run measures one.
+Naming the Stage responsible for a value. The reason Goldfin can run a Stage alone. Only what was **measured** may be attributed: a Document that died, and the Stage it died at; a `missing` value, which is the extraction Stage's on evidence, since the OCR Stage returned text and the extraction did not. A `wrong` value is **not** attributed by a pipeline Run — the run cannot tell whether OCR misread a digit or the extraction read what OCR gave it — and gets an owner only when a single-stage re-run measures one. A **fused gateway** that runs both Stages in one call keeps the `missing` attribution, because the response carries both halves; it loses the `wrong` one **permanently**, because no separable Stage exists to re-run and a Goldfin-side model would measure the grader rather than the customer's prompt. A Run that cannot say which Stage lost a value **says so in words** — an unattributable score is shaped exactly like an attributable one until someone must defend it.
 _Avoid_: Debugging, Diagnosis, Root cause analysis
 
 **Field**:
@@ -55,11 +55,15 @@ The verdict that a normalized Extraction equals its Ground truth. Five outcomes,
 _Avoid_: Correct, Pass, Diff
 
 **Verdict**:
-The persisted record of one Match: both raw values, both normalized values, the resolved chain, the reason, the comparator, and the Goldfin version that scored it. A reason may carry **conditions** — `ground_truth_absent`, when the Manifest asserted the Document had no such value, and `judge_unsure`, when the Judge abstained rather than decide — so a miss never becomes indistinguishable from another miss, and **failure never invents a new outcome**. Frozen when the Run executes, so a score cannot change after it has been shown; rescoring is a new Run over a new Dataset version.
+The persisted record of one Match: both raw values, both normalized values, the resolved chain, the reason, the comparator, and the Goldfin version that scored it. A reason may carry **conditions** — `ground_truth_absent`, when the Manifest asserted the Document had no such value; `judge_unsure`, when the Judge abstained rather than decide; `invalid`, when the value failed a Validity check — so a miss never becomes indistinguishable from another miss, and **failure never invents a new outcome**. Frozen when the Run executes, so a score cannot change after it has been shown; rescoring is a new Run over a new Dataset version.
 _Avoid_: Result, Score, Evidence
 
+**Validity**:
+Whether a value is a **legal instance of its declared type** — an IBAN passing mod-97, a card number passing Luhn, a currency code in ISO 4217. A check rides the type rather than the Field, ships closed, and **never references Ground truth**: a date in the future is not a validity problem, it is a `wrong` like any other. Checks are structural, never time-dependent, so a Verdict stays true forever. Always **advisory**: a failure records an `invalid` condition and leaves the score alone, because the condition adds severity, not correctness. Runs on the normalized value, so a fault in Goldfin's own chain is never recorded as a model failure.
+_Avoid_: Validation, Check, Constraint, Rule — *rule* is reserved for Normalization
+
 **Coverage**:
-The count of Documents a score was actually computed over, carried with the score itself. A Field score reads "47 of 50", never a percentage with a hidden denominator, because Runs with different Coverage are not comparable. The denominator is fixed at the Dataset version's Document count: a Document the Run never reached counts as a miss, exactly as a Document that ran and yielded nothing does. A Run that ended early — cancelled, or stopped on the token cap — is **flagged incomplete**, because a stopped Run and a clean one otherwise produce identically shaped scores.
+The count of Documents a score was actually computed over, carried with the score itself. A Field score reads "47 of 50", never a percentage with a hidden denominator, because Runs with different Coverage are not comparable. The denominator is fixed at the Dataset version's Document count: a Document the Run never reached counts as a miss, exactly as a Document that ran and yielded nothing does. A Document that produced no Extraction therefore sits in that denominator and matches nothing, so **the count alone never says how many Documents actually ran** — that is carried on a document-level line, and a Comparison shows it on both sides. A Run that ended early — cancelled, or stopped on the token cap — is **flagged incomplete**, because a stopped Run and a clean one otherwise produce identically shaped scores.
 _Avoid_: Sample size, Denominator, Completeness
 
 **Judge**:
@@ -89,7 +93,7 @@ One immutable revision of a Prompt. Runs point at a version, never at a mutable 
 _Avoid_: Revision, Version, Iteration
 
 **Run**:
-One execution of the Pipeline over one Dataset using one Prompt version and a set of Connectors. Stored and diffable, so "is v2 better than v1?" is a question Goldfin answers.
+One execution of the Pipeline over one Dataset using one Prompt version and a set of Connectors. Stored and diffable, so "is v2 better than v1?" is a question Goldfin answers. A Run **copies the definition of each Connector it used**, so a later edit to that Connector cannot change what this Run meant; re-attempting a Document is a new Run, never a repair of this one.
 _Avoid_: Evaluation, Test run, Experiment, Job
 
 **Comparison**:
@@ -99,7 +103,7 @@ _Avoid_: Diff, Delta, Regression report
 ### Talking to the outside
 
 **Connector**:
-A registered, reusable configuration for reaching an external service. Two types: `rest` and `llm`. Connectors are entities, not settings — created once and referenced by many Runs.
+A registered, reusable configuration for reaching an external service. Two types: `rest` and `llm`. Connectors are entities, not settings — created once and referenced by many Runs. They stay **editable in place**, and it is the Run that remembers: it copies the definition it used at start — method, URL, headers, body, response path, with `{{credential}}` still a placeholder — so a fix to a response path never silently changes what an earlier Run measured. A Connector may be **fused**, serving both Stages in one call; that is a supported shape, not a degraded one, and it is not detectable from the definition, so Goldfin neither flags nor refuses it.
 _Avoid_: Integration, Adapter, Provider, Endpoint
 
 **REST connector**:

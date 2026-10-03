@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MLSVC Tester</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><text y='19' font-size='20'>▦</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Urbanist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body {
+    --ubg: #111214; --usurf: #17181b; --uwell: #141518; --uline: #2a2c31;
+    --ufg: #f3f4f6; --ufg2: #b9bec6; --ufg3: #8c929b;
+    --uprim: #f3f4f6; --uprimfg: #111214; --upill: #212328;
+    --uout: #121d17; --uoutline: #1f3a2b; --uhl: #1d2a3d;
+    --uprompt: #121212; --upwell: #0d0d0d; --uresult: #1c1c1c;
+    --uhead: #1b1c1e; --urun: #2c2d30; --urunfield: #38393c; --urunwell: #232427; --urunline: #45474b;
+    --umenu: #414245;
+    --key: #60a5fa; --str: #cbd5e1; --num: #fbbf24; --ok: #34d399; --bad: #f87171; --p: #858d98; --cnt: #858d98;
+    --badbg: rgba(248,113,113,.10); --okbg: rgba(52,211,153,.10);
+    --runtext: #eaf1ff; --runchip: rgba(63,116,216,.16); --runchipfg: #8fb4ff;
+    --uheadshadow: 0 1px 2px rgba(0,0,0,.08), 0 4px 10px rgba(0,0,0,.06), 0 10px 24px rgba(0,0,0,.04);
+    --urunshadow: -2px 0 4px rgba(0,0,0,.14), -8px 0 16px rgba(0,0,0,.12), -20px 0 40px rgba(0,0,0,.08);
+    --upwellshadow: inset 0 1px 3px rgba(0,0,0,.35);
+    --umenushadow: 0 12px 32px rgba(0,0,0,.4);
+  }
+  body[data-theme="light"] {
+    --ubg: #ffffff; --usurf: #f7f8f9; --uwell: #fbfbfc; --uline: #e4e6ea;
+    --ufg: #0f1115; --ufg2: #3f4650; --ufg3: #646b75;
+    --uprim: #111317; --uprimfg: #ffffff; --upill: #eff1f3;
+    --uout: #f1f8f3; --uoutline: #d3e8da; --uhl: #e3ebf9;
+    --uprompt: #f4f5f7; --upwell: #ffffff; --uresult: #ffffff; --uhead: #ffffff;
+    --urun: #ffffff; --urunfield: #ffffff; --urunwell: #f7f8f9; --urunline: #e4e6ea; --umenu: #ffffff;
+    --key: #1d4ed8; --str: #334155; --num: #9a5a06; --ok: #047857; --bad: #c81e1e; --p: #6b7280;
+    --badbg: #fdeded; --okbg: #e5f5ee; --runchip: #e6eefc; --runchipfg: #1d4ed8;
+    --upwellshadow: 0 1px 2px rgba(0,0,0,.06);
+    --uheadshadow: 0 1px 3px rgba(0,0,0,.08), 0 2px 8px rgba(0,0,0,.04);
+    --urunshadow: -3px 0 6px rgba(0,0,0,.08), -8px 0 20px rgba(0,0,0,.06);
+    --umenushadow: 0 6px 12px rgba(0,0,0,.10), 0 16px 32px rgba(0,0,0,.08);
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0; height: 100dvh; overflow: hidden;
+    background: var(--ubg); color: var(--ufg2);
+    font: 400 13px/1.5 'Urbanist', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font-family: inherit; }
+  :focus-visible { outline: 2px solid var(--key); outline-offset: 1px; }
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+
+  /* ---------- shell ---------- */
+  .app { display: grid; grid-template-rows: 56px minmax(0,1fr); height: 100dvh; }
+  .grid {
+    display: grid; min-height: 0; overflow: hidden;
+    grid-template-columns: var(--cols);
+    transition: var(--col-transition, grid-template-columns 320ms cubic-bezier(.22,1,.32,1));
+  }
+  .grid.dragging { --col-transition: none; user-select: none; }
+
+  /* ---------- header ---------- */
+  .hdr {
+    position: relative; z-index: 0; overflow: hidden;
+    display: flex; align-items: center; gap: 12px; padding: 0 18px;
+    border-bottom: 1px solid var(--uline); background: var(--uhead);
+  }
+  .hdr-orb {
+    position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%;
+    object-fit: cover; object-position: 51% 84%; pointer-events: none;
+    -webkit-mask-image: linear-gradient(90deg,#000 0%,rgba(0,0,0,.85) 35%,rgba(0,0,0,.35) 60%,transparent 78%);
+    mask-image: linear-gradient(90deg,#000 0%,rgba(0,0,0,.85) 35%,rgba(0,0,0,.35) 60%,transparent 78%);
+  }
+  .hdr-title, .hdr-slash, .hdr-recipe { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.35); }
+  .hdr-title { font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
+  .hdr-slash { font-size: 18px; font-weight: 300; color: rgba(255,255,255,.75); }
+  .hdr-recipe { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; }
+  .spacer { flex: 1; }
+
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px; height: 28px; padding: 0 11px;
+    border-radius: 999px; background: var(--chip-bg); color: var(--chip-fg);
+    font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums;
+  }
+  .chip-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--chip-fg); }
+  .chip[data-tone="ok"] { --chip-bg: var(--okbg); --chip-fg: var(--ok); }
+  .chip[data-tone="running"] { --chip-bg: var(--runchip); --chip-fg: var(--runchipfg); }
+  .chip[data-tone="stopped"] { --chip-bg: var(--upill); --chip-fg: var(--ufg3); }
+  .chip[data-tone="error"] { --chip-bg: var(--badbg); --chip-fg: var(--bad); }
+
+  .theme-btn {
+    position: relative; overflow: hidden; width: 34px; height: 34px; padding: 0;
+    border: 1px solid var(--uline); border-radius: 8px; background: transparent;
+    color: var(--ufg2); cursor: pointer; box-shadow: inset 0 1px 3px rgba(0,0,0,.12);
+  }
+  .theme-btn:hover { color: var(--ufg); }
+  .theme-icon {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    transition: transform 520ms cubic-bezier(.22,1,.32,1), opacity 420ms ease;
+  }
+  .theme-icon.sun { transform: translateX(-100%); opacity: 0; }
+  .theme-icon.moon { transform: translateX(0); opacity: 1; }
+  .theme-btn:hover .theme-icon.sun,
+  .theme-btn:focus-visible .theme-icon.sun { transform: translateX(0); opacity: 1; }
+  .theme-btn:hover .theme-icon.moon,
+  .theme-btn:focus-visible .theme-icon.moon { transform: translateX(100%); opacity: 0; }
+
+  /* ---------- column headers ---------- */
+  .colhead {
+    display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 0 18px;
+    border-bottom: 1px solid var(--uline); position: relative; z-index: 1;
+    box-shadow: var(--uheadshadow);
+  }
+  .colhead.prompt { margin-bottom: 14px; }
+  .colhead.result { margin: 0 -20px 2px; padding: 0 20px; }
+  .title { font-size: 18px; font-weight: 700; color: var(--ufg); }
+  .meta { font: 400 12px 'IBM Plex Mono', monospace; color: var(--ufg3); white-space: nowrap; }
+  .meta.ok { color: var(--ok); }
+  .meta.bad { color: var(--bad); }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 11px;
+    border: 1px solid var(--uline); border-radius: 7px; background: var(--ubg);
+    color: var(--ufg); font: 600 13px 'Urbanist', sans-serif; cursor: pointer;
+  }
+  .btn.icon { width: 30px; padding: 0; justify-content: center; color: var(--ufg2); }
+  .btn.link {
+    height: auto; padding: 0; border: 0; background: transparent;
+    color: var(--key); font: 600 12px 'Urbanist', sans-serif;
+  }
+  .btn.text {
+    height: 26px; padding: 0 9px; border: 0; border-radius: 6px; background: transparent;
+    color: var(--ufg3); font: 600 13px 'Urbanist', sans-serif;
+  }
+
+  /* ---------- column 1: prompt ---------- */
+  .col-prompt { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--uprompt); }
+  .prompt-box {
+    flex: 1; min-height: 0; margin: 0 18px 18px; padding: 16px 18px; resize: none;
+    border: 1px solid var(--uline); border-radius: 10px; outline: 0;
+    background: var(--upwell); box-shadow: var(--upwellshadow); color: var(--ufg2);
+    font: 400 13px/1.75 'IBM Plex Mono', monospace; tab-size: 2;
+  }
+  .prompt-box:focus-visible { outline: 0; box-shadow: var(--upwellshadow), inset 0 0 0 2px var(--key); }
+
+  /* ---------- column 2: result ---------- */
+  .col-result {
+    display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0;
+    padding: 0 20px 18px; background: var(--uresult);
+  }
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 10px;
+    border: 0; border-radius: 7px; background: var(--upill);
+    font: 600 13.5px 'Urbanist', sans-serif; color: var(--ufg); white-space: nowrap;
+  }
+  .pill.inverted { background: var(--uprim); color: var(--uprimfg); }
+  .pill .mono { font: 500 12.5px 'IBM Plex Mono', monospace; }
+  .pill .k { color: var(--key); }
+  .pill .n { color: var(--num); }
+  .pill.missing { background: var(--badbg); color: var(--bad); font-weight: 700; }
+  .pill.missing .sub { font-weight: 500; font-size: 12.5px; }
+
+  .tabsrow { display: flex; align-items: flex-end; border-bottom: 1px solid var(--uline); }
+  .tab {
+    height: 38px; margin: 0 18px -1px 0; padding: 0 4px; border: 0; border-bottom: 2px solid transparent;
+    background: transparent; color: var(--ufg3); font: 700 15px 'Urbanist', sans-serif; cursor: pointer;
+  }
+  .tab[aria-selected="true"] { border-bottom-color: var(--ufg); color: var(--ufg); }
+  .seg {
+    display: flex; gap: 2px; padding: 2px; margin-bottom: 6px; border-radius: 7px;
+    background-color: var(--upill); transition: opacity 180ms, box-shadow 180ms;
+  }
+  .seg[data-disabled="true"] {
+    cursor: not-allowed; opacity: .45; box-shadow: inset 0 2px 6px rgba(0,0,0,.2);
+    background-image: repeating-linear-gradient(135deg, color-mix(in srgb, var(--ufg3) 50%, transparent) 0 1px, transparent 1px 5px);
+  }
+  .seg-btn {
+    height: 24px; padding: 0 10px; border: 0; border-radius: 5px; background: transparent;
+    color: var(--ufg3); font: 700 12.5px 'Urbanist', sans-serif; cursor: pointer;
+  }
+  .seg-btn[aria-pressed="true"] { background: var(--ubg); color: var(--ufg); }
+  .seg[data-disabled="true"] .seg-btn { cursor: not-allowed; color: var(--ufg3); }
+  .seg[data-disabled="true"] .seg-btn[aria-pressed="true"] { background: transparent; }
+
+  .pane { display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0; }
+  .pane[hidden] { display: none; }
+  .subhead { display: flex; align-items: center; gap: 8px; }
+  .subhead .title { font-size: 16px; }
+  .jsonbox {
+    position: relative; flex: 1; min-height: 0; overflow: auto; padding: 10px 0;
+    border: 1px solid var(--uoutline); border-radius: 10px; background: var(--uout);
+    font: 400 12.5px/1.7 'IBM Plex Mono', monospace;
+  }
+  .jsonline {
+    display: grid; grid-template-columns: 40px 14px 14px minmax(0,1fr);
+    background: var(--row-bg, transparent);
+  }
+  .jsonline.clickable { cursor: pointer; }
+  .jsonline .ln { text-align: right; color: var(--ufg3); opacity: .75; }
+  .jsonline .mark { color: var(--bad); text-align: center; font-size: 9px; }
+  .jsonline .chev { color: var(--ufg3); text-align: center; font-size: 10px; }
+  .jsonline .segs { white-space: pre-wrap; word-break: break-word; padding-right: 16px; }
+  .jsonline .k-key { color: var(--key); }
+  .jsonline .k-str { color: var(--str); }
+  .jsonline .k-num { color: var(--num); }
+  .jsonline .k-ok { color: var(--ok); }
+  .jsonline .k-bad { color: var(--bad); }
+  .jsonline .k-p, .jsonline .k-cnt { color: var(--p); }
+  .ocrbox {
+    flex: 1; min-height: 0; margin: 0; padding: 14px 16px; overflow: auto;
+    border: 1px solid var(--uline); border-radius: 10px; background: var(--uwell);
+    color: var(--ufg2); font: 400 12.5px/1.7 'IBM Plex Mono', monospace; white-space: pre-wrap;
+  }
+
+  /* ---------- dividers ---------- */
+  .divider { position: relative; background: var(--uline); cursor: col-resize; }
+  .div-hit {
+    position: absolute; top: 0; bottom: 0; left: -4px; right: -4px; z-index: 2;
+    background: transparent; cursor: col-resize;
+  }
+  .div-hit:hover { background: rgba(127,140,160,.25); }
+  .divider[data-draggable="false"] { cursor: default; }
+  .divider[data-draggable="false"] .div-hit { cursor: default; }
+  .divider[data-draggable="false"] .div-hit:hover { background: transparent; }
+  .knob {
+    position: absolute; top: 50%; left: var(--knob-left, -7px); z-index: 3;
+    display: grid; place-items: center; width: 14px; height: 24px; margin-top: -12px; padding: 0;
+    border: 1px solid var(--urunline); border-radius: 7px; background: var(--urun);
+    color: var(--ufg2); cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    transition: left 320ms cubic-bezier(.22,1,.32,1), color 150ms, border-color 150ms;
+  }
+  .knob:hover { color: var(--ufg); border-color: var(--ufg3); }
+
+  /* ---------- column 3: run ---------- */
+  .col-run {
+    display: flex; flex-direction: column; width: var(--run-w); min-height: 0; overflow: hidden;
+    background: var(--urun); position: relative; z-index: 1;
+    box-shadow: var(--urunshadow); clip-path: inset(0 0 0 -80px);
+    transition: opacity 220ms ease;
+  }
+  .col-run.closed { opacity: 0; }
+  .run-title { display: flex; align-items: center; min-height: 56px; padding: 0 18px; }
+  .run-scroll {
+    display: flex; flex-direction: column; gap: 18px; padding: 0 18px 18px;
+    flex: 1; min-height: 0; overflow: auto;
+  }
+  .field { display: flex; flex-direction: column; gap: 7px; }
+  .field > .label { font-size: 13px; font-weight: 700; color: var(--ufg2); }
+  .label-row { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+  .label-row .value { font: 500 12.5px 'IBM Plex Mono', monospace; color: var(--ufg); }
+
+  .drop {
+    display: flex; align-items: center; gap: 10px; padding: 12px; cursor: pointer;
+    border: 1px dashed var(--urunline); border-radius: 9px; background: var(--urunwell);
+    box-shadow: inset 0 2px 6px rgba(0,0,0,.2);
+  }
+  .drop.over { border-color: var(--ufg3); background: var(--urunfield); }
+  .drop .doc { display: flex; flex-direction: column; min-width: 0; }
+  .drop .name { font-size: 14px; font-weight: 600; color: var(--ufg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .drop .sub { font: 400 11.5px 'IBM Plex Mono', monospace; color: var(--ufg3); }
+
+  .input {
+    height: 36px; padding: 0 10px; outline: 0; border: 1px solid var(--urunline);
+    border-radius: 8px; background: var(--urunfield); color: var(--ufg);
+    font: 400 13px 'IBM Plex Mono', monospace;
+  }
+  .input:focus-visible { border-color: var(--ufg3); box-shadow: 0 0 0 2px var(--key); }
+  input[type="range"] { accent-color: var(--uprim); }
+  .row { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; color: var(--ufg2); }
+  .row .read { font: 400 12.5px 'IBM Plex Mono', monospace; color: var(--ufg3); }
+
+  .dd { position: relative; display: flex; flex-direction: column; gap: 7px; }
+  .dd-trigger {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    height: 36px; padding: 0 10px 0 12px; text-align: left; cursor: pointer;
+    border: 1px solid var(--urunline); border-radius: 8px; background: var(--urunfield);
+    color: var(--ufg); font: 400 13px 'IBM Plex Mono', monospace;
+  }
+  .dd-trigger[aria-expanded="true"] { border-color: var(--ufg3); }
+  .dd-trigger svg { transform: none; transition: transform 150ms; }
+  .dd-trigger[aria-expanded="true"] svg { transform: rotate(180deg); }
+  .dd-menu {
+    position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 10;
+    display: flex; flex-direction: column; gap: 2px; padding: 4px;
+    border: 1px solid var(--urunline); border-radius: 10px; background: var(--umenu);
+    box-shadow: var(--umenushadow);
+  }
+  .dd-opt {
+    display: grid; grid-template-columns: 16px minmax(0,1fr); align-items: center; gap: 8px;
+    padding: 8px 10px 8px 8px; border: 0; border-radius: 7px; text-align: left;
+    background: transparent; cursor: pointer;
+  }
+  .dd-opt:hover { background: var(--upill); }
+  .dd-opt[aria-selected="true"] { background: var(--upill); }
+  .dd-opt .check { color: var(--ufg); font-size: 12px; text-align: center; }
+  .dd-opt .text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .dd-opt .id { font: 400 13px 'IBM Plex Mono', monospace; color: var(--ufg); }
+  .dd-opt .note { font: 500 12px 'Urbanist', sans-serif; color: var(--ufg3); }
+
+  .section { display: flex; flex-direction: column; gap: 10px; padding-top: 16px; border-top: 1px solid var(--urunline); }
+  .section-head { display: flex; justify-content: space-between; align-items: baseline; }
+  .section-head .asideline { display: flex; align-items: center; gap: 8px; font: 400 11.5px 'IBM Plex Mono', monospace; color: var(--ufg3); }
+  .price-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px; }
+  .price-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .price-field > .label { font-size: 12px; font-weight: 600; color: var(--ufg3); }
+  .price-input {
+    display: flex; align-items: center; height: 36px; padding: 0 10px;
+    border: 1px solid var(--urunline); border-radius: 8px; background: var(--urunfield);
+    font: 400 13px 'IBM Plex Mono', monospace; color: var(--ufg3);
+  }
+  .price-input input {
+    flex: 1; min-width: 0; margin-left: 3px; padding: 0; border: 0; outline: 0;
+    background: transparent; color: var(--ufg); font: 400 13px 'IBM Plex Mono', monospace;
+  }
+  .price-input input:focus-visible { box-shadow: none; }
+  .price-input:focus-within { border-color: var(--ufg3); }
+  .price-input .unit { font-size: 11px; white-space: nowrap; }
+
+  .budget-bar { display: flex; height: 8px; border-radius: 4px; background: var(--urunline); overflow: hidden; }
+  .budget-bar .p { background: var(--key); }
+  .budget-bar .c { background: var(--num); }
+  .legend { display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; font-size: 13.5px; }
+  .legend .k { display: flex; align-items: center; gap: 7px; color: var(--ufg2); }
+  .legend .sw { width: 8px; height: 8px; border-radius: 2px; }
+  .legend .v { text-align: right; font: 400 13px 'IBM Plex Mono', monospace; color: var(--ufg); }
+  .legend .k.dim { color: var(--ufg3); }
+
+  .run-foot { padding: 14px 18px; border-top: 1px solid var(--urunline); }
+  .run-btn {
+    position: relative; overflow: hidden; width: 100%; height: 42px; padding: 0;
+    border: 0; border-radius: 9px; background: var(--uprim); color: var(--uprimfg);
+    font: 700 15px 'Urbanist', sans-serif; cursor: pointer;
+  }
+  .run-btn .label {
+    position: relative; z-index: 2; display: flex; align-items: center; justify-content: center;
+    gap: 9px; height: 100%; font-variant-numeric: tabular-nums; transition: color 400ms ease;
+  }
+  .run-btn[data-running="true"] .label { color: var(--runtext); text-shadow: 0 1px 3px rgba(0,0,0,.45); }
+  .run-btn .hint { font: 500 11.5px 'IBM Plex Mono', monospace; opacity: .75; }
+
+  .sea { position: absolute; inset: 0; z-index: 1; overflow: hidden; border-radius: 9px; }
+  .sea-water {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, #0a1430 0%, #0d1b44 100%);
+    animation: sea-rise 800ms cubic-bezier(.2,.8,.25,1) both;
+  }
+  .sea.sinking .sea-water { animation: sea-sink 1100ms cubic-bezier(.55,0,.75,.2) both; }
+  .sea-crest {
+    position: absolute; left: 0; right: 0; top: -9px; height: 10px; overflow: hidden;
+  }
+  .sea-crest svg, .wave svg { display: block; width: 200%; height: 100%; animation: sea-scroll 3s linear infinite; }
+  .wave { position: absolute; left: 0; right: 0; bottom: 0; animation: sea-bob 3s ease-in-out var(--delay, 0s) infinite; }
+  .wave svg { animation-duration: var(--scroll); animation-delay: var(--delay); }
+  .wave.back { top: 18%; animation-duration: 3.2s; --scroll: 5.5s; --delay: 0s; }
+  .wave.mid { top: 40%; animation-duration: 2.6s; --scroll: 3.8s; --delay: -1.2s; }
+  .wave.front { top: 64%; animation-duration: 2.1s; --scroll: 2.6s; --delay: -0.6s; }
+
+  @keyframes sea-rise { from { transform: translateY(110%); } to { transform: translateY(0); } }
+  @keyframes sea-sink { from { transform: translateY(0); } to { transform: translateY(115%); } }
+  @keyframes sea-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  @keyframes sea-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(2px); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .grid, .theme-icon, .knob, .seg, .run-btn .label, .dd-trigger svg { transition: none; }
+    .sea-water, .sea.sinking .sea-water, .sea-crest svg, .wave, .wave svg { animation: none; }
+  }
+
+  /* ---------- copy label crossfade ---------- */
+  .copy-labels {
+    display: inline-grid; justify-items: start; overflow: hidden; white-space: nowrap;
+    transition: width 260ms cubic-bezier(.22,1,.32,1);
+  }
+  .copy-labels span {
+    grid-area: 1 / 1;
+    transition: opacity 220ms ease, transform 260ms cubic-bezier(.22,1,.32,1);
+  }
+  .copy-labels .out { opacity: 0; transform: translateY(6px); }
+  .copy-labels .in { opacity: 1; transform: none; }
+  .copy-labels.copied .in { opacity: 0; transform: translateY(-6px); }
+  .copy-labels.copied .copied-label { opacity: 1; transform: none; }
+  .copy-labels .copied-label { opacity: 0; transform: translateY(6px); }
+</style>
+</head>
+<body data-theme="dark">
+<div class="app">
+  <header class="hdr">
+    <img class="hdr-orb" src="./assets/header-orb.png" alt="" aria-hidden="true">
+    <span class="hdr-title">MLSVC Tester</span>
+    <span class="hdr-slash">/</span>
+    <span class="hdr-recipe">invoice<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6"></path></svg></span>
+    <div class="spacer"></div>
+    <span class="chip" id="chip" data-tone="stopped" role="status" aria-live="polite">
+      <span class="chip-dot"></span><span id="chip-text">Ready</span>
+    </span>
+    <button class="theme-btn" id="theme" title="Switch to light" aria-label="Switch to light">
+      <span class="theme-icon sun"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></span>
+      <span class="theme-icon moon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 14.2A8.5 8.5 0 1 1 9.8 3.5a6.8 6.8 0 0 0 10.7 10.7z"></path></svg></span>
+    </button>
+  </header>
+
+  <div class="grid" id="grid">
+    <section class="col-prompt">
+      <div class="colhead prompt">
+        <span class="title">System prompt</span>
+        <span class="meta" id="prompt-meta"></span>
+        <div class="spacer"></div>
+        <button class="btn" id="prompt-reset">Reset</button>
+        <button class="btn icon" id="prompt-copy" title="Copy prompt" aria-label="Copy prompt">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8.6" y="8.6" width="11" height="11" rx="2.4"></rect><path d="M15.4 5.9A2.4 2.4 0 0 0 13.1 4H6.4A2.4 2.4 0 0 0 4 6.4v6.7a2.4 2.4 0 0 0 1.9 2.3"></path></svg>
+        </button>
+      </div>
+      <textarea class="prompt-box" id="prompt" spellcheck="false" aria-label="System prompt"></textarea>
+    </section>
+
+    <div class="divider" id="div-prompt" data-drag="prompt" title="Drag to resize · double-click to reset" role="separator" aria-orientation="vertical" aria-label="Resize prompt column" tabindex="0">
+      <div class="div-hit"></div>
+    </div>
+
+    <section class="col-result">
+      <div class="colhead result">
+        <span class="title">Result</span>
+        <span class="meta ok" id="json-state">—</span>
+        <div class="spacer"></div>
+        <button class="btn" id="copy" aria-label="Copy result">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8.6" y="8.6" width="11" height="11" rx="2.4"></rect><path d="M15.4 5.9A2.4 2.4 0 0 0 13.1 4H6.4A2.4 2.4 0 0 0 4 6.4v6.7a2.4 2.4 0 0 0 1.9 2.3"></path></svg>
+          <span class="copy-labels" id="copy-labels">
+            <span class="in" id="copy-in">Copy JSON</span>
+            <span class="out" id="copy-out">Copy Raw Text</span>
+            <span class="copied-label">Copied</span>
+          </span>
+        </button>
+      </div>
+
+      <div class="pills" id="pills"></div>
+
+      <div class="tabsrow">
+        <button class="tab" id="tab-output" role="tab" aria-selected="true" aria-controls="pane-output">Output</button>
+        <button class="tab" id="tab-ocr" role="tab" aria-selected="false" aria-controls="pane-ocr">OCR text</button>
+        <div class="spacer"></div>
+        <div class="seg" id="fmt" data-disabled="false" role="group" aria-label="Result view">
+          <button class="seg-btn" id="fmt-formatted" aria-pressed="true">Formatted</button>
+          <button class="seg-btn" id="fmt-json" aria-pressed="false">JSON</button>
+        </div>
+      </div>
+
+      <div class="pane" id="pane-output" role="tabpanel" aria-labelledby="tab-output">
+        <div class="subhead">
+          <span class="title">Output</span>
+          <span class="meta" id="line-count">0 lines</span>
+          <div class="spacer"></div>
+          <button class="btn text" id="fold-all">Collapse all</button>
+        </div>
+        <div class="jsonbox" id="jsonbox"></div>
+      </div>
+
+      <div class="pane" id="pane-ocr" role="tabpanel" aria-labelledby="tab-ocr" hidden>
+        <div class="subhead">
+          <span class="title">OCR raw text</span>
+          <span class="meta" id="ocr-meta">—</span>
+        </div>
+        <pre class="ocrbox" id="ocrbox"></pre>
+      </div>
+    </section>
+
+    <div class="divider" id="div-run" data-drag="run" title="Drag to resize · double-click to reset" role="separator" aria-orientation="vertical" aria-label="Resize run panel">
+      <div class="div-hit"></div>
+      <button class="knob" id="knob" title="Hide run panel" aria-label="Hide run panel" aria-expanded="true">
+        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path id="knob-path" d="m9.5 5.5 6.5 6.5-6.5 6.5"></path></svg>
+      </button>
+    </div>
+
+    <aside class="col-run" id="runpanel">
+      <div class="run-title"><span class="title">Run</span></div>
+      <div class="run-scroll">
+        <div class="field">
+          <span class="label">Document</span>
+          <div class="drop" id="drop" role="button" tabindex="0" aria-label="Choose document">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ufg3)" stroke-width="1.7"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg>
+            <span class="doc">
+              <span class="name" id="doc-name">No document</span>
+              <span class="sub" id="doc-sub">click or drop a PDF</span>
+            </span>
+          </div>
+          <input type="file" id="file" accept="application/pdf,.pdf" hidden>
+        </div>
+
+        <div class="dd" id="dd">
+          <span class="label">Model</span>
+          <button class="dd-trigger" id="dd-trigger" aria-haspopup="listbox" aria-expanded="false">
+            <span id="dd-current"></span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--ufg3)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+          </button>
+          <div class="dd-menu" id="dd-menu" role="listbox" hidden></div>
+        </div>
+
+        <label class="field">
+          <span class="label">Business case</span>
+          <input class="input" id="biz" value="entity-extraction" spellcheck="false">
+        </label>
+
+        <label class="field">
+          <span class="label label-row"><span>Temperature</span><span class="value" id="temp-value">0.0</span></span>
+          <input type="range" id="temp" min="0" max="2" step="0.1" value="0">
+        </label>
+
+        <label class="field">
+          <span class="label label-row"><span>Max tokens</span><span class="value" id="maxtok-value">16,384</span></span>
+          <input type="range" id="maxtok" min="256" max="32768" step="256" value="16384">
+        </label>
+
+        <div class="row"><span>Response format</span><span class="read">json_object</span></div>
+
+        <div class="section">
+          <div class="section-head">
+            <span class="label" style="font-size:13px;font-weight:700;color:var(--ufg2)">Model pricing</span>
+            <span class="asideline">
+              <span id="price-source">USD</span>
+              <button class="btn link" id="price-reset" hidden>Reset</button>
+            </span>
+          </div>
+          <div class="price-grid">
+            <label class="price-field">
+              <span class="label">Input</span>
+              <span class="price-input">$<input type="number" id="price-in" min="0" step="0.01" aria-label="Input price per 1M tokens"><span class="unit">/ 1M in</span></span>
+            </label>
+            <label class="price-field">
+              <span class="label">Output</span>
+              <span class="price-input">$<input type="number" id="price-out" min="0" step="0.01" aria-label="Output price per 1M tokens"><span class="unit">/ 1M out</span></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-head">
+            <span class="label" style="font-size:13px;font-weight:700;color:var(--ufg2)">Last run</span>
+            <span class="asideline" id="last-run-meta">no runs yet</span>
+          </div>
+          <div class="budget-bar"><span class="p" id="budget-p"></span><span class="c" id="budget-c"></span></div>
+          <div class="legend">
+            <span class="k"><span class="sw" style="background:var(--key)"></span>Prompt</span><span class="v" id="last-prompt">—</span>
+            <span class="k"><span class="sw" style="background:var(--num)"></span>Completion</span><span class="v" id="last-completion">—</span>
+            <span class="k dim">Budget used</span><span class="v" id="last-budget">—</span>
+            <span class="k dim">Est. cost</span><span class="v" id="last-cost">—</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="run-foot">
+        <button class="run-btn" id="run" data-running="false" title="Run extraction">
+          <span class="label" id="run-label"></span>
+        </button>
+      </div>
+    </aside>
+  </div>
+</div>
+<p class="sr-only" id="live" role="status" aria-live="polite"></p>
+<script type="module" src="./app.js"></script>
+</body>
+</html>
