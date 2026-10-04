@@ -1,0 +1,1 @@
+<script>let { tone = 'ok', children, ...rest } = $props();</script><span {...rest} class="chip" data-tone={tone}><span class="chip-dot" aria-hidden="true"></span>{@render children?.()}</span>

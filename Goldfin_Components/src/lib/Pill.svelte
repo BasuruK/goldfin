@@ -1,0 +1,1 @@
+<script>let { variant = '', children, ...rest } = $props();</script><span {...rest} class={['pill', variant]}>{@render children?.()}</span>

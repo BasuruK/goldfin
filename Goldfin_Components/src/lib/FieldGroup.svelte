@@ -1,0 +1,1 @@
+<script>let { label, aside = '', children } = $props();</script><section class="section-group"><div class="section-group-head"><h3 class="label">{label}</h3>{#if aside}<span class="asideline">{aside}</span>{/if}</div>{@render children?.()}</section>
