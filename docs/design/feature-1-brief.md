@@ -2,7 +2,7 @@
 
 **Status:** design not started. This is the input to OpenDesign.
 **Decided:** [ADR 0010](../../docs/adr/0010-go-api-postgres-three-containers.md) and the glossary in
-`CONTEXT.md`. Everything below is settled — design *to* it, do not redesign it.
+`GLOSSARY.md`. Everything below is settled — design *to* it, do not redesign it.
 
 ## What this feature is
 
@@ -19,7 +19,7 @@ is the first thing anyone sees, so it is the screen that has to be right.
 
 Parked on purpose. If the design needs any of these, stop and park it:
 
-- **Probe** — the mlsvc-style prompt + document + result screen. Real, defined in `CONTEXT.md`, and
+- **Probe** — the mlsvc-style prompt + document + result screen. Real, defined in `GLOSSARY.md`, and
   **not this feature.** The mlsvc contract it will eventually use is in
   `prototypes/mlsvc-tester-2a/` — reuse it then, not now.
 - Datasets, Prompts, Runs, Comparison, Reports. Every one.
@@ -72,7 +72,7 @@ hit most while building this feature.
 
 ## Language
 
-Use the words in `CONTEXT.md`. **Connector**, **Credential**, **Credential generation**, **Connector
+Use the words in `GLOSSARY.md`. **Connector**, **Credential**, **Credential generation**, **Connector
 check**, **Stage**, **Run**, **Match**, **Verdict**. Two words to keep straight, because they are easy to
 collapse and they are not the same thing:
 

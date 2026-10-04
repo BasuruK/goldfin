@@ -6,7 +6,7 @@ Version: 1.0 — source handoff, 2026-10-04.
 
 This is the design contract for Goldfin's reusable web components. It records the approved component design implemented in `Goldfin_Components/src/`, not a new visual direction.
 
-Goldfin evaluates document extraction. Product terminology follows the main repository's `CONTEXT.md`; this document governs presentation and interaction, not domain behavior.
+Goldfin evaluates document extraction. Product terminology follows the main repository's `GLOSSARY.md`; this document governs presentation and interaction, not domain behavior.
 
 | Responsibility | Authoritative location |
 | --- | --- |

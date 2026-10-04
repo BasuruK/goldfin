@@ -34,7 +34,7 @@ one he is looking at. Ask for the design file; do not offer to design it.
 
 **The flow.** Per feature: `/to-spec` (scope: this feature only) → `/to-tickets` → `/implement` per
 ticket. `/implement` drives `/tdd` and closes with `/code-review`. Wayfinder is done; its decisions
-live in `CONTEXT.md` and `docs/adr/`, and they are binding.
+live in `GLOSSARY.md` and `docs/adr/`, and they are binding.
 
 **A test for new logic.** New domain logic needs a test. Trivial glue is exempt — say why in the PR
 description rather than silently skipping it.
@@ -44,7 +44,7 @@ is how a scope creeps.
 
 ## Before you touch something
 
-`CONTEXT.md` is the glossary and it is strict. Use its terms; do not invent synonyms, and do not use a
+`GLOSSARY.md` is the glossary and it is strict. Use its terms; do not invent synonyms, and do not use a
 word it reserves for something else. The load-bearing ADRs:
 
 - **[0003](docs/adr/0003-goldfin-does-not-rescue-the-model.md)** — Goldfin does not rescue the model.
@@ -70,4 +70,4 @@ Default five-role vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `
 
 ### Domain docs
 
-Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
