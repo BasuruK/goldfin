@@ -1,0 +1,1 @@
+<script>let { layout = 'vertical', markers = 'solid', tone, leading = false, label = 'Timeline', count = 3, children } = $props();</script><ol class={['timeline', leading && 'timeline-leading']} data-layout={layout} data-markers={markers} data-tone={tone} style:--timeline-columns={count} aria-label={label}>{@render children?.()}</ol>

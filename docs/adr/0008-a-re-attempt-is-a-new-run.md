@@ -28,20 +28,20 @@ visible. A re-attempt is the same move applied to the one case that had none.
 **There is no "re-run failed documents" action**, by design. A new Run is a full Run,
 so the feature has no behaviour narrower than "run it again" and a button labelled
 after a state machine value would teach users a concept the system does not have. The
-affordance is a **pre-filled draft** off the source Run — same Dataset version, same
-Prompt version, same Connectors — whose only visible delta is whatever the user just
+affordance is a **pre-filled draft** off the source Run (same Dataset version, same
+Prompt version, same Connectors) whose only visible delta is whatever the user just
 changed. Naming that delta is the point; it is the first screen that makes a Connector
 fix legible as a change rather than as noise.
 
 ## A Run copies the resolved definition of each Connector it uses
 
-At start, a Run copies the **definition** of every Connector it calls — method, URL,
-headers, body template, response path — rather than referencing the Connector entity.
+At start, a Run copies the **definition** of every Connector it calls (method, URL,
+headers, body template, response path) rather than referencing the Connector entity.
 The copy is what an earlier Run means, forever.
 
 This extends the Credential rule from ADR 0005 to the half of a Connector that ADR
 0005 did not reach. A Credential was made versioned, immutable and pinned precisely so
-that editing a Connector could not retroactively change what a Run had measured — but
+that editing a Connector could not retroactively change what a Run had measured, but
 only the **auth** half was protected. Method, URL, body and response path were left
 editable in place, with no generation and no record. So a customer could fix a
 `response_path` and every Run that had used the old one silently meant something else.
@@ -50,7 +50,7 @@ and the diagnostic half is the one that moves scores.
 
 Snapshotting rather than versioning is deliberate. Versioning would buy a
 configuration-diff history nobody has asked for, and would make Connector the only
-versioned thing in the system whose versions carry no secret — a distinction with
+versioned thing in the system whose versions carry no secret. That is a distinction with
 nothing to protect. A copy satisfies `Attestable` completely and adds no entity.
 
 `{{credential}}` placeholders are copied as placeholders, and the pinned credential
@@ -71,14 +71,14 @@ Worse, the edit that prompted a re-attempt is a Connector edit, and Goldfin cann
 whether it was scoped. A raised timeout leaves the other 48 valid; a corrected response
 path leaves all 50 suspect. ADR 0002 says a format is declared, never inferred, and
 inheritance would require the customer to **declare** that their edit changes nothing
-else — a human claim sitting underneath a number sold to a regulated buyer. That is the
+else, a human claim sitting underneath a number sold to a regulated buyer. That is the
 same hole ADR 0006 rejected as a "disagree" button, and it breaks `Attestable` at the
 root.
 
 The cost is bounded by machinery that already exists: the per-Connector concurrency,
 the per-call and per-Document timeout budgets, and the worker-enforced token cap from
-ADR 0001. A clean A/B — same Dataset version, same Prompt version, one named difference
-— is worth more than a cheaper number nobody can attribute.
+ADR 0001. A clean A/B (same Dataset version, same Prompt version, one named difference)
+is worth more than a cheaper number nobody can attribute.
 
 ## What a Comparison must carry
 
@@ -88,15 +88,15 @@ ADR 0006 created two, both per-Field: a Field whose `scoring` changed, and a Jud
 verdict that flipped on identical inputs. A Connector change is not per-Field. A wrong
 `response_path` degrades every Field on every Document at once, which is the entire
 reason Stages exist. Now that a Run copies its Connector definition, the difference is
-detectable for free — the same split ADR 0006 drew: **detection belongs here, display
+detectable for free, on the same split ADR 0006 drew: **detection belongs here, display
 belongs to the Comparison screen.**
 
 The distinction between the three is the value. A `scoring` change and a Connector
 change both altered the **inputs**; a Judge flip altered nothing but the grader, which
 is why it is computable rather than a warning.
 
-The document-level reconciliation line the state-machine work established — "4 documents
-yielded no Extraction — 2 OCR failed, 2 not reached" — must appear on **both** sides of
+The document-level reconciliation line the state-machine work established, "4 documents
+yielded no Extraction — 2 OCR failed, 2 not reached", must appear on **both** sides of
 a Comparison, split by cause, and a change in that count is itself a non-comparability.
 Without it a Run with 2 dead Documents and a Run with 0 are two readings of "of 50",
 and the user is shown a score that moved for a reason the screen cannot name. A
@@ -109,37 +109,37 @@ A Document's failure reason is written once on the transition and never overwrit
 It is evidence, and under this ADR nothing can overwrite it, because the attempt that
 would have overwritten it is a different Run.
 
-Whether a Document has failed *before* is a **derived read over Runs** — "failed in 3
-of the last 4 Runs" — and never stored on the Document. It changes no number, and it is
+Whether a Document has failed *before* is a **derived read over Runs** ("failed in 3
+of the last 4 Runs") and never stored on the Document. It changes no number, and it is
 the difference between an unlucky call and a broken gateway, which is the question a
 customer is actually asking when they look at a fault. Storing it would put mutable
-state on a Document, and a Document's state is written on transitions only — this would
+state on a Document, and a Document's state is written on transitions only. This would
 be the first thing to break that.
 
 ## Considered Options
 
-- **Reset `failed` Documents to `pending` and hand them to Resume** — rejected. It
+- **Reset `failed` Documents to `pending` and hand them to Resume**: rejected. It
   mutates a score that has already been shown, which is the one thing the Verdict
   freeze exists to prevent. ADR 0005 and ADR 0006 already drew this line twice: *`Attestable`
   holds for the record, not for re-execution.*
-- **A "Retry" or "Run attempt" entity hanging off a Run** — rejected. It would be the
-  only mutable entity in a system whose other three — `Dataset version`, `Prompt
-  version`, Credential generation — are all immutable, and it would exist to do
+- **A "Retry" or "Run attempt" entity hanging off a Run**: rejected. It would be the
+  only mutable entity in a system whose other three (`Dataset version`, `Prompt
+  version`, Credential generation) are all immutable, and it would exist to do
   something a Run already does.
-- **Nothing; the status quo is the escape** — rejected as a dead end. #2 makes a
+- **Nothing; the status quo is the escape**: rejected as a dead end. #2 makes a
   Dataset version editable only until a Run references it, so Run A pointing at v1
   forces a v2, and the resulting Comparison spans two Dataset versions with different
-  denominators — non-comparable by Goldfin's own rule. The only route to a score
+  denominators, non-comparable by Goldfin's own rule. The only route to a score
   reflecting a fixed connector yields a score that may not be compared to the old one.
-- **Inherit the prior Run's Extractions** — rejected above.
-- **Version the Connector into immutable, customer-labelled generations** — rejected
+- **Inherit the prior Run's Extractions**: rejected above.
+- **Version the Connector into immutable, customer-labelled generations**: rejected
   for now, and revisited the day a human misses an edit and asks which Runs used the
   old one. A snapshot answers the question that matters; a version history answers one
   nobody has asked.
-- **A "re-run failed documents" button** — rejected. Under this ADR it can only mean
+- **A "re-run failed documents" button**: rejected. Under this ADR it can only mean
   "run it again", and naming it after a state machine value teaches a concept the data
   model does not have.
-- **Partial re-execution behind an explicit customer declaration** — considered and not
+- **Partial re-execution behind an explicit customer declaration**: considered and not
   taken for v1. It is the only shape that could make partial re-attempt honest, and it
   should return as a new effort rather than as a feature flag on this one.
 

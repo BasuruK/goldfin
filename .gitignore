@@ -9,3 +9,4 @@ node_modules/
 
 #Ignore vscode AI rules
 .github/instructions/codacy.instructions.md
+prototypes/UI improvement discussion.zip
