@@ -1,6 +1,6 @@
 # Goldfin Design System
 
-Version: 1.0 — source handoff, 2026-10-04.
+Version: 1.0, source handoff, 2026-10-04.
 
 ## Authority and scope
 

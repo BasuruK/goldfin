@@ -1,4 +1,4 @@
-# MLSVC Tester — design 2a prototype
+# MLSVC Tester: design 2a prototype
 
 Standalone recreation of handoff design **2a** ("Prompt · Result · Run panel") from
 `design_handoff_mlsvc_tester_2a/README.md`. Plain HTML/CSS + one ES module, no framework, no build step.
@@ -36,15 +36,16 @@ node --test                   # 25 tests
 
 1. **No in-place restyle.** The handoff targets `MLSVCTester/index.html` + `app.js`. That project is not
    on this machine, so this is a fresh, self-contained build rather than a modification of existing files.
-2. **The run is mocked.** `runExtraction()` honours the contract the real endpoint has to meet — cancellable
-   promise, token usage, measured latency, rejection on a missing document or an over-budget response —
+2. **The run is mocked.** `runExtraction()` honours the contract the real endpoint has to meet (cancellable
+   promise, token usage, measured latency, rejection on a missing document or an over-budget response)
    but resolves from the fixture after 5.2–7.8s. Nothing leaves the browser.
 3. **JSON view keeps container commas.** The reference's `tree2()` omits the trailing comma on an *expanded*
    container's opening line, which renders invalid JSON in the JSON tab. Fixed here; a test locks it.
 4. **Numbers are derived, not typed in.** Tokens come from `chars / 4` on the live prompt and the live
    result, and latency is measured. The prototype's hardcoded 1,893 / 836 / 6.4 s / "14:32" are gone.
 5. **The sample result is preloaded** as the page's last response so the layout can be judged on open.
-   Last-run stats deliberately read `—` / "no run yet" until a real run happens — nothing pretends to be measured.
+   Last-run stats deliberately read `(none)` / "no run yet" until a real run happens. Nothing pretends
+   to be measured.
 6. **Header orb** uses `object-fit: cover` with `object-position: 51% 84%` rather than the hand-sized
    1611×65px placement, which was a prototype-canvas artefact.
 7. **A11y additions:** both dividers are focusable separators with arrow-key resizing (shift = coarse step,
@@ -56,5 +57,5 @@ node --test                   # 25 tests
 
 Replace the body of `runExtraction()` with the `recipe/execute` call. It must keep returning
 `{ result, ocrText, document, usage: { promptTokens, completionTokens, total }, latencyMs }` and must
-honour `signal` so the Stop button still works. Everything downstream — pills, cost, budget bar, missing
-count — is derived from that one shape.
+honour `signal` so the Stop button still works. Everything downstream (pills, cost, budget bar, missing
+count) is derived from that one shape.
