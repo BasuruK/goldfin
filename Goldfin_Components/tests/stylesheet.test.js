@@ -8,7 +8,7 @@ const styles = () => ['../src/layout.css', '../src/tokens.css', '../src/componen
 // one contract split across two files, and nothing in the build fails when they drift apart.
 test('SplitPane collapsed class matches the stylesheet selector', () => {
   const [, collapsed] = read('../src/lib/SplitPane.svelte').match(/class:([\w-]+)=/);
-  assert.ok(styles().includes(`.divider.${collapsed}`), `no .divider.${collapsed} rule in the stylesheet`);
+  assert.ok(read('../src/lib/SplitPane.svelte').includes(`.divider.${collapsed}`), `no .divider.${collapsed} rule in SplitPane.svelte`);
 });
 // ponytail: the modal entrance keyframe and the rule that centres the dialog are the same
 // contract. The keyframe animates `transform` from an untransformed state, so it has to

@@ -34,18 +34,6 @@
 .btn.danger { background: var(--bad); color: var(--uprimfg); border-color: transparent; }
 .btn.warning:hover, .btn.danger:hover { filter: brightness(.9); }
 
-/* ── pill ─────────────────────────────────────────────────── */
-/* Shared look for the same reason as .btn: TableExamples, LoadingGallery and
-   TimelineItem write class="pill" without going through <Pill>. */
-.pill { display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 10px; border: 0; border-radius: 7px; background: var(--upill); font: 600 13.5px 'Urbanist', sans-serif; color: var(--ufg); white-space: nowrap; }
-.pill.inverted { background: var(--uprim); color: var(--uprimfg); }
-.pill .mono { font: 500 12.5px 'IBM Plex Mono', monospace; }
-.pill .k { color: var(--key); }
-.pill .n { color: var(--num); }
-.pill.missing { background: var(--badbg); color: var(--bad); font-weight: 700; }
-.pill.missing .sub { font-weight: 500; font-size: 12.5px; }
-.pill.ok-pill { background: var(--okbg); color: var(--ok); }
-.pill.running-pill { background: var(--runchip); color: var(--runchipfg); }
 
 /* ── table ────────────────────────────────────────────────── */
 .table-stack { display: grid; gap: 16px; }
@@ -94,22 +82,6 @@
 
 /* ── tabs ─────────────────────────────────────────────────── */
 .tabsrow { display: flex; align-items: flex-end; border-bottom: 1px solid var(--uline); gap: 0; }
-.tab { height: 38px; margin: 0 18px -1px 0; padding: 0 4px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--ufg3); font: 700 15px 'Urbanist', sans-serif; cursor: pointer; }
-.tab[aria-selected="true"] { border-bottom-color: var(--ufg); color: var(--ufg); }
-.tab:hover { color: var(--ufg); }
-
-/* ── seg ──────────────────────────────────────────────────── */
-/* The indicator is one element that slides to the selected segment, so a change
-   reads as movement rather than a cross-fade. It is measured on the first frame
-   and only then allowed to transition, so it never slides in from the left. */
-.seg { position: relative; display: flex; width: max-content; max-width: 100%; gap: 2px; padding: 2px; border-radius: 7px; background-color: var(--upill); transition: opacity 180ms, box-shadow 180ms; }
-.seg[data-disabled] { cursor: not-allowed; box-shadow: inset 0 2px 6px rgba(0,0,0,.2); background-image: repeating-linear-gradient(135deg, color-mix(in srgb, var(--ufg3) 42.5%, transparent) 0 1px, transparent 1px 5px); }
-.seg-thumb { position: absolute; top: 2px; bottom: 2px; left: 0; z-index: 0; width: var(--thumb-w, 0px); transform: translateX(var(--thumb-x, 0px)); box-sizing: border-box; border: 1px solid var(--uline); border-radius: 5px; background: var(--uprim); pointer-events: none; }
-.seg[data-ready="true"] .seg-thumb { transition: transform 220ms cubic-bezier(.22,1,.32,1), width 220ms cubic-bezier(.22,1,.32,1), background-color 200ms ease, border-color 200ms ease; }
-.seg-btn { position: relative; z-index: 1; height: 24px; padding: 0 10px; box-sizing: border-box; border: 1px solid transparent; border-radius: 5px; background: transparent; color: var(--ufg3); font: 700 12.5px 'Urbanist', sans-serif; cursor: pointer; transition: color 200ms ease; }
-.seg-btn.active { color: var(--uprimfg); }
-.seg[data-disabled] .seg-btn { cursor: not-allowed; color: color-mix(in srgb, var(--ufg3) 60%, transparent); }
-.seg[data-disabled] .seg-thumb { background: color-mix(in srgb, var(--ufg3) 20%, transparent); border-color: transparent; }
 
 /* ── field — the composition layer ───────────────────────── */
 /* Every control gets the same four slots: label + description (.field-content),
@@ -245,10 +217,6 @@
 .dd-opt .id { font: 400 13px 'IBM Plex Mono', monospace; color: var(--ufg); }
 .dd-opt .note { font: 500 12px 'Urbanist', sans-serif; color: var(--ufg3); }
 
-/* ── section (field group) ───────────────────────────────── */
-.section-group { display: flex; flex-direction: column; gap: 10px; }
-.section-group-head { display: flex; justify-content: space-between; align-items: baseline; }
-.section-group-head .asideline { display: flex; align-items: center; gap: 8px; font: 400 11.5px 'IBM Plex Mono', monospace; color: var(--ufg3); }
 
 /* ── price-grid ───────────────────────────────────────────── */
 .price-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px; }
@@ -267,23 +235,6 @@
 .legend .v { text-align: right; font: 400 13px 'IBM Plex Mono', monospace; color: var(--ufg); }
 .legend .k.dim { color: var(--ufg3); }
 
-/* ── json viewer ──────────────────────────────────────────── */
-.jsonbox { position: relative; min-height: 120px; overflow: auto; padding: 10px 0; border: 1px solid var(--uoutline); border-radius: 10px; background: var(--uout); font: 400 12.5px/1.7 'IBM Plex Mono', monospace; }
-.jsonline { display: grid; grid-template-columns: 40px 14px 14px minmax(0,1fr); background-color: var(--row-bg, transparent); }
-.jsonline.is-null { --row-bg: var(--badbg); }
-.jsonline.clickable { cursor: pointer; }
-/* hover is a translucent overlay, so it layers over --row-bg instead of replacing the row tint */
-.jsonline.clickable:hover { background-image: linear-gradient(var(--hover), var(--hover)); }
-.jsonline .ln { text-align: right; color: var(--ufg3); opacity: .75; padding-right: 6px; }
-.jsonline .mark { color: var(--bad); text-align: center; font-size: 9px; }
-.jsonline .chev { color: var(--ufg3); text-align: center; font-size: 10px; }
-.jsonline .segs { white-space: pre-wrap; word-break: break-word; padding-right: 16px; }
-.jsonline .k-key { color: var(--key); }
-.jsonline .k-str { color: var(--str); }
-.jsonline .k-num { color: var(--num); }
-.jsonline .k-ok { color: var(--ok); }
-.jsonline .k-bad { color: var(--bad); }
-.jsonline .k-p, .jsonline .k-cnt { color: var(--p); }
 
 /* ── run-btn ──────────────────────────────────────────────── */
 .run-btn { position: relative; overflow: hidden; width: 100%; height: 42px; padding: 0; border: 0; border-radius: 9px; background: var(--uprim); color: var(--uprimfg); font: 700 15px 'Urbanist', sans-serif; cursor: pointer; }
@@ -325,16 +276,8 @@
 .copy-btn { position: relative; overflow: hidden; display: inline-flex; align-items: center; height: 30px; padding: 0 11px; border: 1px solid var(--uline); border-radius: 7px; background: var(--ubg); color: var(--ufg); font: 600 13px 'Urbanist', sans-serif; cursor: pointer; gap: 7px; }
 
 /* ── divider + knob ───────────────────────────────────────── */
-.divider { position: relative; background: var(--uline); cursor: col-resize; flex-shrink: 0; width: 5px; }
 .div-hit { position: absolute; top: 0; bottom: 0; left: -4px; right: -4px; z-index: 2; background: transparent; cursor: col-resize; }
 .div-hit:hover { background: rgba(127,140,160,.25); }
-.knob { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 3; display: grid; place-items: center; width: 14px; height: 24px; padding: 0; border: 1px solid var(--urunline); border-radius: 7px; background: var(--urun); color: var(--ufg2); cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.25); transition: color 150ms, border-color 150ms; }
-.knob::before { content: '>'; font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 700; line-height: 1; }
-.knob[aria-expanded="false"]::before { content: '<'; }
-.knob:hover { color: var(--ufg); border-color: var(--ufg3); }
-.demo-pane { flex: 1 1 0; min-width: 0; overflow: hidden; transition: flex-basis 320ms cubic-bezier(.22,1,.32,1), padding 320ms cubic-bezier(.22,1,.32,1), opacity 200ms ease; }
-.divider.is-collapsed ~ .demo-pane { flex: 0 0 0; padding-left: 0; padding-right: 0; opacity: 0; }
-.demo-pane:has(~ .divider.is-collapsed) { border-radius: 8px; }
 
 /* ── modal ───────────────────────────────────────────────── */
 /* A native <dialog> opened with showModal(): the focus trap, Escape, the inert
@@ -582,14 +525,10 @@ body[data-theme="light"] .slider-field { --slider-grip: url("data:image/svg+xml,
 .gf-menu [data-highlighted] { background: var(--upill); }
 .gf-menu [data-disabled] { opacity: .45; cursor: not-allowed; }
 .gf-actions .dd-opt { display: block; }
-.gf-tab-content { padding-block: 16px; font-family: 'IBM Plex Sans', system-ui, sans-serif; }
 @media (pointer: coarse) { .ctl { min-height: 44px; align-items: center; } .gf-control { margin-top: 0; } .dd-trigger, .btn, .seg-btn, .tab, .table-sort { min-height: 44px; } }
 
 /* Native Goldfin compositions */
-.tabs{display:flex;gap:0;border-bottom:1px solid var(--uline)}
-.gf-split{display:flex;min-height:80px;max-width:500px}.gf-split .demo-pane{padding:12px;background:var(--usurf);font:12px 'IBM Plex Mono',monospace;color:var(--ufg3);overflow-wrap:anywhere}.gf-split .demo-pane:last-child{background:var(--uresult)}.gf-split .divider{width:5px;flex:none}.gf-split .knob{padding:0;border:0;color:var(--ufg);background:var(--usurf)}
 .gf-drop{position:relative;cursor:pointer}.gf-drop input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}.gf-drop:focus-within{outline:2px solid var(--ufg);outline-offset:3px}.gf-drop .name{overflow-wrap:anywhere}
-.gf-json .segs{white-space:pre-wrap;overflow-wrap:anywhere}.gf-json-body{max-height:320px;overflow:auto}.gf-json .jsonline{min-height:24px}
 .budget-bar{margin-top:4px}.legend{margin-top:10px}.run-btn[aria-busy=true]{cursor:progress}
 
 .run-btn[aria-busy=true] .label{color:var(--runtext);text-shadow:var(--runshadow)}.copy-btn{align-self:flex-start}

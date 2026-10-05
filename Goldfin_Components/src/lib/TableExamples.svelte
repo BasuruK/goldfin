@@ -1,5 +1,5 @@
 <script>
-import Table from './Table.svelte';import Icon from './Icon.svelte';
+import Table from './Table.svelte';import Icon from './Icon.svelte';import Pill from './Pill.svelte';
 const files = [
   {
     "id": 0,
@@ -77,7 +77,7 @@ const fileColumns=[{key:'name',label:'Name',width:'44%'},{key:'sharing',label:'S
 const caseColumns=[{key:'id',label:'ID',width:'16%'},{key:'name',label:'Test case',width:'44%'},{key:'type',label:'Type',width:'20%'},{key:'status',label:'Status',width:'20%'}];
 </script><section class="section" id="tables"><div class="section-head"><h2 class="section-title">Table</h2><span class="section-id">Sortable · compact · no avatars</span></div><div class="table-stack">
 <Table rows={files} columns={fileColumns} label="Plain · file listing" variant="plain" caption="Sample files, sharing permissions, sizes and modification times">
-{#snippet cell(row, column)}{#if column.key === 'name'}<span class="table-name"><Icon name="file" size={20}/>{row.name}</span>{:else if column.key === 'sharing'}<span class="pill table-badge">{row.sharing}</span>{:else if column.key === 'size'}<span class="table-number">{row.sizeLabel}</span>{:else}<span class="table-muted">{row.modifiedLabel}</span>{/if}{/snippet}</Table>
+{#snippet cell(row, column)}{#if column.key === 'name'}<span class="table-name"><Icon name="file" size={20}/>{row.name}</span>{:else if column.key === 'sharing'}<Pill class="table-badge">{row.sharing}</Pill>{:else if column.key === 'size'}<span class="table-number">{row.sizeLabel}</span>{:else}<span class="table-muted">{row.modifiedLabel}</span>{/if}{/snippet}</Table>
 <Table rows={cases} columns={caseColumns} label="Contained · test cases" caption="Sample test cases and evaluation states">
-{#snippet cell(row, column)}{#if column.key === 'status'}<span class={['pill','table-badge',row.status === 'Passed' ? 'ok-pill' : row.status === 'Failed' ? 'missing' : row.status === 'Running' ? 'running-pill' : '']}>{row.status}</span>{:else if column.key === 'type'}<span class="pill table-badge">{row.type}</span>{:else}{row[column.key]}{/if}{/snippet}</Table>
+{#snippet cell(row, column)}{#if column.key === 'status'}<Pill variant={row.status === 'Passed' ? 'ok-pill' : row.status === 'Failed' ? 'missing' : row.status === 'Running' ? 'running-pill' : ''} class="table-badge">{row.status}</Pill>{:else if column.key === 'type'}<Pill class="table-badge">{row.type}</Pill>{:else}{row[column.key]}{/if}{/snippet}</Table>
 </div></section>
