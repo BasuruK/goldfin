@@ -110,8 +110,9 @@ button { font-family: inherit; }
 .chip[data-tone="error"]  { --chip-bg: var(--badbg); --chip-fg: var(--bad); }
 
 /* ── btn ──────────────────────────────────────────────────── */
-.btn { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 11px; border: 1px solid var(--uline); border-radius: 7px; background: var(--ubg); color: var(--ufg); font: 600 13px 'Urbanist', sans-serif; cursor: pointer; white-space: nowrap; }
+.btn { position: relative; display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 11px; border: 1px solid var(--uline); border-radius: 7px; background: var(--ubg); color: var(--ufg); font: 600 13px 'Urbanist', sans-serif; cursor: pointer; white-space: nowrap; transition: background-color 150ms ease, transform 150ms cubic-bezier(.22,1,.32,1); }
 .btn:hover { background: var(--uwell); }
+.btn:active:not(:disabled) { transform: scale(.97); }
 .btn.icon { width: 30px; padding: 0; justify-content: center; color: var(--ufg2); }
 .btn.link { height: auto; padding: 0; border: 0; background: transparent; color: var(--key); font: 600 12px 'Urbanist', sans-serif; }
 .btn.link:hover { color: var(--ufg); }
@@ -185,12 +186,17 @@ button { font-family: inherit; }
 .tab:hover { color: var(--ufg); }
 
 /* ── seg ──────────────────────────────────────────────────── */
-.seg { display: flex; width: max-content; max-width: 100%; gap: 2px; padding: 2px; border-radius: 7px; background-color: var(--upill); transition: opacity 180ms, box-shadow 180ms; }
-.seg[data-disabled="true"] { cursor: not-allowed; opacity: .45; box-shadow: inset 0 2px 6px rgba(0,0,0,.2); background-image: repeating-linear-gradient(135deg, color-mix(in srgb, var(--ufg3) 50%, transparent) 0 1px, transparent 1px 5px); }
-.seg-btn { height: 24px; padding: 0 10px; border: 0; border-radius: 5px; background: transparent; color: var(--ufg3); font: 700 12.5px 'Urbanist', sans-serif; cursor: pointer; }
-.seg-btn[aria-pressed="true"] { background: var(--ubg); color: var(--ufg); }
-.seg[data-disabled="true"] .seg-btn { cursor: not-allowed; color: var(--ufg3); }
-.seg[data-disabled="true"] .seg-btn[aria-pressed="true"] { background: transparent; }
+/* The indicator is one element that slides to the selected segment, so a change
+   reads as movement rather than a cross-fade. It is measured on the first frame
+   and only then allowed to transition, so it never slides in from the left. */
+.seg { position: relative; display: flex; width: max-content; max-width: 100%; gap: 2px; padding: 2px; border-radius: 7px; background-color: var(--upill); transition: opacity 180ms, box-shadow 180ms; }
+.seg[data-disabled] { cursor: not-allowed; box-shadow: inset 0 2px 6px rgba(0,0,0,.2); background-image: repeating-linear-gradient(135deg, color-mix(in srgb, var(--ufg3) 42.5%, transparent) 0 1px, transparent 1px 5px); }
+.seg-thumb { position: absolute; top: 2px; bottom: 2px; left: 0; z-index: 0; width: var(--thumb-w, 0px); transform: translateX(var(--thumb-x, 0px)); box-sizing: border-box; border: 1px solid var(--uline); border-radius: 5px; background: var(--uprim); pointer-events: none; }
+.seg[data-ready="true"] .seg-thumb { transition: transform 220ms cubic-bezier(.22,1,.32,1), width 220ms cubic-bezier(.22,1,.32,1), background-color 200ms ease, border-color 200ms ease; }
+.seg-btn { position: relative; z-index: 1; height: 24px; padding: 0 10px; box-sizing: border-box; border: 1px solid transparent; border-radius: 5px; background: transparent; color: var(--ufg3); font: 700 12.5px 'Urbanist', sans-serif; cursor: pointer; transition: color 200ms ease; }
+.seg-btn.active { color: var(--uprimfg); }
+.seg[data-disabled] .seg-btn { cursor: not-allowed; color: color-mix(in srgb, var(--ufg3) 60%, transparent); }
+.seg[data-disabled] .seg-thumb { background: color-mix(in srgb, var(--ufg3) 20%, transparent); border-color: transparent; }
 
 /* ── field — the composition layer ───────────────────────── */
 /* Every control gets the same four slots: label + description (.field-content),
@@ -313,7 +319,7 @@ button { font-family: inherit; }
 .dd-stage.tall { min-height: 280px; }
 .dd-trigger { display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 36px; padding: 0 10px 0 12px; text-align: left; cursor: pointer; border: 1px solid var(--urunline); border-radius: 8px; background: var(--urunfield); color: var(--ufg); font: 400 13px 'IBM Plex Mono', monospace; }
 .dd-trigger[aria-expanded="true"] { border-color: var(--ufg3); }
-.dd-trigger svg { transform: none; transition: transform 150ms; }
+.dd-trigger svg { transform: none; transition: transform 180ms cubic-bezier(.22,1,.32,1); }
 .dd-trigger[aria-expanded="true"] svg { transform: rotate(180deg); }
 .dd-menu { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 100; display: flex; flex-direction: column; gap: 2px; padding: 4px; border: 1px solid var(--urunline); border-radius: 10px; background: var(--umenu); box-shadow: var(--umenushadow); overflow: visible; }
 .dd-opt { display: grid; grid-template-columns: 16px minmax(0,1fr); align-items: center; gap: 8px; padding: 8px 10px 8px 8px; border: 0; border-radius: 7px; text-align: left; background: transparent; cursor: pointer; color: var(--ufg); }
@@ -327,7 +333,7 @@ button { font-family: inherit; }
 .dd-opt .note { font: 500 12px 'Urbanist', sans-serif; color: var(--ufg3); }
 
 /* ── section (field group) ───────────────────────────────── */
-.section-group { display: flex; flex-direction: column; gap: 10px; padding-top: 16px; border-top: 1px solid var(--urunline); }
+.section-group { display: flex; flex-direction: column; gap: 10px; }
 .section-group-head { display: flex; justify-content: space-between; align-items: baseline; }
 .section-group-head .asideline { display: flex; align-items: center; gap: 8px; font: 400 11.5px 'IBM Plex Mono', monospace; color: var(--ufg3); }
 
@@ -351,6 +357,7 @@ button { font-family: inherit; }
 /* ── json viewer ──────────────────────────────────────────── */
 .jsonbox { position: relative; min-height: 120px; overflow: auto; padding: 10px 0; border: 1px solid var(--uoutline); border-radius: 10px; background: var(--uout); font: 400 12.5px/1.7 'IBM Plex Mono', monospace; }
 .jsonline { display: grid; grid-template-columns: 40px 14px 14px minmax(0,1fr); background-color: var(--row-bg, transparent); }
+.jsonline.is-null { --row-bg: var(--badbg); }
 .jsonline.clickable { cursor: pointer; }
 /* hover is a translucent overlay, so it layers over --row-bg instead of replacing the row tint */
 .jsonline.clickable:hover { background-image: linear-gradient(var(--hover), var(--hover)); }
@@ -368,22 +375,28 @@ button { font-family: inherit; }
 /* ── run-btn ──────────────────────────────────────────────── */
 .run-btn { position: relative; overflow: hidden; width: 100%; height: 42px; padding: 0; border: 0; border-radius: 9px; background: var(--uprim); color: var(--uprimfg); font: 700 15px 'Urbanist', sans-serif; cursor: pointer; }
 .run-btn .label { position: relative; z-index: 2; display: flex; align-items: center; justify-content: center; gap: 9px; height: 100%; font-variant-numeric: tabular-nums; transition: color 400ms ease; }
-.run-btn[data-running="true"] .label { color: var(--runtext); text-shadow: var(--runshadow); }
+.run-btn:not([aria-busy="true"]) .label { transition: color 200ms ease; }
 .run-btn:disabled { opacity: .45; cursor: not-allowed; }
 .run-btn:not(:disabled):hover { filter: brightness(.92); }
 .run-btn:not(:disabled):active { filter: brightness(.84); }
 
 /* ── sea animation ────────────────────────────────────────── */
-.sea { position: absolute; inset: 0; z-index: 1; display: none; overflow: hidden; border-radius: 9px; pointer-events: none; }
-.run-btn[data-running="true"] .sea { display: block; }
-.sea-water { position: absolute; inset: 0; background: linear-gradient(180deg, var(--seawater) 0%, var(--seawater2) 100%); animation: sea-rise 800ms cubic-bezier(.2,.8,.25,1) both; }
-.sea.sinking .sea-water { animation: sea-sink 1100ms cubic-bezier(.55,0,.75,.2) both; }
-.sea-crest { position: absolute; left: 0; right: 0; top: -9px; height: 10px; overflow: hidden; }
-.sea-crest svg, .wave svg { display: block; width: 200%; height: 100%; fill: var(--seawave); animation: sea-scroll 3s linear infinite; }
-.wave { position: absolute; left: 0; right: 0; bottom: 0; animation: sea-bob 3s ease-in-out var(--delay, 0s) infinite; }
-.wave.back { top: 18%; animation-duration: 3.2s; --scroll: 5.5s; --delay: 0s; }
-.wave.mid { top: 40%; animation-duration: 2.6s; --scroll: 3.8s; --delay: -1.2s; }
-.wave.front { top: 64%; animation-duration: 2.1s; --scroll: 2.6s; --delay: -0.6s; }
+/* Water, crest and the three wave bands rise as one body. The crest rides the
+   top edge of the water, so the leading edge of the rise is a wave — never the
+   straight edge of a sheet. Each wave is a fixed-height band; giving one both
+   top and bottom would stretch a 10px path across the whole button. */
+.sea { --sea-crest: 12px; position: absolute; inset: 0; z-index: 1; display: none; overflow: hidden; border-radius: 9px; pointer-events: none; }
+.run-btn[data-wave="true"] .sea { display: block; }
+.sea-body { position: absolute; left: 0; right: 0; top: var(--sea-crest); bottom: calc(-1 * var(--sea-crest)); animation: sea-rise 800ms cubic-bezier(.2,.8,.25,1) both; }
+.sea.sinking .sea-body { animation: sea-sink 1100ms cubic-bezier(.55,0,.75,.2) both; }
+.sea-water { position: absolute; inset: 0; background: linear-gradient(180deg, var(--seawater) 0%, var(--seawater2) 100%); }
+.sea-crest { position: absolute; left: 0; right: 0; bottom: 100%; height: var(--sea-crest); overflow: hidden; }
+.sea-crest svg { display: block; width: 200%; height: 100%; fill: var(--seawater); animation: sea-scroll 3s linear infinite; }
+.wave { position: absolute; left: 0; right: 0; height: 10px; overflow: hidden; animation: sea-bob 3s ease-in-out var(--delay, 0s) infinite; }
+.wave svg { display: block; width: 200%; height: 100%; fill: var(--seawave); animation: sea-scroll 3s linear infinite; }
+.wave.back { top: 24%; animation-duration: 3.2s; --delay: 0s; }
+.wave.mid { top: 48%; animation-duration: 2.6s; --delay: -1.2s; }
+.wave.front { top: 72%; animation-duration: 2.1s; --delay: -0.6s; }
 @keyframes sea-rise { from { transform: translateY(110%); } to { transform: translateY(0); } }
 @keyframes sea-sink { from { transform: translateY(0); } to { transform: translateY(115%); } }
 @keyframes sea-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
@@ -394,6 +407,8 @@ button { font-family: inherit; }
 .copy-labels span { grid-area: 1 / 1; transition: opacity 220ms ease, transform 260ms cubic-bezier(.22,1,.32,1); }
 .copy-labels .out { opacity: 0; transform: translateY(6px); }
 .copy-labels .in { opacity: 1; transform: none; }
+.copy-btn.copied .copy-labels .in { opacity: 0; transform: translateY(-6px); }
+.copy-btn.copied .copy-labels .out { opacity: 1; transform: none; }
 .copy-btn { position: relative; overflow: hidden; display: inline-flex; align-items: center; height: 30px; padding: 0 11px; border: 1px solid var(--uline); border-radius: 7px; background: var(--ubg); color: var(--ufg); font: 600 13px 'Urbanist', sans-serif; cursor: pointer; gap: 7px; }
 
 /* ── divider + knob ───────────────────────────────────────── */
@@ -419,7 +434,7 @@ button { font-family: inherit; }
 .modal[open]::backdrop { animation: scrim-in 200ms ease; }
 body:has(dialog[open]) { overflow: hidden; }
 .modal-head { position: relative; isolation: isolate; display: flex; align-items: center; gap: 11px; min-height: var(--modal-header-height); padding: 16px 18px; }
-.modal-head::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 11px 11px 0 0; background: var(--modal-mosaic-tone); opacity: var(--modal-mosaic-opacity); pointer-events: none; -webkit-mask-image: linear-gradient(to bottom, #000 0 48%, transparent 100%), var(--modal-mosaic-pattern); mask-image: linear-gradient(to bottom, #000 0 48%, transparent 100%), var(--modal-mosaic-pattern); -webkit-mask-size: 100% 100%, 80px 80px; mask-size: 100% 100%, 80px 80px; -webkit-mask-repeat: no-repeat, repeat; mask-repeat: no-repeat, repeat; -webkit-mask-composite: source-in; mask-composite: intersect; }
+.modal-head::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 11px 11px 0 0; background: var(--modal-mosaic-tone); opacity: var(--modal-mosaic-opacity); pointer-events: none; -webkit-mask-image: linear-gradient(to bottom, #000 0 calc(var(--modal-header-height) * .48), transparent var(--modal-header-height)), var(--modal-mosaic-pattern); mask-image: linear-gradient(to bottom, #000 0 calc(var(--modal-header-height) * .48), transparent var(--modal-header-height)), var(--modal-mosaic-pattern); -webkit-mask-size: 100% 100%, 80px 80px; mask-size: 100% 100%, 80px 80px; -webkit-mask-repeat: no-repeat, repeat; mask-repeat: no-repeat, repeat; -webkit-mask-composite: source-in; mask-composite: intersect; }
 .modal-head > * { position: relative; z-index: 1; }
 .modal-head .modal-title { min-width: 0; overflow-wrap: anywhere; }
 .modal-head .modal-icon, .modal-head .modal-x { flex-shrink: 0; }
@@ -441,14 +456,14 @@ body:has(dialog[open]) { overflow: hidden; }
 
 .modal-icon svg { filter: drop-shadow(var(--modal-icon-shadow)); }
 .modal-head.has-mosaic::before { display: none; }
-.modal-head > .modal-mosaic { position: absolute; z-index: 0; top: 0; left: 0; width: 100%; height: 100%; display: grid; grid-template-columns: repeat(var(--mosaic-columns, 1), 8px); grid-auto-rows: 8px; gap: 2px; align-content: start; border-radius: 11px 11px 0 0; overflow: hidden; color: var(--modal-mosaic-tone); opacity: var(--modal-mosaic-opacity); pointer-events: none; -webkit-mask-image: linear-gradient(to bottom, #000 0 48%, transparent 100%); mask-image: linear-gradient(to bottom, #000 0 48%, transparent 100%); }
+.modal-head > .modal-mosaic { position: absolute; z-index: 0; top: 0; left: 0; width: 100%; height: 100%; display: grid; grid-template-columns: repeat(var(--mosaic-columns, 1), 8px); grid-auto-rows: 8px; gap: 2px; align-content: start; border-radius: 11px 11px 0 0; overflow: hidden; color: var(--modal-mosaic-tone); opacity: var(--modal-mosaic-opacity); pointer-events: none; -webkit-mask-image: linear-gradient(to bottom, #000 0 calc(var(--modal-header-height) * .48), transparent var(--modal-header-height)); mask-image: linear-gradient(to bottom, #000 0 calc(var(--modal-header-height) * .48), transparent var(--modal-header-height)); }
 .modal-mosaic-cell { display: block; width: 8px; height: 8px; border-radius: 1px; background: currentColor; opacity: var(--tile-base); animation: mosaic-wave var(--modal-wave-cycle) ease-in-out var(--tile-delay) infinite; animation-play-state: paused; }
 .modal[open] .modal-mosaic-cell { animation-play-state: running; }
 .mosaic-paused .modal[open] .modal-mosaic-cell { animation-play-state: paused; }
 @keyframes mosaic-wave { 0%, 24%, 100% { opacity: var(--tile-base); } 12% { opacity: var(--tile-peak); } }
 @media (prefers-reduced-motion: reduce) { .modal .modal-mosaic-cell { animation: none !important; opacity: var(--tile-base); } }
 
-@keyframes modal-in { from { opacity: 0; transform: translateY(10px) scale(.985); } }
+@keyframes modal-in { from { opacity: 0; transform: translate(-50%,-50%) translateY(10px) scale(.985); } }
 @keyframes scrim-in { from { opacity: 0; } }
 
 /* ── chip tone swatch row ─────────────────────────────────── */
@@ -486,15 +501,15 @@ body:has(dialog[open]) { overflow: hidden; }
 .spinner[data-size="xl"] { --spinner-size: 32px; }
 .loading-dots { --dots-cycle: 900ms; display: inline-flex; gap: 6px; align-items: center; }
 .loading-dots i { display: block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: goldfin-dot var(--dots-cycle) ease-in-out infinite; }
-.loading-dots i:nth-child(2) { animation-delay: 150ms; }
-.loading-dots i:nth-child(3) { animation-delay: 300ms; }
+.loading-dots i:nth-child(2) { animation-delay: 300ms; }
+.loading-dots i:nth-child(3) { animation-delay: 600ms; }
 [data-loading-tone="key"] { color: var(--key); }
 [data-loading-tone="ok"] { color: var(--ok); }
 [data-loading-tone="bad"] { color: var(--bad); }
 [data-loading-tone="warn"] { color: var(--warn); }
 .loading-badge { height: 24px; padding-inline: 8px; gap: 6px; font-size: 12px; }
 .loading-feedback { display: block; min-height: 20px; color: var(--ufg2); font: 400 12px/1.5 'IBM Plex Sans', sans-serif; }
-.loading-button-stack { --od-gap: 8px; }
+.loading-button-stack { --od-gap: 8px; align-items: start; }
 .loading-example .btn:disabled { opacity: .65; cursor: not-allowed; }
 .loading-example .btn[aria-busy="true"] { opacity: 1; }
 .loading-search { display: flex; align-items: center; gap: 8px; padding-inline: 12px; min-height: 36px; border: 1px solid var(--urunline); border-radius: 8px; background: var(--urunfield); color: var(--ufg2); }
@@ -502,7 +517,7 @@ body:has(dialog[open]) { overflow: hidden; }
 .loading-search input { flex: 1; min-width: 0; padding: 0; border: 0; outline: 0; background: transparent; color: var(--ufg); font: 400 13px 'IBM Plex Sans', sans-serif; }
 .loading-stage { display: grid; min-height: 144px; border: 1px solid var(--uline); border-radius: 8px; background: var(--usurf); }
 .loading-content, .loading-overlay { grid-area: 1 / 1; padding: 16px; border-radius: inherit; }
-.loading-content { --od-gap: 8px; }
+.loading-content { --od-gap: 8px; transition: opacity 150ms ease; }
 .loading-stage[data-state="running"] .loading-content { opacity: .25; }
 .loading-overlay { display: grid; place-content: center; justify-items: center; gap: 8px; background: var(--usurf); color: var(--ufg); }
 .loading-example[data-example="content-overlay"] .loading-overlay { background: color-mix(in srgb, var(--usurf) 92%, transparent); }
@@ -512,6 +527,14 @@ body:has(dialog[open]) { overflow: hidden; }
 .loading-skeleton span { display: block; height: 8px; border-radius: 4px; background: var(--uline); }
 .loading-skeleton span:last-child { width: 65%; }
 .loading-demo [hidden], .loading-search [hidden] { display: none !important; }
+/* A loading button holds one size and stays centred: the label keeps its box and
+   is only hidden, and the spinner is centred over the whole button rather than
+   sitting beside the text. `translate` is used, not `transform`, because the
+   spin keyframes own `transform` and would otherwise clobber the centring. */
+.loading-demo .btn { position: relative; }
+.btn .spinner { position: absolute; top: 50%; left: 50%; translate: -50% -50%; opacity: 0; animation: none; transition: opacity 150ms ease; }
+.btn .spinner.is-on { opacity: 1; animation: goldfin-spin var(--spinner-cycle) linear infinite; }
+.btn-label.is-hidden { visibility: hidden; }
 @keyframes goldfin-spin { to { transform: rotate(360deg); } }
 @keyframes goldfin-dot { 0%,100% { opacity: .35; } 50% { opacity: 1; } }
 
@@ -554,7 +577,7 @@ body:has(dialog[open]) { overflow: hidden; }
 .timeline-details { border: 1px solid var(--uline); border-radius: 8px; background: var(--usurf); }
 .timeline-details summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 36px; padding: 8px 12px; color: var(--ufg); cursor: pointer; list-style: none; font-size: 13px; }
 .timeline-details summary::-webkit-details-marker { display: none; }
-.timeline-details summary::after { content: ''; display: block; flex: none; width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); transition: transform 180ms ease-out; }
+.timeline-details summary::after { content: ''; display: block; flex: none; width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); transition: transform 180ms cubic-bezier(.22,1,.32,1); }
 .timeline-details[open] summary::after { transform: rotate(225deg); }
 .timeline-details .timeline-description { padding: 8px 12px; border-top: 1px solid var(--uline); }
 .timeline[data-tone="semantic"] .timeline-item[data-state="complete"] .timeline-marker { background: var(--okbg); border-color: var(--ok); color: var(--ok); }
@@ -618,7 +641,7 @@ body[data-theme="light"] .slider-field { --slider-grip: url("data:image/svg+xml,
 @media (hover: hover) { .gf-slider:not([data-disabled]) .gf-slider-thumb:hover { box-shadow: 0 0 0 4px var(--hover); } }
 
 .gf-overlay { position: fixed; inset: 0; z-index: 1000; background: var(--scrim); backdrop-filter: blur(5px) saturate(.85); animation: scrim-in 200ms ease; }
-.gf-modal { position: fixed; top: 50%; left: 50%; z-index: 1001; transform: translate(-50%, -50%); margin: 0; overflow-y: auto; animation: scrim-in 200ms ease; }
+.gf-modal { position: fixed; top: 50%; left: 50%; z-index: 1001; transform: translate(-50%, -50%); margin: 0; overflow-y: auto; animation: modal-in 200ms cubic-bezier(.22,1,.32,1); }
 .gf-modal .modal-mosaic-cell { animation-play-state: running; }
 .gf-dialog-error { padding: 0 18px 12px; }
 .modal-confirm[data-tone="bad"] .modal-icon { color: var(--bad); background: var(--badbg); }
@@ -647,16 +670,17 @@ body[data-theme="light"] .slider-field { --slider-grip: url("data:image/svg+xml,
 .gf-menu [data-disabled] { opacity: .45; cursor: not-allowed; }
 .gf-actions .dd-opt { display: block; }
 .gf-tab-content { padding-block: 16px; font-family: 'IBM Plex Sans', system-ui, sans-serif; }
-@media (pointer: coarse) { .ctl { min-height: 44px; align-items: center; } .gf-control { margin-top: 0; } .dd-trigger, .btn, .seg-btn, .tab { min-height: 44px; } }
+@media (pointer: coarse) { .ctl { min-height: 44px; align-items: center; } .gf-control { margin-top: 0; } .dd-trigger, .btn, .seg-btn, .tab, .table-sort { min-height: 44px; } }
 
 /* Native Goldfin compositions */
 .tabs{display:flex;gap:0;border-bottom:1px solid var(--uline)}
 .gf-split{display:flex;min-height:80px;max-width:500px}.gf-split .demo-pane{padding:12px;background:var(--usurf);font:12px 'IBM Plex Mono',monospace;color:var(--ufg3);overflow-wrap:anywhere}.gf-split .demo-pane:last-child{background:var(--uresult)}.gf-split .divider{width:5px;flex:none}.gf-split .knob{padding:0;border:0;color:var(--ufg);background:var(--usurf)}
 .gf-drop{position:relative;cursor:pointer}.gf-drop input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}.gf-drop:focus-within{outline:2px solid var(--ufg);outline-offset:3px}.gf-drop .name{overflow-wrap:anywhere}
-.gf-json .segs{white-space:pre-wrap;overflow-wrap:anywhere}.gf-json-toggle{display:flex;gap:8px;background:var(--usurf);color:var(--ufg2);border:0;border-bottom:1px solid var(--uline);padding:8px 12px;cursor:pointer;width:100%;text-align:left;font:inherit}.gf-json{max-height:320px;overflow:auto}.gf-json .jsonline{min-height:24px}
-.budget-bar{margin-top:4px}.legend{margin-top:10px}.run-btn .sea,.run-btn .label,.run-btn .sea-water,.run-btn .sea-crest,.run-btn .wave{display:block}.run-btn[aria-busy=true]{cursor:progress}.copy-labels{display:block}
+.gf-json .segs{white-space:pre-wrap;overflow-wrap:anywhere}.gf-json-body{max-height:320px;overflow:auto}.gf-json .jsonline{min-height:24px}
+.budget-bar{margin-top:4px}.legend{margin-top:10px}.run-btn[aria-busy=true]{cursor:progress}
 
-.run-btn[aria-busy=true] .sea{display:block}.run-btn[aria-busy=true] .label{color:var(--runtext);text-shadow:var(--runshadow)}.copy-labels .in,.copy-labels .out{display:block}.copy-btn{align-self:flex-start}
+.run-btn[aria-busy=true] .label{color:var(--runtext);text-shadow:var(--runshadow)}.copy-btn{align-self:flex-start}
+.dialog-trigger{align-self:flex-start}
 :where(button,a,input,summary,[tabindex]):focus-visible{outline:2px solid var(--ufg);outline-offset:3px}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 

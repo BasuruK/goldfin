@@ -4,7 +4,6 @@
   import Input from '../lib/Input.svelte';
   import Button from '../lib/Button.svelte';
   import { suiteError } from '../lib/validation.js';
-  let deleted = $state(false);
   let deleteFeedback = $state('Local sample · invoice-extraction');
   let connected = $state(false);
   let pairFeedback = $state('Sample device · not connected');
@@ -23,13 +22,9 @@
   <div class="grid-2" style="align-items:start">
     <div class="od-stack">
       <p class="field-legend">Destructive</p>
-      {#if !deleted}
-        <ConfirmDialog trigger="Delete suite" title="Delete invoice-extraction?" description="12 cases, 3 runs and every result stored with them. This cannot be undone." action="Delete suite" icon="trash" tone="bad"
-          onConfirm={() => { deleted = true; deleteFeedback = 'Sample suite deleted.'; }}
-          onResult={result => { if (result === 'canceled') deleteFeedback = 'Deletion canceled. Sample suite retained.'; }}/>
-      {:else}
-        <Button onclick={() => { deleted = false; deleteFeedback = 'Sample suite restored.'; }}>Reset sample suite</Button>
-      {/if}
+      <ConfirmDialog trigger="Delete suite" title="Delete invoice-extraction?" description="12 cases, 3 runs and every result stored with them. This cannot be undone." action="Delete suite" icon="trash" tone="bad"
+        onConfirm={() => { deleteFeedback = 'Sample suite deleted.'; }}
+        onResult={result => { if (result === 'canceled') deleteFeedback = 'Deletion canceled. Sample suite retained.'; }}/>
       <p class="field-desc" role="status">{deleteFeedback}</p>
     </div>
     <div class="od-stack">
