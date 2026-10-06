@@ -44,7 +44,25 @@ Import `src/goldfin.css` once at the application entry. Import components from `
   action="Delete suite" tone="bad" icon="trash" onConfirm={deleteSuite} />
 ```
 
-In an existing SvelteKit application, copy the library and stylesheet under its `src/lib` and use `$lib` imports. Reuse that application's build setup. Do not add a second Vite starter inside the application.
+In an existing SvelteKit application, point the build at this folder. Do not copy it. Two copies means a core edit reaches one copy while the application runs the other.
+
+```js
+// vite.config.js in the SvelteKit application
+import { fileURLToPath } from 'node:url';
+import { defineConfig } from 'vite';
+import { sveltekit } from '@sveltejs/kit/vite';
+
+export default defineConfig({
+  plugins: [sveltekit()],
+  resolve: {
+    alias: {
+      '$goldfin': fileURLToPath(new URL('./Goldfin_Components/src', import.meta.url))
+    }
+  }
+});
+```
+
+Then import components from `$goldfin/lib/index.js` and the stylesheet from `$goldfin/goldfin.css`. Reuse that application's build setup. Do not add a second Vite starter inside the application.
 
 ## Public components
 

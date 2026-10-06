@@ -203,4 +203,53 @@ test.describe('harness defaults', () => {
     await expect(page.locator('#tabs .tab.active')).toHaveText('Two');
     await expect(page.getByText('Second panel')).toBeVisible();
   });
+
+  test('JSONViewer keeps folds for the same JSON and drops them for new JSON', async ({ page }) => {
+    const lines = page.locator('#json .jsonline');
+    await expect(lines).toHaveCount(8);
+    await lines.nth(1).click();
+    await expect(lines).toHaveCount(6);
+    await page.evaluate(() => window.harness.setJson({ first: { a: 1 }, second: { b: 2 } }));
+    await expect(lines).toHaveCount(6);
+    await page.evaluate(() => window.harness.setJson({ list: [1, 2, 3] }));
+    await expect(lines).toHaveCount(7);
+    await expect(lines.nth(1)).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  test('RunButton ignores a stopped run that finishes late', async ({ page }) => {
+    const button = page.locator('#run .run-btn');
+    const status = page.locator('#run [role="status"]');
+    await button.click();
+    await button.click();
+    await expect(status).toHaveText('Run stopped.');
+    await button.click();
+    await expect(button).toHaveAttribute('aria-busy', 'true');
+    await page.evaluate(() => window.harness.finishOldestRun());
+    await expect(button).toHaveAttribute('aria-busy', 'true');
+    await expect(status).toHaveText('Running main LLM test case…');
+    await page.evaluate(() => window.harness.finishOldestRun());
+    await expect(status).toHaveText('Test case complete.');
+    await button.click();
+    await button.click();
+    await page.evaluate(() => window.harness.finishOldestRun());
+    await expect(status).toHaveText('Run stopped.');
+    await expect(button).toHaveAttribute('aria-busy', 'false');
+  });
+
+  test('SegmentedControl resolves an unknown value to the first item everywhere', async ({ page }) => {
+    const first = page.locator('#seg .seg-btn').first();
+    await expect(first).toHaveClass(/active/);
+    await expect(first).toHaveAttribute('data-state', 'on');
+    const [thumb, button] = await page.locator('#seg .seg').evaluate(el =>
+      [el.querySelector('.seg-thumb'), el.querySelector('.seg-btn')].map(node => node.getBoundingClientRect().width));
+    expect(thumb).toBeCloseTo(button, 0);
+  });
+
+  test('SegmentedControl thumb follows a segment that changes size', async ({ page }) => {
+    const seg = page.locator('#seg .seg');
+    await expect(seg).toHaveAttribute('data-ready', 'true');
+    await page.addStyleTag({ content: '#seg .seg-btn { padding: 0 40px; }' });
+    await expect.poll(() => seg.evaluate(el =>
+      Math.round(el.querySelector('.seg-thumb').getBoundingClientRect().width - el.querySelector('.seg-btn').getBoundingClientRect().width))).toBe(0);
+  });
 });

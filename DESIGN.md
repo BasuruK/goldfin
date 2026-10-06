@@ -148,6 +148,7 @@ Goldfin components are the application-facing API. Bits UI remains an upstream i
 - Titles and descriptions share the mosaic header, left-aligned and vertically centered with the icon. Form fields stay below the header.
 - Keep the subtle icon drop shadow and separated footer across confirmation, deletion and suite creation.
 - Tile pitch is 10px; column delays are 60ms. The 5-second cycle contains a broad 1.2-second pulse, traveling left to right. Each tile has randomized intensity; peaks refresh each pass.
+- The mosaic band is masked from `--modal-header-height`, not from the header's rendered height. A header grows when its description wraps, and a percentage mask made the decoration render at two different sizes for no reason other than line count; a test asserts two dialogs with different header heights resolve to the same mask.
 - Mosaic content is decorative and aria-hidden. The observer/listener are cleaned up on unmount, and animation pauses when the document is hidden.
 - Confirmations use the existing Cancel-first focus behavior. Escape/scrim dismissal is allowed when idle; pending confirmation blocks dismissal and duplicate execution.
 - Confirmation succeeds only after the application callback resolves. Rejection keeps the dialog open with retryable error feedback. Reopening resets prior result/error state.
@@ -158,7 +159,7 @@ Goldfin components are the application-facing API. Bits UI remains an upstream i
 - Inputs keep visible labels, adjacent useful errors, required markers and validation on blur.
 - Selection menus choose values; action menus invoke actions. Do not conflate those APIs.
 - Preserve single/multiple selection, disabled options and selected/highlighted states.
-- Tabs switch content; segmented controls express one selection. Retain keyboard operation and explicit selected state.
+- Tabs switch content; segmented controls express one selection. Retain keyboard operation and explicit selected state. The selection is one indicator element that slides to the selected segment, so a change reads as movement rather than a cross-fade; it is placed without transition on first paint and must not resize the control.
 - FileDrop selects and validates a local file; it does not upload it. Full production validation remains application-owned.
 
 ### Tables
@@ -171,18 +172,20 @@ Goldfin components are the application-facing API. Bits UI remains an upstream i
 ### Loading and timelines
 
 - Preserve the ring/dot loaders and supplied 12 loading patterns.
+- A loading button keeps one size across every state. While an operation runs, the spinner replaces the text: the label keeps its box and is only hidden, and the spinner is centred over the whole button rather than sitting beside the text. The text returns when the operation finishes. A dialog or form trigger is the standard button size and is not stretched by its container.
 - Loading state must describe a real operation or clearly labeled local example. Cancellation and stale callbacks must not revive an outdated result.
 - Preserve the 11 timeline layouts, status markers/connectors and native collapsible disclosures; no avatars.
 - Show the application's real state with text as well as visual cues. Sample events are not production records.
 
 ### Data and special actions
 
-- Run is exclusive to the main LLM test case. Its button has no cost or execution-time hint. App callbacks own real execution; sample mode is local.
-- JSONViewer provides escaped JSON text, line presentation and whole-output disclosure. It is not a nested syntax-tree editor or full syntax highlighter.
-- CopyButton uses the browser clipboard and reports failure; clipboard availability depends on the browser context.
+- Run is exclusive to the main LLM test case. Its button has no cost or execution-time hint. App callbacks own real execution; sample mode is local. The sea rises as one body — water, crest and wave bands travel together — so the leading edge of the rise is a wave and never the straight edge of a sheet. Each wave band is a fixed height.
+- JSONViewer provides escaped JSON text, line presentation, token colouring and a labelled region; it has no header and no whole-output disclosure. A line whose value is null carries a gutter dot and a full-width error band. A line that opens an object or array reports its direct child count. Any such line is also a fold control: the whole line toggles on click, Enter or Space, carries `aria-expanded`, and shows ▾ when open or ▸ when folded. Folding hides descendants and keeps original line numbers. Each line folds on its own. It is not a draggable or editable tree.
+- CopyButton uses the browser clipboard and reports failure; clipboard availability depends on the browser context. On success the label swaps to "Copied!" and returns to its default label afterwards. The two labels are one overlapping cell, so the swap never resizes the button, and the swap is decorative — the status line carries the announcement.
 - SplitPane currently collapses/restores a pane. It is not a draggable splitter.
 - BudgetBar displays derived example values; it is not billing or a model-pricing authority.
 - Chips, pills and status selection use existing tokens and explicit labels.
+- `FieldGroup` renders its label, optional aside and content with no divider of its own. A stacked-group rule was removed: the only composition using it wanted the groups read as one block, and a divider there was noise. Separate the groups in CSS at the call site if a future composition needs it.
 
 ## Public inventory
 
@@ -196,11 +199,21 @@ API examples live in the source README and example files. LoadingGallery, Timeli
 
 The existing switch transition is 180ms. Ordinary state transitions should remain within 150–300ms and larger transitions within 400ms unless the already-approved timed sea/mosaic effect applies. Animate transform/opacity rather than layout dimensions in new interactions.
 
-Reduced-motion styling disables animations and transitions. Avoid dependence on animation for status or comprehension.
+`cubic-bezier(.22,1,.32,1)` is the house easing curve. It reaches half its travel in roughly the first eighth of its duration, so it reads as responsive rather than soft. Use it for anything that moves in space. A duration given with no easing function inherits the browser default and is a defect: `.dd-trigger svg` carried `transform 150ms` with no curve while the timeline disclosure used a different one, so two chevrons meaning the same thing disagreed. The disclosure chevrons now share 180ms on the house curve.
+
+Two disclosure surfaces must not disagree. More generally, one meaning gets one duration and one curve; where a second surface expresses the same state change, match the first rather than choosing independently.
+
+A state change is not finished when the value changes, it is finished when the change is seen. A press on a button scales to 0.97 over 150ms; the dialog rises into place rather than dissolving; loading content fades to its working state over 150ms and the in-button spinner fades rather than appearing from nothing. Prefer an interruptible property — opacity, transform — over `visibility`, which cannot be retargeted mid-flight.
+
+Entering and leaving a busy state are not symmetric. The Run label keeps its 400ms colour fade on the way in, where the user is committing, and returns over 200ms on the way out, where the system is only reporting back and the water is still draining. Slow where a person decides, fast where the system answers.
+
+A dialog is centred by its own `transform: translate(-50%,-50%)`, and an entrance keyframe that animates `transform` from an untransformed state overwrites that centring for the whole duration. The entrance keyframe must restate the centring translate it replaces, or the dialog animates in from off-centre. A test asserts this.
+
+Reduced-motion styling disables animations and transitions. Avoid dependence on animation for status or comprehension. Because a tile's randomisation is driven by the animation's own iteration event, killing the animation also stops that work; a reduced-motion guard in the script layer would guard a path that cannot be reached.
 
 Product integration must retain accessible names, labels, focus order, visible focus, keyboard controls, disabled behavior, non-color state cues and system zoom. General final focus styling is a 2px foreground outline with 3px offset; the slider thumb uses its explicit accent outline.
 
-Coarse-pointer controls need at least 44px interaction targets. Existing coarse-pointer CSS expands several controls, but this is not a blanket certification of every exported control. Mobile consumers must retain sufficient spacing between adjacent targets.
+Coarse-pointer controls need at least 44px interaction targets. The coarse-pointer block covers `.ctl`, `.dd-trigger`, `.btn`, `.seg-btn`, `.tab` and `.table-sort`; a narrow viewport separately covers the table sort. Those two conditions are complementary — a wide tablet was previously uncovered. This is not a blanket certification of every exported control. Mobile consumers must retain sufficient spacing between adjacent targets. A loading button is a positioning context so its absolutely centred spinner resolves against the button rather than an ancestor.
 
 Integration acceptance must assess each theme independently: at least 4.5:1 for body text and 3:1 for large text/essential graphics. These are requirements, not a claim that every inherited color pairing has been audited.
 
@@ -232,6 +245,14 @@ After transfer, treat the main repository's source as the active copy. The Open 
 ## Verification status and remaining work
 
 Existing generation compiled component candidates and checked selected pure logic before writing source. The showcase generation completed previously. Browser interactions, focus restoration, responsive rendering and visual parity were not independently verified.
+
+A later motion pass changed only `goldfin.css` and added stylesheet tests. It did not change any component, so the public inventory and `src/lib/index.js` are unchanged. It was verified by reading source and by three regression tests that assert the cross-file contracts the motion work depends on: the entrance keyframe restating the dialog's centring translate, the button being a positioning context for the centred spinner, and `RunButton` still emitting the `aria-busy` the asymmetric label fade selects on. Those assertions are non-vacuous; each was checked against a deliberately broken value.
+
+**Browser verification: now performed, in Chromium.** An e2e suite existed and was committed (`e2e/components.spec.js` with eleven tests covering MosaicHeader peak refresh, the focus ring, ARIA validity, JSONViewer, CopyButton, Timeline, FileDrop, Select and Tabs). It could never run: `playwright.config.ts` pointed `testDir` at a non-existent absolute path and the file lived at the repository root while the components live in `Goldfin_Components/`, so the `@playwright/test` import resolved to two different module instances and every invocation failed. The config now lives beside its own `package.json`, drives the Vite dev server, and runs twenty-six tests: the original eleven plus fifteen covering the motion decisions recorded above.
+
+That pass verifies, in a rendered browser, that a closing dialog restores focus to its trigger and never falls back to `body`; that the dialog stays centred through its entrance and not merely at rest; that a pressed button settles to `matrix(0.97, 0, 0, 0.97, 0, 0)`; that the loading spinner never changes the button box; that the Run label fades at 0.4s going in and 0.2s coming out; that the mosaic does not animate under reduced motion; that the table sort reaches 44px on a coarse pointer with the pointer actually coarse; and that 375px produces no horizontal overflow. The dialog-centring assertions were mutation-checked against the pre-fix keyframe and do fail without it.
+
+Only Chromium was exercised. Firefox and WebKit are installed and configured for in spirit but were not run, so the `-webkit-` prefixed paths and Safari's `<dialog>` behaviour are unverified. The remaining gap is cross-browser, not unverified-anywhere.
 
 This handoff adds documentation and packages unchanged source; it adds no new component/domain logic and does not claim new tests, rendering or archive validation. Archive contents are selected during creation, not inspected after generation.
 

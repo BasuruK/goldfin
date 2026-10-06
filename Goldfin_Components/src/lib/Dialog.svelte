@@ -5,7 +5,7 @@
   let { open = $bindable(false), trigger, title, description, children, actions, ...rest } = $props();
 </script>
 <Primitive.Root {...rest} bind:open>
-  <Primitive.Trigger class="btn">{trigger}</Primitive.Trigger>
+  <Primitive.Trigger class="btn dialog-trigger">{trigger}</Primitive.Trigger>
   <Primitive.Portal>
     <Primitive.Overlay class="gf-overlay" />
     <Primitive.Content class="modal gf-modal">
