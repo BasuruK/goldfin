@@ -48,6 +48,7 @@ In an existing SvelteKit application, point the build at this folder. Do not cop
 
 ```js
 // vite.config.js in the SvelteKit application
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 
@@ -55,7 +56,7 @@ export default defineConfig({
   plugins: [sveltekit()],
   resolve: {
     alias: {
-      '$goldfin': new URL('./Goldfin_Components/src', import.meta.url).pathname
+      '$goldfin': fileURLToPath(new URL('./Goldfin_Components/src', import.meta.url))
     }
   }
 });
