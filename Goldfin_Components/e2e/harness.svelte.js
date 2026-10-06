@@ -4,8 +4,10 @@ import Tabs from '../src/lib/Tabs.svelte';
 import JSONViewer from '../src/lib/JSONViewer.svelte';
 import RunButton from '../src/lib/RunButton.svelte';
 import SegmentedControl from '../src/lib/SegmentedControl.svelte';
-import { jsonProps } from './harness-props.svelte.js';
 import '../src/goldfin.css';
+
+// Mutable on purpose: the harness swaps value to test how each component reacts to new input.
+const jsonProps = $state({ label: 'Harness JSON', value: { first: { a: 1 }, second: { b: 2 } } });
 
 mount(Select, {
   target: document.getElementById('select'),
