@@ -387,7 +387,6 @@ body:has(dialog[open]) { overflow: hidden; }
    is only hidden, and the spinner is centred over the whole button rather than
    sitting beside the text. `translate` is used, not `transform`, because the
    spin keyframes own `transform` and would otherwise clobber the centring. */
-.loading-demo .btn { position: relative; }
 .btn .spinner { position: absolute; top: 50%; left: 50%; translate: -50% -50%; opacity: 0; animation: none; transition: opacity 150ms ease; }
 .btn .spinner.is-on { opacity: 1; animation: goldfin-spin var(--spinner-cycle) linear infinite; }
 .btn-label.is-hidden { visibility: hidden; }

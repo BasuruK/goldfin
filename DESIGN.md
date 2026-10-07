@@ -189,11 +189,15 @@ Goldfin components are the application-facing API. Bits UI remains an upstream i
 
 ## Public inventory
 
-The current barrel exports 32 components:
+The current barrel exports 56 components in two groups: 32 composed components, then 24 individual parts.
 
-Slider, MosaicHeader, ConfirmDialog, Dialog, Button, Icon, Checkbox, CheckboxGroup, RadioGroup, Switch, SwitchCard, Input, Select, StatusSelect, DropdownMenu, Tabs, SegmentedControl, Pill, Chip, Spinner, LoadingTask, LoadingSearch, Table, BudgetBar, RunButton, CopyButton, SplitPane, FileDrop, JSONViewer, Timeline, TimelineItem and FieldGroup.
+Composed: Slider, MosaicHeader, ConfirmDialog, Dialog, Button, Icon, Checkbox, CheckboxGroup, RadioGroup, Switch, SwitchCard, Input, Select, StatusSelect, DropdownMenu, Tabs, SegmentedControl, Pill, Chip, Spinner, LoadingTask, LoadingSearch, Table, BudgetBar, RunButton, CopyButton, SplitPane, FileDrop, JSONViewer, Timeline, TimelineItem and FieldGroup.
 
-API examples live in the source README and example files. LoadingGallery, TimelineGallery, TableExamples and TokenGallery are showcase/support compositions, not additional public exports. Keep sample state out of reusable primitives.
+Individual parts exist so a screen can build its own instead of settling for the array shape: `DialogHeader`, `DialogBody`, `DialogFooter`, `SwitchControl`, `TableSortButton`, `TableEmpty`, `TimelineMarker`, `TabList`, `TabTrigger`, `TabContent`, `MenuItem`, `MenuSeparator`, `MenuLabel`, `SegmentedItem`, `Mosaic`, `Sea`, `JSONLine`, `LoadingButton`, `LoadingOverlay`, `LoadingStatus`, `ReadRow`, `Section`, `Skeleton`, `ThemeToggle`.
+
+The parts are additive. The composed component stays the convenient default and keeps its props; a part only earns its place where the composed shape cannot express what a screen needs. `SegmentedItem` still renders the `.seg-btn` class because the sliding thumb measures that class. `Mosaic` and `Sea` are the animated systems lifted out of `MosaicHeader` and `RunButton`, which keep their own props and output.
+
+API examples live in the source README and example files. `src/lib/` holds only what a screen imports: the 56 exported components, their pure helpers, and `index.js`. LoadingGallery, TimelineGallery, TableExamples and TokenGallery are showcase compositions and live in `src/examples/`, not `src/lib/`. Keep sample state out of reusable primitives: `src/lib/` file count matches the export count.
 
 ## Motion and accessibility requirements
 
