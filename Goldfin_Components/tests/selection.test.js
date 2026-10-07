@@ -14,3 +14,11 @@ test('select-all derives empty, partial and full states from known items', () =>
   assert.equal(selectionState(['a', 'b'], items).checked, true);
   assert.equal(selectionState([], []).checked, false);
 });
+test('disabled items keep their selection and do not count towards select-all', () => {
+  const items = [{ value: 'a' }, { value: 'b' }, { value: 'c', disabled: true }];
+  assert.deepEqual(toggleAll(['c', 'a'], items, false), ['c']);
+  assert.deepEqual(toggleAll(['c'], items, true), ['c', 'a', 'b']);
+  assert.deepEqual(selectionState(['a', 'b'], items), { count: 2, checked: true, indeterminate: false });
+  assert.deepEqual(selectionState(['c'], items), { count: 1, checked: false, indeterminate: false });
+  assert.equal(selectionState(['c'], [{ value: 'c', disabled: true }]).checked, false);
+});

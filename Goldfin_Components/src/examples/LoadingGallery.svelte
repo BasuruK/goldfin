@@ -11,7 +11,7 @@
 </script>
 {#snippet feedback(state)}<p class="loading-feedback" role="status" aria-atomic="true">{feedbackText[state] ?? 'Sample operation · ready'}</p>{/snippet}
 {#snippet taskButton(idle, working, variant = '')}<LoadingTask>{#snippet children({ busy, state, start })}<div class="od-stack loading-button-stack loading-demo"><LoadingButton {busy} {idle} {working} {variant} onclick={start}/>{@render feedback(state)}</div>{/snippet}</LoadingTask>{/snippet}
-{#snippet overlayExample({ example, heading, content, overlay, action, empty = false })}<LoadingTask>{#snippet children({ busy, state, start, cancel })}<article class="loading-example od-stack loading-demo" data-example={example}><h3>{heading}</h3><LoadingOverlay {busy} {state} {overlay} {empty} {example}>
+{#snippet overlayExample({ example, heading, content, overlay, action, empty = false })}<LoadingTask>{#snippet children({ busy, state, start, cancel })}<article class="loading-example od-stack loading-demo" data-example={example}><h3>{heading}</h3><LoadingOverlay {busy} {state} {overlay} hint="Sample operation in progress" {empty} {example}>
   {#snippet children()}<strong>{content}</strong><p class="loading-hint">Local sample content; no service connection.</p><Skeleton/>{/snippet}
 </LoadingOverlay><div class="od-cluster"><LoadingButton {busy} idle={action} working="Loading…" onclick={start}/><button class="btn" type="button" onclick={cancel} hidden={!busy}>Cancel</button></div>{@render feedback(state)}</article>{/snippet}</LoadingTask>{/snippet}
 <Section title="Spinners" reference=".spinner · .loading-dots · aria-busy" id="spinners" data-od-id="spinners" legend="Sample loading patterns · controls complete locally and can be repeated">
