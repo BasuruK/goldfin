@@ -1,5 +1,5 @@
 <script>
-  import TokenGallery from './lib/TokenGallery.svelte';
+  import TokenGallery from './examples/TokenGallery.svelte';
   import TableExamples from './lib/TableExamples.svelte';
   import LoadingGallery from './lib/LoadingGallery.svelte';
   import TimelineGallery from './lib/TimelineGallery.svelte';

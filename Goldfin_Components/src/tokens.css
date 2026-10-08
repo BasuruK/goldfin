@@ -1,48 +1,201 @@
-/* ── tokens ──────────────────────────────────────────────── */
-:root,
-body {
-  --ubg:     #111214; --usurf:   #17181b; --uwell:   #141518; --uline:   #2a2c31;
-  --ufg:     #f3f4f6; --ufg2:    #b9bec6; --ufg3:    #8c929b;
-  --uprim:   #f3f4f6; --uprimfg: #111214; --upill:   #212328;
-  --uout:    #121d17; --uoutline: #1f3a2b; --uhl:     #1d2a3d; --uhead:   #1b1c1e;
-  --uprompt: #121212; --upwell:  #0d0d0d; --uresult: #1c1c1c;
-  --urun:    #2c2d30; --urunfield: #38393c; --urunwell: #232427; --urunline: #45474b; --umenu: #414245;
-  --key: #60a5fa; --str: #cbd5e1; --num: #fbbf24; --ok: #34d399; --bad: #f87171; --p: #858d98; --cnt: var(--ufg3);
-  --warn: #fbbf24;
-  --badbg: rgba(248,113,113,.10); --okbg: rgba(52,211,153,.10);
-  --runchip: rgba(63,116,216,.16); --runchipfg: #8fb4ff;
-  --runtext: #eaf1ff; --runshadow: 0 1px 3px rgba(0,0,0,.45);
-  --seawater: #0a1430; --seawater2: #0d1b44; --seawave: #1a3a8f;
-  --sel: rgba(63,116,216,.32); --hover: rgba(255,255,255,.05);
-  --scrim: rgba(0,0,0,.58);
-  --uheadshadow: 0 1px 2px rgba(0,0,0,.08), 0 4px 10px rgba(0,0,0,.06), 0 10px 24px rgba(0,0,0,.04);
-  --urunshadow: -2px 0 4px rgba(0,0,0,.14), -8px 0 16px rgba(0,0,0,.12), -20px 0 40px rgba(0,0,0,.08);
-  --upwellshadow: inset 0 1px 3px rgba(0,0,0,.35);
-  --umenushadow: 0 12px 32px rgba(0,0,0,.4);
-}
-body[data-theme="light"] {
-  --ubg: #ffffff; --usurf: #f7f8f9; --uwell: #fbfbfc; --uline: #e4e6ea;
-  --ufg: #0f1115; --ufg2: #3f4650; --ufg3: #646b75;
-  --uprim: #111317; --uprimfg: #ffffff; --upill: #eff1f3;
-  --uout: #f1f8f3; --uoutline: #d3e8da; --uhl: #e3ebf9; --uhead: #ffffff;
-  --key: #1d4ed8; --str: #334155; --num: #9a5a06; --ok: #047857; --bad: #c81e1e; --p: #6b7280;
-  --badbg: #fdeded; --okbg: #e5f5ee;   --warn: #9a5a06; --runchip: #e6eefc; --runchipfg: #1d4ed8;
-  --runtext: #111214; --runshadow: none;
-  --seawater: #e9f0fb; --seawater2: #ffffff; --seawave: #a8c2e8;
-  --sel: rgba(29,78,216,.16); --hover: rgba(0,0,0,.05);
-  --scrim: rgba(17,19,23,.34);
-  --uprompt: #f4f5f7; --upwell: #ffffff; --uresult: #ffffff;
-  --urun: #ffffff; --urunfield: #ffffff; --urunwell: #f7f8f9; --urunline: #e4e6ea; --umenu: #ffffff;
-  --uheadshadow: 0 1px 3px rgba(0,0,0,.08), 0 2px 8px rgba(0,0,0,.04);
-  --urunshadow: -3px 0 6px rgba(0,0,0,.08), -8px 0 20px rgba(0,0,0,.06);
-  --upwellshadow: 0 1px 2px rgba(0,0,0,.06);
-  --umenushadow: 0 6px 12px rgba(0,0,0,.10), 0 16px 32px rgba(0,0,0,.08);
+/* ──────────────────────────────────────────────────────────────────────────
+   Goldfin design tokens.
+
+   Colour is written in oklch(). Every value was converted from the previous hex
+   and verified to round-trip to the same 8-bit sRGB triple, so the rendered
+   colour did not move. A true gray has zero chroma and takes `none` as its hue;
+   the subtly tinted grays keep their chroma, because dropping it shifts them.
+
+   Each token holds both themes through light-dark(), so there is no second
+   override block. Dark is the default, so color-scheme starts at dark and the
+   light values only apply when the document asks for them.
+
+   `body[data-theme]` still sets the theme, because that is what the toggle
+   writes and what portaled dialogs and menus inherit. It now maps to
+   color-scheme rather than redeclaring the tokens.
+   ────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  color-scheme: dark;
+
+  /* ── motion ─────────────────────────────────────────────────────────────
+     The house curve from DESIGN.md: it reaches half its travel in roughly the
+     first eighth of its duration, so it reads as responsive rather than soft.
+     Anything that moves in space uses it. Colours fade on the browser default,
+     because easing a colour change is noise. */
+  --ease-out: cubic-bezier(.22, 1, .32, 1);
+  --ease-in-out: cubic-bezier(.77, 0, .175, 1);
+  --duration-press: 150ms;
+  --duration-ui: 180ms;
+  --duration-menu: 200ms;
+    --duration-panel: 320ms;
+
+  /* ── type roles ─────────────────────────────────────────────────────────
+     Font families are not interchangeable, so each role is named once here
+     instead of being retyped in every component rule. */
+  --font-ui: 'Urbanist', system-ui, sans-serif;
+  --font-body: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+
+  /* ── core ─────────────────────────────────────────────────────────────── */
+  --ubg:     light-dark(oklch(100% 0 none),       oklch(18.196% 0.0044 264.46));
+  --usurf:   light-dark(oklch(97.865% 0.0017 247.84), oklch(20.924% 0.0061 271.12));
+  --uwell:   light-dark(oklch(98.837% 0.0013 286.38), oklch(19.595% 0.0062 271.09));
+  --uline:   light-dark(oklch(92.455% 0.0058 264.53), oklch(29.312% 0.0095 268.35));
+  --ufg:     light-dark(oklch(17.727% 0.0089 264.32), oklch(96.696% 0.0029 264.54));
+  --ufg2:    light-dark(oklch(39.165% 0.0193 257.26), oklch(79.999% 0.0126 259.82));
+  --ufg3:    light-dark(oklch(52.526% 0.0179 257.24), oklch(65.792% 0.0151 258.36));
+  --uprim:   light-dark(oklch(18.637% 0.0088 264.34), oklch(96.696% 0.0029 264.54));
+  --uprimfg: light-dark(oklch(100% 0 none),       oklch(18.196% 0.0044 264.46));
+  --upill:   light-dark(oklch(95.719% 0.0034 247.86), oklch(25.618% 0.0098 268.29));
+
+  /* Boolean state is two-tone, not accent blue. --key keeps its accent roles. */
+  --key:  light-dark(oklch(48.82% 0.2172 264.38),  oklch(71.374% 0.1434 254.62));
+  --ok:   light-dark(oklch(50.813% 0.1049 165.61), oklch(77.294% 0.1535 163.22));
+  --bad:  light-dark(oklch(53.492% 0.2026 27.61),  oklch(71.063% 0.1661 22.22));
+  --warn: light-dark(oklch(52.939% 0.118 63.6),    oklch(83.686% 0.1644 84.43));
+
+  /* ── specialist ───────────────────────────────────────────────────────── */
+  --uout:     light-dark(oklch(97.248% 0.0099 155.1),  oklch(21.789% 0.0197 160.35));
+  --uoutline: light-dark(oklch(91.154% 0.0292 156.6),  oklch(32.17% 0.0429 158.45));
+  --uhl:      light-dark(oklch(93.816% 0.0208 261.77), oklch(28.257% 0.0395 257.77));
+  --uhead:    light-dark(oklch(100% 0 none),          oklch(22.62% 0.0041 264.49));
+  --uprompt:  light-dark(oklch(96.995% 0.0029 264.54), oklch(18.22% 0 none));
+  --upwell:   light-dark(oklch(100% 0 none),          oklch(15.907% 0 none));
+  --uresult:  light-dark(oklch(100% 0 none),          oklch(22.645% 0 none));
+
+  --urun:      light-dark(oklch(100% 0 none),          oklch(29.732% 0.0056 271.23));
+  --urunfield: light-dark(oklch(100% 0 none),          oklch(34.473% 0.0054 271.26));
+  --urunwell:  light-dark(oklch(97.865% 0.0017 247.84), oklch(26.05% 0.0058 271.19));
+  --urunline:  light-dark(oklch(92.455% 0.0058 264.53), oklch(39.75% 0.0072 264.49));
+  --umenu:     light-dark(oklch(100% 0 none),          oklch(37.923% 0.0052 271.28));
+
+  --str: light-dark(oklch(37.17% 0.0392 257.29), oklch(86.898% 0.0198 252.89));
+  --num: light-dark(oklch(52.939% 0.118 63.6),   oklch(83.686% 0.1644 84.43));
+  --p:   light-dark(oklch(55.102% 0.0234 264.36), oklch(64.045% 0.0189 256.32));
+  --cnt: var(--ufg3);
+
+  /* Tints are derived from the semantic colour they sit behind, never a second
+     hand-written value. The light theme uses an opaque tint by design, so it
+     keeps its own value rather than forcing the alpha form on both. */
+  --badbg: light-dark(oklch(95.875% 0.0174 17.46),  color-mix(in oklch, var(--bad) 10%, transparent));
+  --okbg:  light-dark(oklch(95.634% 0.0192 167.93), color-mix(in oklch, var(--ok) 10%, transparent));
+
+  --runchip:   light-dark(oklch(94.721% 0.0207 261.77), oklch(57.504% 0.1637 261.7 / 0.16));
+  --runchipfg: light-dark(oklch(48.82% 0.2172 264.38),  oklch(77.23% 0.1154 263.77));
+  --runtext:   light-dark(oklch(18.196% 0.0044 264.46), oklch(95.697% 0.0203 264.47));
+  --seawater:  light-dark(oklch(95.306% 0.0166 259.42), oklch(20.067% 0.0576 266.48));
+  --seawater2: light-dark(oklch(100% 0 none),          oklch(23.833% 0.0798 266.19));
+  --seawave:   light-dark(oklch(80.757% 0.061 257.79), oklch(38.183% 0.1459 264.62));
+
+  --sel:   light-dark(color-mix(in oklch, var(--key) 16%, transparent), oklch(57.504% 0.1637 261.7 / 0.32));
+  --hover: light-dark(oklch(0% 0 none / 0.05),        oklch(100% 0 none / 0.05));
+  --scrim: light-dark(color-mix(in oklch, var(--uprim) 34%, transparent), oklch(0% 0 none / 0.58));
+
+  /* ── shadows ────────────────────────────────────────────────────────────
+     Centralised here so a consumer never writes its own. The horizontal
+     offsets have no logical form, so they stay physical. */
+  --runshadow:   light-dark(none,
+    0 1px 3px oklch(0% 0 none / 0.45));
+  --uheadshadow: light-dark(
+    0 1px 3px oklch(0% 0 none / 0.08), 0 2px 8px oklch(0% 0 none / 0.04),
+    0 1px 2px oklch(0% 0 none / 0.08), 0 4px 10px oklch(0% 0 none / 0.06), 0 10px 24px oklch(0% 0 none / 0.04));
+  --urunshadow: light-dark(
+    -3px 0 6px oklch(0% 0 none / 0.08), -8px 0 20px oklch(0% 0 none / 0.06),
+    -2px 0 4px oklch(0% 0 none / 0.14), -8px 0 16px oklch(0% 0 none / 0.12), -20px 0 40px oklch(0% 0 none / 0.08));
+  --upwellshadow: light-dark(
+    0 1px 2px oklch(0% 0 none / 0.06),
+    inset 0 1px 3px oklch(0% 0 none / 0.35));
+  --umenushadow: light-dark(
+    0 6px 12px oklch(0% 0 none / 0.1), 0 16px 32px oklch(0% 0 none / 0.08),
+    0 12px 32px oklch(0% 0 none / 0.4));
 }
 
-/* ── base ─────────────────────────────────────────────────── */
-* { box-sizing: border-box; }
-body { margin: 0; font-family: 'Urbanist', system-ui, sans-serif; font-size: 13px; line-height: 1.5; -webkit-font-smoothing: antialiased; background: var(--ubg); color: var(--ufg2); }
+/* The theme lives on the body so portaled dialogs and menus inherit it. It now
+   selects a scheme instead of redeclaring every token. */
+body[data-theme="light"] { color-scheme: light; }
+body[data-theme="dark"]  { color-scheme: dark; }
+
+/* ── reset ────────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  /* With this, a sized icon or avatar in a flex row shrinks to make room for
+     the text beside it. The components give those `flex: none`. */
+  min-width: 0;
+}
+
+:root {
+  /* Lets the details disclosure animate to `height: auto` without a script. */
+  interpolate-size: allow-keywords;
+  text-wrap: pretty;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Reserve the scrollbar gutter only while the page is locked behind a dialog,
+   which is the one moment it is needed: without it the layout shifts sideways
+   when the scrollbar disappears. Declared on :root instead, the gutter narrows
+   the containing block of every `position: fixed` element while innerWidth
+   stays put, and a centred dialog opens half a scrollbar off-centre. */
+html:has(dialog:modal) {
+  overflow: hidden;
+  scrollbar-gutter: stable;
+}
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  font-family: 'Urbanist', system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  background: var(--ubg);
+  color: var(--ufg2);
+}
+
+h1, h2, h3, h4 { text-wrap: balance; }
+
+img, svg, video {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+button, a, [role="button"] { touch-action: manipulation; }
+
+/* Controls only. Never on body or a link, because people copy text. */
+button, [role="button"] {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 button { font-family: inherit; }
+
+/* The input font-size floor from the skill reset is deliberately absent. The
+   design is a compact 13px UI and DESIGN.md forbids normalising it to 16px.
+   The zoom-on-focus trade-off is documented rather than silently taken. */
+
+/* ── focus ────────────────────────────────────────────────────────────── */
+/* One ring for every focusable. Goldfin's ring is --ufg at 2px with a 3px
+   offset, which e2e pins. Nothing anywhere writes `outline: none`; a component
+   that draws its own ring with box-shadow keeps the outline and makes it
+   transparent, so forced-colors mode can repaint it. */
 :focus-visible { outline: 2px solid var(--ufg); outline-offset: 3px; }
-.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: clip;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 ::selection { background: var(--sel); color: var(--ufg); }

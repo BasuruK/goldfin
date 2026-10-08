@@ -12,5 +12,5 @@
     <Slider label="Temperature · Small" bind:value={smallTemperature} min={0} max={2} step={0.1} format="decimal" size="sm"/>
     <Slider label="Max tokens · Disabled" value={16384} min={256} max={32768} step={256} unit="tokens" disabled/>
   </div>
-  <p class="field-desc" style="margin-top:16px">Sample ranges: Temperature 0–2; Max tokens 256–32,768. Model limits vary. Arrow keys change steps; Home / End select bounds.</p>
+  <p class="field-desc mt-16">Sample ranges: Temperature 0–2; Max tokens 256–32,768. Model limits vary. Arrow keys change steps; Home / End select bounds.</p>
 </section>

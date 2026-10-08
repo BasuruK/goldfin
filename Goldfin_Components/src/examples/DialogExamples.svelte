@@ -19,7 +19,7 @@
 </script>
 <section class="section" id="dialogs">
   <div class="section-head"><h2 class="section-title">Modal dialog</h2><span class="section-id">Shared mosaic · divided footer</span></div>
-  <div class="grid-2" style="align-items:start">
+  <div class="grid-2 grid-start">
     <div class="od-stack">
       <p class="field-legend">Destructive</p>
       <ConfirmDialog trigger="Delete suite" title="Delete invoice-extraction?" description="12 cases, 3 runs and every result stored with them. This cannot be undone." action="Delete suite" icon="trash" tone="bad"
@@ -36,7 +36,7 @@
       <p class="field-desc" role="status">{suiteFeedback}</p>
     </div>
   </div>
-  <div class="od-stack" style="margin-top:16px">
+  <div class="od-stack mt-16">
     <p class="field-legend">Confirmation</p>
     <div class="od-cluster">
       <ConfirmDialog trigger="Pair sample device" title="Pair with this device?" description="This will allow the device to connect and share data with your current session." action="Connect"

@@ -15,9 +15,35 @@
 <style>
   /* Every class here is handed to a bits-ui part, so the compiler never sees it.
      :global() is required; a plain selector would be pruned as unused. */
-  :global(.tabs) { display: flex; gap: 0; border-bottom: 1px solid var(--uline); }
-  :global(.tab) { height: 38px; margin: 0 18px -1px 0; padding: 0 4px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--ufg3); font: 700 15px 'Urbanist', sans-serif; cursor: pointer; }
-  :global(.tab[aria-selected="true"]) { border-bottom-color: var(--ufg); color: var(--ufg); }
-  :global(.tab:hover) { color: var(--ufg); }
-  :global(.gf-tab-content) { padding-block: 16px; font-family: 'IBM Plex Sans', system-ui, sans-serif; }
+  :global(.tabs) {
+    display: flex;
+    gap: 0;
+    border-block-end: 1px solid var(--uline);
+    /* `safe center` keeps the row centred while it fits and pins it to the
+       readable edge rather than overflowing when it does not. */
+    justify-content: safe center;
+  }
+  :global(.tab) {
+    flex: none;
+    height: 38px;
+    margin-inline-end: 18px;
+    /* The -1px pulls the active underline over the row border so the two read
+       as one line. It cannot move into `margin-block` alone: the row border
+       sits at the container's bottom edge. */
+    margin-block-end: -1px;
+    padding: 0 4px;
+    border: 0;
+    border-block-end: 2px solid transparent;
+    background: transparent;
+    color: var(--ufg3);
+    font: 700 15px var(--font-ui);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color var(--duration-ui) ease, border-color var(--duration-ui) ease;
+  }
+  :global(.tab[aria-selected="true"]) { border-block-end-color: var(--ufg); color: var(--ufg); }
+  @media (hover: hover) and (pointer: fine) {
+    :global(.tab:hover) { color: var(--ufg); }
+  }
+  :global(.gf-tab-content) { padding-block: 16px; font-family: var(--font-body); }
 </style>

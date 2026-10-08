@@ -59,7 +59,7 @@
 <section class="section" id="inputs"><div class="section-head"><h2 class="section-title">Input</h2><span class="section-id">Fields · prices · file drop</span></div>
   <div class="grid-2"><Input label="System prompt" value="gpt-4o-mini" placeholder="Enter model ID"/>
     <div class="field"><p class="label">Custom price (USD / 1M tokens)</p><div class="price-input"><label class="sr-only" for="inputPrice">Input price</label><span aria-hidden="true">in</span><input id="inputPrice" type="text" inputmode="decimal" bind:value={inputPrice}/><label class="sr-only" for="outputPrice">Output price</label><span aria-hidden="true">out</span><input id="outputPrice" type="text" inputmode="decimal" bind:value={outputPrice}/><span class="unit">USD</span></div></div></div>
-  <div style="margin-top:16px"><FileDrop/></div>
+  <div class="mt-16"><FileDrop/></div>
 </section>
 <section class="section" id="input-states"><div class="section-head"><h2 class="section-title">Input states</h2><span class="section-id">Default · error · success · disabled</span></div>
   <div class="grid-2">
@@ -67,7 +67,7 @@
     <div class="od-stack"><Input label="Suite name" description="Shown in run history and export filenames." value="Invoice extraction · v2" message="Unique across the sample workspace."/><p class="field-msg ok">Name available in this sample.</p></div>
     <Input label="Run ID" description="Assigned by the runner when the run starts." value="run_8f2a91c4" disabled/>
     <Input label="System prompt" description="Sent with every request in the suite." value="Extract line items"/>
-  </div><p class="field-desc" style="margin-top:16px">Edit Model ID, then leave the field. Try gpt-4o-mini to clear the error.</p>
+  </div><p class="field-desc mt-16">Edit Model ID, then leave the field. Try gpt-4o-mini to clear the error.</p>
 </section>
 <section class="section" id="selection"><div class="section-head"><h2 class="section-title">Checkbox · Radio · Switch</h2><span class="section-id">Two-tone · keyboard controls</span></div>
   <div class="grid-3">
@@ -75,7 +75,7 @@
     <div><p class="field-legend">Radio</p><RadioGroup label="Scorer" items={scorers} value="exact"/></div>
     <div><p class="field-legend">Switch</p><div class="ctl-list"><Switch label="Parallel requests" description="4 at a time" checked/><Switch label="Fail on first error" description="Stops the suite early"/><Switch label="Webhooks" description="Admin only" disabled/></div></div>
   </div>
-  <div class="grid-2" style="margin-top:24px">
+  <div class="grid-2 mt-24">
     <div><p class="field-legend">Output formats · derived tri-state</p><CheckboxGroup label="All formats" bind:selected={formats} items={[{value:'json',label:'JSON'},{value:'csv',label:'CSV'},{value:'md',label:'Markdown'},{value:'html',label:'HTML'}]}/></div>
     <div><p class="field-legend">Boolean validity</p><div class="field-set ctl-list"><Switch label="Require approval" description="Gate the run behind a reviewer" invalid/><p class="field-msg error">Pick a reviewer before saving this suite.</p><Checkbox label="Enforce pass threshold" description="Applies to every case in the suite" checked invalid/><p class="field-msg error">Threshold is required once enforcement is on.</p></div></div>
   </div>
@@ -88,7 +88,7 @@
 <section class="section" id="dropdowns"><div class="section-head"><h2 class="section-title">Dropdown</h2><span class="section-id">Single · multiple · status · actions</span></div>
   <div class="grid-3"><Select label="Model" items={models} value="gpt-4o-mini"/><Select label="Models" type="multiple" items={models} value={['gpt-4o-mini','claude-3-5-sonnet']}/>
     <StatusSelect label="With icons" value="active" items={[{value:'active',label:'Active',note:'Running normally',tone:'ok'},{value:'pending',label:'Pending',note:'Awaiting resources',tone:'num'},{value:'failed',label:'Failed',note:'Check logs',tone:'bad'}]}/></div>
-  <div class="grid-2" style="margin-top:16px"><StatusSelect label="Status filter" items={statuses}/><Select label="Model ID filter" items={modelFilters} value="claude-sonnet-4-5"/></div>
-  <div class="od-cluster" style="margin-top:16px"><DropdownMenu label="Sample actions" items={[{value:'inspect',label:'Inspect sample'},{value:'duplicate',label:'Duplicate sample'},{value:'admin',label:'Admin action',disabled:true}]} onAction={action => actionFeedback = action === 'inspect' ? 'Sample inspected locally.' : 'Sample duplicated locally.'}/><span class="field-desc" role="status">{actionFeedback}</span></div>
-  <p class="field-desc" style="margin-top:16px">Model IDs and price notes are retained sample content, not current pricing advice.</p>
+  <div class="grid-2 mt-16"><StatusSelect label="Status filter" items={statuses}/><Select label="Model ID filter" items={modelFilters} value="claude-sonnet-4-5"/></div>
+  <div class="od-cluster mt-16"><DropdownMenu label="Sample actions" items={[{value:'inspect',label:'Inspect sample'},{value:'duplicate',label:'Duplicate sample'},{value:'admin',label:'Admin action',disabled:true}]} onAction={action => actionFeedback = action === 'inspect' ? 'Sample inspected locally.' : 'Sample duplicated locally.'}/><span class="field-desc" role="status">{actionFeedback}</span></div>
+  <p class="field-desc mt-16">Model IDs and price notes are retained sample content, not current pricing advice.</p>
 </section>

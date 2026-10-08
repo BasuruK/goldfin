@@ -30,7 +30,7 @@
         {:else}<td data-label={column.label}>{#if cell}{@render cell(row, column)}{:else}{row[column.key] ?? '—'}{/if}</td>{/if}
       {/each}</tr>{/each}</tbody>
     </table>
-    {#if !rows.length}<p class="field-desc" style="padding:16px">No rows to display.</p>{/if}
+    {#if !rows.length}<p class="field-desc table-empty">No rows to display.</p>{/if}
   </div>
   <p class="sr-only" role="status">{feedback}</p>
 </div>

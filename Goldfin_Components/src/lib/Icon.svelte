@@ -1,5 +1,5 @@
 <script>
-  let { name = 'chevron', size = 16 } = $props();
+  let { name = 'chevron', size } = $props();
   const paths = {
     check: 'm5 12 4 4L19 6', minus: 'M5 12h14', chevron: 'm6 9 6 6 6-6',
     close: 'm6 6 12 12M18 6 6 18', trash: 'M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14',
@@ -10,7 +10,21 @@
     branch: 'M4 5a2 2 0 1 0 4 0a2 2 0 1 0-4 0M16 12a2 2 0 1 0 4 0a2 2 0 1 0-4 0M4 19a2 2 0 1 0 4 0a2 2 0 1 0-4 0M6 7v10M8 5h3a7 7 0 0 1 7 5'
   };
 </script>
-<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+
+<!-- Size travels as a custom property rather than width/height attributes, so a
+     consumer can retune an icon to its label with `--icon-size: 1.2cap` without
+     editing markup. `flex: none` stops a long label squeezing it. -->
+<svg class="icon" viewBox="0 0 24 24" style:--icon-size={size ? size + 'px' : undefined} fill="none"
+  stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+  aria-hidden="true">
   {#if name === 'error' || name === 'info'}<circle cx="12" cy="12" r="9" />{/if}
   <path d={paths[name] || paths.chevron} />
 </svg>
+
+<style>
+  .icon {
+    flex: none;
+    inline-size: var(--icon-size, 16px);
+    block-size: var(--icon-size, 16px);
+  }
+</style>

@@ -2,6 +2,6 @@
 
 <style>
   .section-group { display: flex; flex-direction: column; gap: 10px; }
-  .section-group-head { display: flex; justify-content: space-between; align-items: baseline; }
-  .section-group-head .asideline { display: flex; align-items: center; gap: 8px; font: 400 11.5px 'IBM Plex Mono', monospace; color: var(--ufg3); }
+  .section-group-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .section-group-head .asideline { display: flex; align-items: center; gap: 8px; font: 400 11.5px var(--font-mono); color: var(--ufg3); }
 </style>
