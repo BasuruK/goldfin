@@ -81,6 +81,7 @@ Then import components from `$goldfin/lib/index.js` and the stylesheet from `$go
 | Timeline | `Timeline`: layout, markers, tone, label, count, leading and children. `TimelineItem`: title, description, time, datetime, state, status, icon, dateColumn, collapsible, open and detail children |
 | Data / actions | `JSONViewer`: value, label, escaped JSON text and whole-output disclosure. `BudgetBar`: prompt, completion, maximum. `RunButton`: async `onRun`, disabled; `sample` enables a local demo. `CopyButton`: text and label. `SplitPane`: `bind:open`, first / second snippets |
 | Presentation | `Button`: native attributes, variant, size, children. `Chip`: tone and children. `Pill`: variant and children. `Icon`: name and size |
+| Individual parts | `DialogHeader` / `DialogBody` / `DialogFooter`: compose a dialog shell yourself. `TabList` / `TabTrigger` / `TabContent`: unique tab triggers and panels. `MenuItem` / `MenuSeparator` / `MenuLabel`: unique action-menu contents. `SegmentedItem`: a custom segment. `SwitchControl`, `TableSortButton`, `TableEmpty`, `TimelineMarker`, `JSONLine`: the extracted internals. `Mosaic`, `Sea`, `Skeleton`: the animated and placeholder systems. `LoadingButton`, `LoadingOverlay`, `LoadingStatus`, `ReadRow`, `Section`, `ThemeToggle`: the screen-level patterns the showcase used to hand-write |
 
 ## Composition examples
 
@@ -111,6 +112,7 @@ For a table, sort keys must contain the appropriate raw values: numeric bytes / 
 - Confirmations focus Cancel through Bits UI defaults, permit Escape / scrim dismissal, and only report confirmation after `onConfirm` resolves. Pending confirmation blocks dismissal; rejected operations show a retryable error. Ordinary form dialogs use `Dialog`.
 - Reduced motion disables animations. The mosaic pauses when the document is hidden and disconnects its observer when unmounted.
 - The showcased 12 loading patterns and 11 timeline layouts retain the reference markup and sample events. Collapsible timeline details use native disclosures. Table and timeline examples contain no avatars.
+- Every pattern in the showcase is a component. Where markup used to be hand-written across files it is now one exported component, so a screen can build its own instead of reusing the sample composition. The composed components kept their props; the parts are additive.
 - Run remains exclusive to the main LLM test case. No cost / duration hint is attached to its button. Running, pairing, deletion and suite creation in the showcase are explicitly local examples. Production business operations belong in application callbacks.
 - Clipboard copy uses the actual browser clipboard and reports failure. File selection stays local. Nothing in this starter calls a model, uploads files or saves server records.
 

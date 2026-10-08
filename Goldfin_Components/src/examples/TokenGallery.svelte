@@ -1,8 +1,6 @@
-<section class="section" data-od-id="tokens">
-    <div class="section-head">
-      <h2 class="section-title">Tokens</h2>
-      <span class="section-id">tokens.css · --ufg, --ufg2, --ufg3, --uline</span>
-    </div>
+<script>
+  import Section from '../lib/Section.svelte';
+</script><Section title="Tokens" reference="tokens.css · --ufg, --ufg2, --ufg3, --uline" data-od-id="tokens">
 
     <p style="color:var(--ufg3);font-size:13px;margin:0 0 16px;line-height:1.6">
       CSS custom properties on <code style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--key)">:root</code> (dark) and <code style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--key)">body[data-theme="light"]</code>.
@@ -46,4 +44,4 @@
       <div class="swatch"><div class="swatch-color" style="background:rgba(52,211,153,.10);border-color:var(--ok)"></div><span class="swatch-name">--okbg</span><span class="swatch-hex">rgba / 10%</span><span class="swatch-hex lt">#e5f5ee</span></div>
       <div class="swatch"><div class="swatch-color" style="background:rgba(63,116,216,.16);border-color:#3f74d8"></div><span class="swatch-name">--runchip</span><span class="swatch-hex">rgba / 16%</span><span class="swatch-hex lt">#e6eefc</span></div>
     </div>
-  </section>
+  </Section>

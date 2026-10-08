@@ -1,0 +1,31 @@
+<script>
+  import LoadingTask from '../lib/LoadingTask.svelte';
+  import LoadingSearch from '../lib/LoadingSearch.svelte';
+  import LoadingButton from '../lib/LoadingButton.svelte';
+  import LoadingOverlay from '../lib/LoadingOverlay.svelte';
+  import LoadingStatus from '../lib/LoadingStatus.svelte';
+  import Skeleton from '../lib/Skeleton.svelte';
+  import Pill from '../lib/Pill.svelte';
+  import Section from '../lib/Section.svelte';
+  const feedbackText = { running: 'Sample operation in progress…', complete: 'Sample operation complete.', canceled: 'Sample operation canceled. Try again.' };
+</script>
+{#snippet feedback(state)}<p class="loading-feedback" role="status" aria-atomic="true">{feedbackText[state] ?? 'Sample operation · ready'}</p>{/snippet}
+{#snippet taskButton(idle, working, variant = '')}<LoadingTask>{#snippet children({ busy, state, start })}<div class="od-stack loading-button-stack loading-demo"><LoadingButton {busy} {idle} {working} {variant} onclick={start}/>{@render feedback(state)}</div>{/snippet}</LoadingTask>{/snippet}
+{#snippet overlayExample({ example, heading, content, overlay, action, empty = false })}<LoadingTask>{#snippet children({ busy, state, start, cancel })}<article class="loading-example od-stack loading-demo" data-example={example}><h3>{heading}</h3><LoadingOverlay {busy} {state} {overlay} hint="Sample operation in progress" {empty} {example}>
+  {#snippet children()}<strong>{content}</strong><p class="loading-hint">Local sample content; no service connection.</p><Skeleton/>{/snippet}
+</LoadingOverlay><div class="od-cluster"><LoadingButton {busy} idle={action} working="Loading…" onclick={start}/><button class="btn" type="button" onclick={cancel} hidden={!busy}>Cancel</button></div>{@render feedback(state)}</article>{/snippet}</LoadingTask>{/snippet}
+<Section title="Spinners" reference=".spinner · .loading-dots · aria-busy" id="spinners" data-od-id="spinners" legend="Sample loading patterns · controls complete locally and can be repeated">
+<div class="od-grid loading-gallery">
+  <article class="loading-example od-stack" data-example="basic"><h3>Basic spinner</h3><div class="loading-center" role="status"><div class="od-cluster"><span class="spinner" aria-hidden="true" data-size="sm"></span><span class="spinner" aria-hidden="true"></span><span class="spinner" aria-hidden="true" data-size="lg"></span><span class="spinner" aria-hidden="true" data-size="xl"></span></div><span class="loading-hint">Loading · 12 / 16 / 24 / 32px</span></div></article>
+  <article class="loading-example od-stack" data-example="buttons"><h3>Spinners in buttons</h3><div class="od-cluster">{@render taskButton('Process sample', 'Processing…', 'primary')}{@render taskButton('Load sample', 'Processing…')}<LoadingTask>{#snippet children({ busy, state, start })}<div class="od-stack loading-demo"><LoadingButton {busy} idle="Refresh sample" size="icon" onclick={start}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7v5h-5M4 17v-5h5M6 6a8 8 0 0 1 13 2M18 18a8 8 0 0 1-13-2"></path></svg></LoadingButton>{@render feedback(state)}</div>{/snippet}</LoadingTask></div></article>
+  <article class="loading-example od-stack" data-example="badges"><h3>Spinners in badges</h3><div class="od-cluster"><Pill variant="inverted" class="loading-badge"><span class="spinner" aria-hidden="true" data-size="sm"></span>Updating</Pill><Pill class="loading-badge"><span class="spinner" aria-hidden="true" data-size="sm"></span>Syncing</Pill><Pill variant="running-pill" class="loading-badge"><span class="spinner" aria-hidden="true" data-size="sm"></span>Loading</Pill><Pill variant="missing" class="loading-badge"><span class="spinner" aria-hidden="true" data-size="sm"></span>Retrying</Pill><Pill variant="ok-pill" class="loading-badge"><span class="spinner" aria-hidden="true" data-size="sm"></span>Syncing</Pill></div><p class="loading-hint">Sample pending states</p></article>
+  <LoadingSearch/>
+  {@render overlayExample({ example: 'empty-state', heading: 'Loading empty state', content: 'No sample projects loaded', overlay: 'Loading projects…', action: 'Load sample projects', empty: true })}
+  <article class="loading-example od-stack" data-example="button-states"><h3>Button loading states</h3><div class="od-cluster">{@render taskButton('Save sample', 'Saving…', 'primary')}{@render taskButton('Load sample', 'Loading…')}{@render taskButton('Process sample', 'Processing…', 'text')}</div></article>
+  {@render overlayExample({ example: 'content-overlay', heading: 'Content loading overlay', content: 'Sample evaluation results', overlay: 'Refreshing data…', action: 'Refresh sample' })}
+  {@render overlayExample({ example: 'full-surface', heading: 'Full-surface loading', content: 'Sample workspace', overlay: 'Setting up workspace…', action: 'Set up sample', empty: true })}
+  <article class="loading-example od-stack" data-example="inline"><h3>Inline loading status</h3><div class="od-stack"><LoadingStatus tone="key" spinnerSize="sm" text="Checking availability…"/><LoadingStatus tone="ok" spinnerSize="sm" text="Connected · syncing sample data"/><LoadingStatus tone="warn" spinnerSize="sm" text="Reconnecting · sample attempt"/></div></article>
+  <article class="loading-example od-stack" data-example="dots"><h3>Animated loading dots</h3><div class="loading-center" role="status"><span class="loading-dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="loading-hint">Waiting for sample response…</span></div></article>
+  {@render overlayExample({ example: 'card-overlay', heading: 'Card loading overlay', content: 'Sample suite summary', overlay: 'Refreshing card…', action: 'Refresh card' })}
+  <article class="loading-example od-stack" data-example="colours"><h3>Semantic spinner colours</h3><div class="od-cluster"><LoadingStatus tone="key" text="Working" status={false}/><LoadingStatus tone="ok" text="Syncing" status={false}/><LoadingStatus tone="bad" text="Retrying" status={false}/><LoadingStatus tone="warn" text="Reconnecting" status={false}/></div><p class="loading-hint">State labels accompany colour.</p></article>
+</div></Section>
