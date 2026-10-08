@@ -5,6 +5,7 @@ node_modules/
 
 # local agent runtime artefacts (canvas assets etc.)
 .mavis/
+.serena/
 
 
 #Ignore vscode AI rules

@@ -113,7 +113,10 @@ html { scroll-padding-block-start: var(--page-header-offset, 24px); }
    cell a real min-content floor. */
 .data-table th,
 .data-table td { padding: var(--table-pad-y) var(--table-pad-x); border-block-end: 1px solid var(--uline); text-align: start; vertical-align: middle; overflow-wrap: break-word; }
-.data-table thead th { color: var(--ufg); font-weight: 600; }
+/* Column widths arrive as a custom property, not an inline `width`, so card mode
+   can hand layout back to its two-column grid. An inline width would win the
+   cascade and could not be reset from here. */
+.data-table thead th { inline-size: var(--col-width, auto); color: var(--ufg); font-weight: 600; }
 .data-table tbody th { color: var(--ufg); font-weight: 500; }
 .table-sort { display: inline-flex; align-items: center; justify-content: space-between; gap: 4px; width: 100%; min-height: 24px; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: start; cursor: pointer; }
 .table-sort svg { flex: none; inline-size: 12px; block-size: 12px; color: var(--ufg2); }
@@ -148,7 +151,7 @@ html { scroll-padding-block-start: var(--page-header-offset, 24px); }
   .data-table colgroup { display: none; }
   .data-table thead { display: block; border-block-end: 1px solid var(--uline); }
   .data-table thead tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .data-table thead th { display: block; padding: 0 16px; border: 0; }
+  .data-table thead th { display: block; inline-size: auto; padding: 0 16px; border: 0; }
   .data-table .table-sort { min-height: 44px; }
   .data-table thead th:first-child { border-start-start-radius: var(--table-radius); }
   .data-table thead th:nth-child(2) { border-start-end-radius: var(--table-radius); }
@@ -721,7 +724,7 @@ html { scroll-padding-block-start: var(--page-header-offset, 24px); }
    is only hidden, and the spinner is centred over the whole button rather than
    sitting beside the text. `translate` is used, not `transform`, because the
    spin keyframes own `transform` and would otherwise clobber the centring. */
-.loading-demo .btn { position: relative; }
+/* .btn is already position: relative, so the spinner needs no extra anchor. */
 .btn .spinner { position: absolute; inset-block-start: 50%; inset-inline-start: 50%; translate: -50% -50%; opacity: 0; animation: none; transition: opacity var(--duration-press) ease; }
 .btn .spinner.is-on { opacity: 1; animation: goldfin-spin var(--spinner-cycle) linear infinite; }
 .btn-label.is-hidden { visibility: hidden; }

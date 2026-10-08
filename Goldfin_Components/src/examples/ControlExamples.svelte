@@ -10,7 +10,9 @@
   import DropdownMenu from '../lib/DropdownMenu.svelte';
   import Tabs from '../lib/Tabs.svelte';
   import SegmentedControl from '../lib/SegmentedControl.svelte';
+  import FieldGroup from '../lib/FieldGroup.svelte';
   import FileDrop from '../lib/FileDrop.svelte';
+  import Section from '../lib/Section.svelte';
   import { modelError } from '../lib/validation.js';
   let modelId = $state('gpt-4o-minii');
   let currentModelError = $state(modelError('gpt-4o-minii'));
@@ -49,27 +51,27 @@
     {label:'Auto Backup',description:'Take daily snapshots of your database',checked:false,icon:'copy'}
   ];
 </script>
-<section class="section" id="tabs"><div class="section-head"><h2 class="section-title">Tabs</h2><span class="section-id">Output · OCR text</span></div>
+<Section title="Tabs" reference="Output · OCR text" id="tabs">
   <Tabs value="output" label="Result view" items={[{value:'output',label:'Output',content:'Sample JSON output: invoice INV-2024-001, amount 2499.00.'},{value:'ocr',label:'OCR text',content:'Sample OCR text: Invoice INV-2024-001 · Acme Corp · Amount 2,499.00.'}]}/>
-</section>
-<section class="section" id="segmented"><div class="section-head"><h2 class="section-title">Segmented control</h2><span class="section-id">Two-tone · single selection</span></div>
+</Section>
+<Section title="Segmented control" reference="Two-tone · single selection" id="segmented">
   <div class="grid-2"><div class="od-stack"><p class="label">Formatted</p><SegmentedControl bind:value={formatted} label="Output format" items={[{value:'formatted',label:'Formatted'},{value:'raw',label:'Raw'}]}/><span class="field-desc" role="status">{formatted === 'formatted' ? 'Formatted output selected.' : 'Raw output selected.'}</span></div>
   <div class="od-stack"><p class="label">Disabled</p><SegmentedControl value="on" label="Disabled sample" disabled items={[{value:'on',label:'On'},{value:'off',label:'Off'}]}/></div></div>
-</section>
-<section class="section" id="inputs"><div class="section-head"><h2 class="section-title">Input</h2><span class="section-id">Fields · prices · file drop</span></div>
+</Section>
+<Section title="Input" reference="Fields · prices · file drop" id="inputs">
   <div class="grid-2"><Input label="System prompt" value="gpt-4o-mini" placeholder="Enter model ID"/>
-    <div class="field"><p class="label">Custom price (USD / 1M tokens)</p><div class="price-input"><label class="sr-only" for="inputPrice">Input price</label><span aria-hidden="true">in</span><input id="inputPrice" type="text" inputmode="decimal" bind:value={inputPrice}/><label class="sr-only" for="outputPrice">Output price</label><span aria-hidden="true">out</span><input id="outputPrice" type="text" inputmode="decimal" bind:value={outputPrice}/><span class="unit">USD</span></div></div></div>
+    <div class="field"><p class="label">Custom price (USD / 1M tokens)</p><div class="price-grid"><Input affix label="Input price" inputmode="decimal" bind:value={inputPrice}>{#snippet prefix()}<span aria-hidden="true">in</span>{/snippet}{#snippet suffix()}<span class="unit">USD</span>{/snippet}</Input><Input affix label="Output price" inputmode="decimal" bind:value={outputPrice}>{#snippet prefix()}<span aria-hidden="true">out</span>{/snippet}{#snippet suffix()}<span class="unit">USD</span>{/snippet}</Input></div></div></div>
   <div class="mt-16"><FileDrop/></div>
-</section>
-<section class="section" id="input-states"><div class="section-head"><h2 class="section-title">Input states</h2><span class="section-id">Default · error · success · disabled</span></div>
+</Section>
+<Section title="Input states" reference="Default · error · success · disabled" id="input-states">
   <div class="grid-2">
     <Input label="Model ID" description="Checked against the local sample registry." bind:value={modelId} error={currentModelError} onblur={() => currentModelError = modelError(modelId)}/>
     <div class="od-stack"><Input label="Suite name" description="Shown in run history and export filenames." value="Invoice extraction · v2" message="Unique across the sample workspace."/><p class="field-msg ok">Name available in this sample.</p></div>
     <Input label="Run ID" description="Assigned by the runner when the run starts." value="run_8f2a91c4" disabled/>
     <Input label="System prompt" description="Sent with every request in the suite." value="Extract line items"/>
   </div><p class="field-desc mt-16">Edit Model ID, then leave the field. Try gpt-4o-mini to clear the error.</p>
-</section>
-<section class="section" id="selection"><div class="section-head"><h2 class="section-title">Checkbox · Radio · Switch</h2><span class="section-id">Two-tone · keyboard controls</span></div>
+</Section>
+<Section title="Checkbox · Radio · Switch" reference="Two-tone · keyboard controls" id="selection">
   <div class="grid-3">
     <div><p class="field-legend">Checkbox</p><div class="ctl-list"><Checkbox label="Stream responses" description="Partial output during the run" checked/><Checkbox label="Reuse prompt cache" description="Off on a suite's first run"/><Checkbox label="Record traces" description="Requires the Pro plan" checked disabled/></div></div>
     <div><p class="field-legend">Radio</p><RadioGroup label="Scorer" items={scorers} value="exact"/></div>
@@ -77,18 +79,18 @@
   </div>
   <div class="grid-2 mt-24">
     <div><p class="field-legend">Output formats · derived tri-state</p><CheckboxGroup label="All formats" bind:selected={formats} items={[{value:'json',label:'JSON'},{value:'csv',label:'CSV'},{value:'md',label:'Markdown'},{value:'html',label:'HTML'}]}/></div>
-    <div><p class="field-legend">Boolean validity</p><div class="field-set ctl-list"><Switch label="Require approval" description="Gate the run behind a reviewer" invalid/><p class="field-msg error">Pick a reviewer before saving this suite.</p><Checkbox label="Enforce pass threshold" description="Applies to every case in the suite" checked invalid/><p class="field-msg error">Threshold is required once enforcement is on.</p></div></div>
+    <div><FieldGroup set legend="Boolean validity" class="ctl-list"><Switch label="Require approval" description="Gate the run behind a reviewer" invalid/><p class="field-msg error">Pick a reviewer before saving this suite.</p><Checkbox label="Enforce pass threshold" description="Applies to every case in the suite" checked invalid/><p class="field-msg error">Threshold is required once enforcement is on.</p></FieldGroup></div>
   </div>
-</section>
-<section class="section switch-card-section" id="switch-cards"><div class="section-head"><h2 class="section-title">Switch card</h2><span class="section-id">Standard · small · badge</span></div>
+</Section>
+<Section title="Switch card" reference="Standard · small · badge" id="switch-cards" class="switch-card-section">
   <div class="switch-card-grid">{#each features as feature (feature.label)}<SwitchCard {...feature}/>{/each}</div>
   <h3 class="switch-card-variant-title">Small toggle</h3><div class="switch-card-grid"><SwitchCard {...features[0]} size="sm"/><SwitchCard {...features[2]} size="sm"/></div>
   <h3 class="switch-card-variant-title">Toggle with badge</h3><div class="switch-card-grid"><SwitchCard {...features[0]} badge/><SwitchCard {...features[3]} badge/></div>
-</section>
-<section class="section" id="dropdowns"><div class="section-head"><h2 class="section-title">Dropdown</h2><span class="section-id">Single · multiple · status · actions</span></div>
+</Section>
+<Section title="Dropdown" reference="Single · multiple · status · actions" id="dropdowns">
   <div class="grid-3"><Select label="Model" items={models} value="gpt-4o-mini"/><Select label="Models" type="multiple" items={models} value={['gpt-4o-mini','claude-3-5-sonnet']}/>
     <StatusSelect label="With icons" value="active" items={[{value:'active',label:'Active',note:'Running normally',tone:'ok'},{value:'pending',label:'Pending',note:'Awaiting resources',tone:'num'},{value:'failed',label:'Failed',note:'Check logs',tone:'bad'}]}/></div>
   <div class="grid-2 mt-16"><StatusSelect label="Status filter" items={statuses}/><Select label="Model ID filter" items={modelFilters} value="claude-sonnet-4-5"/></div>
   <div class="od-cluster mt-16"><DropdownMenu label="Sample actions" items={[{value:'inspect',label:'Inspect sample'},{value:'duplicate',label:'Duplicate sample'},{value:'admin',label:'Admin action',disabled:true}]} onAction={action => actionFeedback = action === 'inspect' ? 'Sample inspected locally.' : 'Sample duplicated locally.'}/><span class="field-desc" role="status">{actionFeedback}</span></div>
   <p class="field-desc mt-16">Model IDs and price notes are retained sample content, not current pricing advice.</p>
-</section>
+</Section>

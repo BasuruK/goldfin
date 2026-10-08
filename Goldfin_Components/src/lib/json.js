@@ -38,6 +38,24 @@ export function countChildItems(lines) {
   });
 }
 
+/* Fold state is a set of opening-line indexes. Each entry hides its own descendants only,
+   so one fold never collapses another line's children. */
+export function toggleFold(folded, index) {
+  const next = new Set(folded);
+  next.has(index) ? next.delete(index) : next.add(index);
+  return next;
+}
+
+export function hiddenLines(ranges, folded) {
+  const mask = new Array(ranges.length).fill(false);
+  for (const index of folded) {
+    const range = ranges[index];
+    if (!range?.opens) continue;
+    for (let next = index + 1; next <= range.end; next++) mask[next] = true;
+  }
+  return mask;
+}
+
 export function tokenizeJsonLine(line) {
   const tokens = [];
   let last = 0;

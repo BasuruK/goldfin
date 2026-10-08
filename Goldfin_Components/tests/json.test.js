@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { tokenizeJsonLine, isNullLine, countChildItems, nodeRange } from '../src/lib/json.js';
+import { tokenizeJsonLine, isNullLine, countChildItems, nodeRange, toggleFold, hiddenLines } from '../src/lib/json.js';
 import { safeStringify } from '../src/lib/format.js';
 
 const classesOf = line => tokenizeJsonLine(line).filter(t => t.cls).map(t => `${t.text}|${t.cls}`);
@@ -96,4 +96,42 @@ test('an unclosed node runs to the last line', () => {
 test('blank lines inside a node do not end it early', () => {
   const lines = ['{', '  "a": {', '', '    "b": 1', '', '  },', '}'];
   assert.deepEqual(nodeRange(lines, 1), { opens: true, end: 5 });
+});
+
+const rangesOf = lines => lines.map((_, index) => nodeRange(lines, index));
+
+test('toggling a fold adds then removes it without touching the input set', () => {
+  const empty = new Set();
+  const open = toggleFold(empty, 1);
+  assert.deepEqual([...open], [1]);
+  assert.equal(empty.size, 0, 'the caller\'s set must not be mutated');
+  assert.deepEqual([...toggleFold(open, 1)], []);
+});
+test('each line folds on its own', () => {
+  const lines = ['{', '  "a": {', '    "x": 1', '  },', '  "b": {', '    "y": 2', '  }', '}'];
+  const folded = toggleFold(toggleFold(new Set(), 1), 4);
+  assert.deepEqual([...folded].sort(), [1, 4]);
+  assert.deepEqual(hiddenLines(rangesOf(lines), folded), [false, false, true, true, false, true, true, false]);
+});
+test('folding hides descendants and keeps the folded line and its numbers', () => {
+  const lines = ['{', '  "a": {', '    "x": 1', '  },', '  "b": 2', '}'];
+  const ranges = rangesOf(lines);
+  assert.deepEqual(hiddenLines(ranges, new Set([1])), [false, false, true, true, false, false]);
+});
+test('a folded leaf or stale index hides nothing', () => {
+  const lines = ['{', '  "a": 1', '}'];
+  const ranges = rangesOf(lines);
+  assert.deepEqual(hiddenLines(ranges, new Set([1])), [false, false, false]);
+  assert.deepEqual(hiddenLines(ranges, new Set([9])), [false, false, false]);
+});
+test('no folds leaves no line hidden', () => {
+  const lines = safeStringify({ invoice: { number: 'INV-1' } }).split('\n');
+  assert.deepEqual(hiddenLines(rangesOf(lines), new Set()), lines.map(() => false));
+});
+test('the invoice sample folds one node and leaves its sibling visible', () => {
+  const lines = safeStringify({ invoice: { number: 'INV-1', amount: 1 }, items: [{ a: 1 }] }).split('\n');
+  const hidden = hiddenLines(rangesOf(lines), new Set([1]));
+  assert.equal(hidden[1], false, 'the opening line itself stays');
+  assert.deepEqual([2, 3, 4].map(index => hidden[index]), [true, true, true], 'descendants and the closing line go');
+  assert.equal(hidden[5], false, 'the sibling node stays');
 });

@@ -8,3 +8,9 @@ export function compareValues(left, right, direction = 'ascending') {
 export function sortRows(rows, key, direction) {
   return [...rows].sort((left, right) => compareValues(left[key], right[key], direction));
 }
+export function nextDirection(columnKey, key, direction) {
+  return key === columnKey && direction === 'ascending' ? 'descending' : 'ascending';
+}
+export function sortLabel(columnLabel, direction) {
+  return 'Sort by ' + columnLabel + ', ' + direction + ' order';
+}

@@ -24,8 +24,8 @@ These are the rules that keep the product small. Breaking them is how it got com
 
 **One feature at a time.** A feature is one seam: the Connector screen, the Dataset ingest, the Run
 view. Build it, verify it, stop. Do not widen into adjacent cleanup, speculative endpoints, or
-infrastructure nobody asked for. If an idea is worth doing but is not this feature, **park it out loud**
-and move on. Absorbing it silently is the failure mode, not having it.
+infrastructure nobody asked for. If an idea is worth doing but is not this feature, finish the feature,
+then **ask the user** whether to do it. Absorbing it silently is the failure mode, not having it.
 
 **UI first, and the design is not yours.** The user designs in OpenDesign and hands over `DESIGN.md`,
 frames, images and instructions. Implement from that artefact. **Never scaffold a throwaway UI
@@ -39,8 +39,8 @@ live in `GLOSSARY.md` and `docs/adr/`, and they are binding.
 **A test for new logic.** New domain logic needs a test. Trivial glue is exempt. Say why in the PR
 description rather than silently skipping it.
 
-**Say what you parked.** Every turn that leaves something undone says so in one line. Silent omission
-is how a scope creeps.
+**Ask about what is left.** When a turn changes code and leaves something undone, end with one
+question that names it: "Fix X too?" Silent omission is how a scope creeps.
 
 ## Before you touch something
 

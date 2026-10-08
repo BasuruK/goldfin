@@ -1,6 +1,7 @@
 <script>
-  import Timeline from './Timeline.svelte';
-  import TimelineItem from './TimelineItem.svelte';
+  import Timeline from '../lib/Timeline.svelte';
+  import TimelineItem from '../lib/TimelineItem.svelte';
+  import Section from '../lib/Section.svelte';
   const at = time => ({ time, datetime: '2026-10-04T' + time + ':00' });
   const complete = { state: 'complete', status: 'Complete' };
   const passed = { state: 'complete', status: 'Complete', statusVariant: 'ok-pill' };
@@ -71,8 +72,8 @@
     ] }
   ];
 </script>
-<section class="section" data-od-id="timelines" id="timelines"><div class="section-head"><h2 class="section-title">Timelines</h2><span class="section-id">.timeline · .timeline-item · details</span></div><p class="field-legend">Sample events · completed, current, pending and failed states · no avatars</p><div class="timeline-gallery od-stack">
+<Section title="Timelines" reference=".timeline · .timeline-item · details" id="timelines" data-od-id="timelines" legend="Sample events · completed, current, pending and failed states · no avatars"><div class="timeline-gallery od-stack">
   {#each examples as example (example.heading)}
     <article class="timeline-example od-stack"><h3>{example.heading}</h3><Timeline layout={example.layout} markers={example.markers} tone={example.tone} count={example.events.length} leading={example.leading ?? false} label={example.heading + ', sample events'}>{#each example.events as event (event.title)}<TimelineItem {...event} dateColumn={example.dateColumn} collapsible={example.collapsible} open={example.collapsible} summary="Step details" />{/each}</Timeline></article>
   {/each}
-</div></section>
+</div></Section>

@@ -132,27 +132,29 @@ Chromium, `npm run build` clean with no Svelte warnings.
 The work was checked by running the original tree and the new tree side by side and
 diffing them, not by eyeballing the new one.
 
-1. **`.field-legend` gained 12px of top margin.** Replacing the `margin: 0 0 10px`
-   shorthand with `margin-block-end: 10px` left the UA's `1em` margin-top on a `<p>`
-   in place. Caught by walking every element top-to-bottom and comparing
-   `offsetTop`. Fixed with `margin-block: 0 10px`.
+1. **`.field-legend` gained 12px.** Replacing the `margin: 0 0 10px` shorthand with
+   `margin-block-end: 10px` left the UA's `1em` margin-top on a `<p>` in place.
+   Caught by walking every element top-to-bottom and comparing `offsetTop`. Fixed
+   with `margin-block: 0 10px`.
 2. **`.tone-row` lost 8px.** Its offset lived in an inline `style` on all four
    instances; removing the inline style without moving the value to the class
    dropped it. Fixed by putting it on `.tone-row`.
-3. **Fixed since: the cause was the inline `width` on each header `<th>`.** In
-   card mode the percentages resolved against a 171px grid cell, so a 20% column
-   was 34px wide. The widths now live on `<col>`, which card mode already hides,
-   and e2e pins the header height at 375px. The original note follows.
-   **Card-mode table headers collapse to one character per line at 375px —
-   pre-existing, not introduced here.** The `<th>` cells render at 32–78px inside
-   a 343px container, so `Type` breaks one letter per line and its header is 126px
-   tall. Measured identical in the original tree and in this one. `overflow-wrap:
-   break-word` and `min-inline-size: 0` were both tried and changed nothing: the
-   cells are constrained by the table box model, not by wrapping. The body rows
-   already avoid this by drawing their labels from `data-label::before`; the header
-   does not. **Needs its own ticket — it is a component fix, not a CSS tidy.**
-   `min-width: 0` in the reset makes this one pre-existing defect about 63px worse
-   on the first table. That trade is recorded rather than hidden.
+3. **Inline `style="width"` on the table header broke card mode (found during the
+   `main` merge, not by review).** `main`'s component split added
+   `style:width={column.width}` to the `<th>`. An inline width wins the cascade, so
+   the card-mode container query could not hand layout back to its two-column grid:
+   the cells fell to 55px and every label wrapped, pushing the header to 147px. The
+   width now travels as `--col-width` and card mode resets it to `auto`. This is
+   why the inline-style rule exists at all — an inline value that varies per element
+   and that a layout mode must be able to override should be a custom property.
+
+### Retracted
+
+An earlier revision of this file recorded a "card-mode table headers collapse to one
+letter per line at 375px" defect as pre-existing and unfixed. **That was wrong.** It
+came from a measurement taken against a stale build with the wrong viewport. The
+current tree measures every header at 171×44px in card mode, the rendered table is
+correct, and `card-mode table headers keep one line at 375px` covers it. No ticket.
 
 ## Deliberate deviations from the skill
 

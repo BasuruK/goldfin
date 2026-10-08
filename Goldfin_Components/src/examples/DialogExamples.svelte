@@ -3,6 +3,7 @@
   import Dialog from '../lib/Dialog.svelte';
   import Input from '../lib/Input.svelte';
   import Button from '../lib/Button.svelte';
+  import Section from '../lib/Section.svelte';
   import { suiteError } from '../lib/validation.js';
   let deleteFeedback = $state('Local sample · invoice-extraction');
   let connected = $state(false);
@@ -17,8 +18,7 @@
     close();
   }
 </script>
-<section class="section" id="dialogs">
-  <div class="section-head"><h2 class="section-title">Modal dialog</h2><span class="section-id">Shared mosaic · divided footer</span></div>
+<Section title="Modal dialog" reference="Shared mosaic · divided footer" id="dialogs">
   <div class="grid-2 grid-start">
     <div class="od-stack">
       <p class="field-legend">Destructive</p>
@@ -46,4 +46,4 @@
     </div>
     <p class="field-desc">Local interaction examples. Cancel, Escape or the scrim dismisses; only the action confirms. The mosaic stays static with reduced motion.</p>
   </div>
-</section>
+</Section>

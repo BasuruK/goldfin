@@ -1,4 +1,6 @@
 <script>
+  import Section from '../lib/Section.svelte';
+
   // The chip always paints the live token, so the gallery cannot drift from
   // tokens.css. The label is documentation and is kept beside it.
   const groups = [
@@ -29,12 +31,7 @@
   ];
 </script>
 
-<section class="section" data-od-id="tokens">
-  <div class="section-head">
-    <h2 class="section-title">Tokens</h2>
-    <span class="section-id">tokens.css · light-dark() · oklch</span>
-  </div>
-
+<Section title="Tokens" reference="tokens.css · light-dark() · oklch" data-od-id="tokens">
   <p class="token-note">
     Every colour token holds both themes in one
     <code class="code-k">light-dark()</code> value on
@@ -58,13 +55,13 @@
         <div class="swatch">
           <div class="swatch-color" class:edge={token.edge} style:background={'var(' + token.name + ')'}></div>
           <span class="swatch-name">{token.name}</span>
-          <span class="swatch-value">{token.dark}</span>
-          <span class="swatch-value lt">{token.light}</span>
+          <span class="swatch-hex">{token.dark}</span>
+          <span class="swatch-hex lt">{token.light}</span>
         </div>
       {/each}
     </div>
   {/each}
-</section>
+</Section>
 
 <style>
   .token-note { margin: 0 0 16px; color: var(--ufg3); font-size: 13px; line-height: 1.6; }
@@ -72,8 +69,9 @@
   .token-group { margin: 20px 0 8px; }
   .swatch-grid { margin-block-end: 20px; }
   .swatch-grid:last-of-type { margin-block-end: 0; }
-  .swatch-value { font-family: var(--font-mono); font-size: 10px; color: var(--ufg); overflow-wrap: anywhere; }
-  .swatch-value.lt { color: var(--ufg3); }
+  /* An alpha tint has almost nothing to show on its own, so it gets an edge in
+     the colour it is derived from. */
+  .swatch-color.edge { border-color: var(--ufg3); }
   .code-k { font-family: var(--font-mono); font-size: 12px; color: var(--key); }
   .code-n { font-family: var(--font-mono); font-size: 12px; color: var(--num); }
 </style>

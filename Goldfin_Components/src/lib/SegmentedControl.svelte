@@ -1,5 +1,6 @@
 <script>
   import { ToggleGroup as Primitive } from 'bits-ui';
+  import SegmentedItem from './SegmentedItem.svelte';
   import { activeIndex, resolveValue, thumbVars } from './segment.js';
   let { value = $bindable(''), items, label = 'Options', disabled = false } = $props();
   let root = $state(null);
@@ -33,30 +34,26 @@
   });
 </script><Primitive.Root type="single" bind:value={() => selected, next => { if (next) value = next; }} bind:ref={root} {disabled} class="seg" data-ready={placed} aria-label={label}>
   <span class="seg-thumb" aria-hidden="true"></span>
-  {#each items as item (item.value)}<Primitive.Item class={['seg-btn', selected === item.value && 'active']} value={item.value} disabled={item.disabled}>{item.label}</Primitive.Item>{/each}
+  {#each items as item (item.value)}<SegmentedItem value={item.value} active={selected === item.value} disabled={item.disabled}>{item.label}</SegmentedItem>{/each}
 </Primitive.Root>
 
 <style>
-  /* .seg and .seg-btn are handed to bits-ui parts, so the compiler never sees them and
-     :global() is required. .seg-thumb is an element this component renders, so it stays scoped. */
+  /* .seg is handed to a bits-ui part, so the compiler never sees it and :global() is required.
+     .seg-thumb and the root-state rules stay here: they read state the root owns. The .seg-btn
+     rules live in SegmentedItem.svelte, the component that renders the class. */
   :global(.seg) { position: relative; display: flex; width: max-content; max-width: 100%; gap: 2px; padding: 2px; border-radius: 7px; background-color: var(--upill); transition: opacity var(--duration-ui) ease, box-shadow var(--duration-ui) ease; }
   :global(.seg[data-disabled]) { cursor: not-allowed; box-shadow: inset 0 2px 6px oklch(0% 0 none / 0.2); background-image: repeating-linear-gradient(135deg, color-mix(in oklch, var(--ufg3) 42.5%, transparent) 0 1px, transparent 1px 5px); }
   .seg-thumb { position: absolute; inset-block: 2px; inset-inline-start: 0; z-index: 0; inline-size: var(--thumb-w, 0px); box-sizing: border-box; border: 1px solid var(--uline); border-radius: 5px; background: var(--uprim); pointer-events: none; }
-  :global(.seg-btn) { position: relative; z-index: 1; height: 24px; padding: 0 10px; box-sizing: border-box; border: 1px solid transparent; border-radius: 5px; background: transparent; color: var(--ufg3); font: 700 12.5px var(--font-ui); white-space: nowrap; cursor: pointer; transition: color var(--duration-menu) ease; }
-  :global(.seg-btn.active) { color: var(--uprimfg); }
-  :global(.seg[data-disabled]) :global(.seg-btn) { cursor: not-allowed; color: color-mix(in oklch, var(--ufg3) 60%, transparent); }
-  :global(.seg[data-disabled]) .seg-thumb { background: color-mix(in oklch, var(--ufg3) 20%, transparent); border-color: transparent; }
-
-  @media (hover: hover) and (pointer: fine) {
-    :global(.seg-btn:not([disabled]):hover) { color: var(--ufg); }
-  }
 
   /* The thumb is positioned from the measured --thumb-x whether or not motion is
-     allowed; only the slide between placements is motion. `data-ready` gates the
-     transition: before the first measurement the thumb has no size, and sliding
-     from nothing reads as a jump. */
+     allowed; only the slide between placements is motion. `data-ready` gates it:
+     before the first measurement the thumb has no size, and sliding from nothing
+     reads as a jump. */
   :global(.seg[data-ready="true"]) .seg-thumb { transform: translateX(var(--thumb-x, 0px)); }
   @media (prefers-reduced-motion: no-preference) {
     :global(.seg[data-ready="true"]) .seg-thumb { transition: transform 220ms var(--ease-out), inline-size 220ms var(--ease-out), background-color var(--duration-menu) ease, border-color var(--duration-menu) ease; }
   }
+
+  :global(.seg[data-disabled]) :global(.seg-btn) { cursor: not-allowed; color: color-mix(in oklch, var(--ufg3) 60%, transparent); }
+  :global(.seg[data-disabled]) .seg-thumb { background: color-mix(in oklch, var(--ufg3) 20%, transparent); border-color: transparent; }
 </style>
