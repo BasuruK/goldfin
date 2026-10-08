@@ -190,6 +190,16 @@ test('no horizontal page overflow at 375px', async ({ page }) => {
   expect(scroll).toBeLessThanOrEqual(client + 1);
 });
 
+test('card-mode table headers keep one line at 375px', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await page.waitForTimeout(150);
+  const headers = await page.$$eval('.data-table thead th', cells =>
+    cells.map(cell => ({ label: cell.textContent.trim(), height: cell.getBoundingClientRect().height })));
+  expect(headers.length).toBeGreaterThan(0);
+  // 44px is the touch-sized sort control; a wrapped label pushes past it.
+  for (const { label, height } of headers) expect(height, label).toBeLessThanOrEqual(48);
+});
+
 /* ── reduced motion: mosaic must not animate, and must not burn frames ──── */
 
 test.describe('reduced motion', () => {

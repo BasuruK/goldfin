@@ -137,16 +137,6 @@ body[data-theme="dark"]  { color-scheme: dark; }
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Reserve the scrollbar gutter only while the page is locked behind a dialog,
-   which is the one moment it is needed: without it the layout shifts sideways
-   when the scrollbar disappears. Declared on :root instead, the gutter narrows
-   the containing block of every `position: fixed` element while innerWidth
-   stays put, and a centred dialog opens half a scrollbar off-centre. */
-html:has(dialog:modal) {
-  overflow: hidden;
-  scrollbar-gutter: stable;
-}
-
 body {
   margin: 0;
   min-height: 100svh;
