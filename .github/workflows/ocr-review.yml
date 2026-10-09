@@ -23,6 +23,8 @@ jobs:
     # Concurrency is chosen before this job's if. A flat ocr-<pr> group lets a
     # rejected comment cancel a live review. Only an authorized run joins that
     # group; everything else gets a group unique to this run.
+    # Keep this authorization predicate in sync with code-review.if below.
+    # YAML aliases cannot splice a predicate into this longer expression.
     concurrency:
       group: >-
         ${{
@@ -50,6 +52,7 @@ jobs:
           || format('noop-{0}', github.run_id)
         }}
       cancel-in-progress: true
+    # Keep this authorization predicate in sync with code-review.concurrency.group above.
     if: |
       (
         github.event_name == 'pull_request_target'

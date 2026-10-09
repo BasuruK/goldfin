@@ -6,14 +6,16 @@
    colour did not move. A true gray has zero chroma and takes `none` as its hue;
    the subtly tinted grays keep their chroma, because dropping it shifts them.
 
-   Each token holds both themes through light-dark(), so there is no second
-   override block. Dark is the default, so color-scheme starts at dark and the
-   light values only apply when the document asks for them.
+   Colour tokens hold both themes through light-dark(). Shadows use complete
+   values per theme. Dark is the default, so color-scheme starts at dark and
+   the light values only apply when the document asks for them.
 
    `body[data-theme]` still sets the theme, because that is what the toggle
    writes and what portaled dialogs and menus inherit. It now maps to
-   color-scheme rather than redeclaring the tokens.
+   color-scheme and selects the complete shadow values.
    ────────────────────────────────────────────────────────────────────────── */
+
+@layer od-reset, od-layout;
 
 :root {
   color-scheme: dark;
@@ -95,35 +97,34 @@
   /* ── shadows ────────────────────────────────────────────────────────────
      Centralised here so a consumer never writes its own. The horizontal
      offsets have no logical form, so they stay physical. */
-  --runshadow:   light-dark(none,
-    0 1px 3px oklch(0% 0 none / 0.45));
-  --uheadshadow: light-dark(
-    0 1px 3px oklch(0% 0 none / 0.08), 0 2px 8px oklch(0% 0 none / 0.04),
-    0 1px 2px oklch(0% 0 none / 0.08), 0 4px 10px oklch(0% 0 none / 0.06), 0 10px 24px oklch(0% 0 none / 0.04));
-  --urunshadow: light-dark(
-    -3px 0 6px oklch(0% 0 none / 0.08), -8px 0 20px oklch(0% 0 none / 0.06),
-    -2px 0 4px oklch(0% 0 none / 0.14), -8px 0 16px oklch(0% 0 none / 0.12), -20px 0 40px oklch(0% 0 none / 0.08));
-  --upwellshadow: light-dark(
-    0 1px 2px oklch(0% 0 none / 0.06),
-    inset 0 1px 3px oklch(0% 0 none / 0.35));
-  --umenushadow: light-dark(
-    0 6px 12px oklch(0% 0 none / 0.1), 0 16px 32px oklch(0% 0 none / 0.08),
-    0 12px 32px oklch(0% 0 none / 0.4));
+  --runshadow:   0 1px 3px oklch(0% 0 none / 0.45);
+  --uheadshadow: 0 1px 2px oklch(0% 0 none / 0.08), 0 4px 10px oklch(0% 0 none / 0.06), 0 10px 24px oklch(0% 0 none / 0.04);
+  --urunshadow: -2px 0 4px oklch(0% 0 none / 0.14), -8px 0 16px oklch(0% 0 none / 0.12), -20px 0 40px oklch(0% 0 none / 0.08);
+  --upwellshadow: inset 0 1px 3px oklch(0% 0 none / 0.35);
+  --umenushadow: 0 12px 32px oklch(0% 0 none / 0.4);
 }
 
-/* The theme lives on the body so portaled dialogs and menus inherit it. It now
-   selects a scheme instead of redeclaring every token. */
-body[data-theme="light"] { color-scheme: light; }
+/* The theme lives on the body so portaled dialogs and menus inherit it. */
+body[data-theme="light"] {
+  color-scheme: light;
+  --runshadow: none;
+  --uheadshadow: 0 1px 3px oklch(0% 0 none / 0.08), 0 2px 8px oklch(0% 0 none / 0.04);
+  --urunshadow: -3px 0 6px oklch(0% 0 none / 0.08), -8px 0 20px oklch(0% 0 none / 0.06);
+  --upwellshadow: 0 1px 2px oklch(0% 0 none / 0.06);
+  --umenushadow: 0 6px 12px oklch(0% 0 none / 0.1), 0 16px 32px oklch(0% 0 none / 0.08);
+}
 body[data-theme="dark"]  { color-scheme: dark; }
 
 /* ── reset ────────────────────────────────────────────────────────────── */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  /* With this, a sized icon or avatar in a flex row shrinks to make room for
-     the text beside it. The components give those `flex: none`. */
-  min-width: 0;
+@layer od-reset {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    /* With this, a sized icon or avatar in a flex row shrinks to make room for
+       the text beside it. The components give those `flex: none`. */
+    min-width: 0;
+  }
 }
 
 :root {

@@ -57,6 +57,6 @@
   }
 
   .od-spacer { flex: none; visibility: hidden; pointer-events: none; }
-  .od-touch { min-inline-size: 44px; min-block-size: 44px; }
 }
+.od-touch { min-inline-size: 44px; min-block-size: 44px; }
 /* /OD-LAYOUT-PRIMITIVES v1 */

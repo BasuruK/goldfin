@@ -11,6 +11,6 @@
   :global(.seg-btn.active) { color: var(--uprimfg); }
 
   @media (hover: hover) and (pointer: fine) {
-    :global(.seg-btn:not([disabled]):hover) { color: var(--ufg); }
+    :global(.seg-btn:not([disabled]):not(.active):hover) { color: var(--ufg); }
   }
 </style>

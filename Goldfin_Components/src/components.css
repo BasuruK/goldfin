@@ -666,7 +666,7 @@ html { scroll-padding-block-start: var(--page-header-offset, 24px); }
 .swatch { display: flex; flex-direction: column; gap: 4px; }
 .swatch-color { height: 40px; border-radius: 6px; border: 1px solid var(--uline); }
 .swatch-name { font-family: var(--font-mono); font-size: 10px; color: var(--ufg3); }
-.swatch-hex { font-family: var(--font-mono); font-size: 11px; color: var(--ufg); }
+.swatch-hex { font-family: var(--font-mono); font-size: 11px; color: var(--ufg); overflow-wrap: anywhere; }
 .swatch-hex.lt { font-size: 10px; color: var(--ufg3); }
 
 /* ── row (key/value) ──────────────────────────────────────── */
