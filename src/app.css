@@ -1,0 +1,108 @@
+@import '../Goldfin_Components/src/tokens.css';
+
+.app-shell {
+  --sidebar-width: 224px;
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  grid-template-rows: 56px minmax(0, 1fr);
+  block-size: 100dvh;
+}
+
+.app-shell[data-sidebar-expanded='false'] {
+  --sidebar-width: 64px;
+}
+
+.app-sidebar {
+  grid-row: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  min-block-size: 0;
+  background: var(--usurf);
+  border-inline-end: 1px solid var(--uline);
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: none;
+  block-size: 56px;
+  padding-inline: 18px;
+}
+
+.logo-placeholder {
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: 28px;
+  block-size: 28px;
+  border: 1px dashed var(--ufg3);
+  border-radius: 7px;
+  color: var(--ufg3);
+}
+
+.logo-placeholder svg {
+  inline-size: 20px;
+  block-size: 20px;
+}
+
+.app-wordmark {
+  color: var(--ufg);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.app-navigation {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  padding-inline: 16px;
+  border-block-end: 1px solid var(--uline);
+}
+
+.sidebar-toggle {
+  position: relative;
+  display: grid;
+  place-items: center;
+  inline-size: 32px;
+  block-size: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ufg2);
+  cursor: pointer;
+}
+
+.sidebar-toggle::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+
+.sidebar-toggle svg {
+  inline-size: 20px;
+  block-size: 20px;
+}
+
+.sidebar-toggle:active {
+  background: var(--upill);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sidebar-toggle:hover {
+    background: var(--hover);
+  }
+}
+
+.app-content {
+  min-block-size: 0;
+  padding: 24px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}

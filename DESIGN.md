@@ -27,6 +27,12 @@ Compact, dark-first, cool neutral tooling. Hierarchy comes from type, alignment,
 
 Keep the user-approved oval slider grip, compact tables, divided dialog footers and animated mosaic headers. No avatars in the supplied table or timeline designs. Do not introduce new gradients, glass treatments, decorative cards or unregistered colors. Existing sea and mosaic effects are approved exceptions with defined component scope.
 
+## Main app shell
+
+The desktop shell has a persistent left sidebar and a header above the content. The sidebar starts expanded at 224px and collapses to a 64px icon rail; it remains a navigation landmark in both states. The header and brand row are 56px high. The brand uses a logo placeholder and the Goldfin wordmark; collapse hides the wordmark and retains the placeholder.
+
+The header currently contains only the sidebar toggle. It exposes the expanded state and keeps keyboard focus when toggled. Navigation items, header actions and the mobile drawer remain to be designed. Desktop navigation uses ordinary landmarks and a button, with no modal focus trap.
+
 ## Themes and colors
 
 Every colour token is declared once on `:root` and holds **both** themes in a single `light-dark()` value. There is no second override block. `color-scheme` starts at `dark` because dark is the default; `body[data-theme="light"]` and `body[data-theme="dark"]` only select a `color-scheme`, they do not redeclare tokens. Keep setting the theme on the document body so portaled dialogs and menus inherit it — `color-scheme` inherits, so this still works. A theme on an inner component wrapper is insufficient.
