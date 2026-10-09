@@ -190,6 +190,16 @@ test('no horizontal page overflow at 375px', async ({ page }) => {
   expect(scroll).toBeLessThanOrEqual(client + 1);
 });
 
+test('card-mode table headers keep one line at 375px', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await page.waitForTimeout(150);
+  const headers = await page.$$eval('.data-table thead th', cells =>
+    cells.map(cell => ({ label: cell.textContent.trim(), height: cell.getBoundingClientRect().height })));
+  expect(headers.length).toBeGreaterThan(0);
+  // 44px is the touch-sized sort control; a wrapped label pushes past it.
+  for (const { label, height } of headers) expect(height, label).toBeLessThanOrEqual(48);
+});
+
 /* ── reduced motion: mosaic must not animate, and must not burn frames ──── */
 
 test.describe('reduced motion', () => {
@@ -208,17 +218,28 @@ test.describe('reduced motion', () => {
 /* ── tokens must resolve in both themes ─────────────────────────────────── */
 
 test('core tokens resolve in dark and light', async ({ page }) => {
+  // The tokens carry both themes through light-dark(), so reading the raw custom
+  // property returns the expression, not a colour. Assert the painted value
+  // instead — that is what the reader actually sees.
   const read = () => page.evaluate(() => {
     const s = getComputedStyle(document.body);
-    return { bg: s.getPropertyValue('--ubg').trim(), fg: s.getPropertyValue('--ufg').trim() };
+    return {
+      scheme: s.colorScheme,
+      bg: s.backgroundColor,
+      fg: getComputedStyle(document.querySelector('.page-title')).color,
+    };
   });
 
   await page.evaluate(() => document.body.removeAttribute('data-theme'));
   const dark = await read();
-  expect(dark.bg.toLowerCase()).toBe('#111214');
-  expect(dark.fg.toLowerCase()).toBe('#f3f4f6');
+  expect(dark.scheme).toBe('dark');
+  expect(dark.bg).toBe('oklch(0.18196 0.0044 264.46)');   // --ubg dark, #111214
+  expect(dark.fg).toBe('oklch(0.96696 0.0029 264.54)');  // --ufg dark, #f3f4f6
 
   await page.evaluate(() => document.body.setAttribute('data-theme', 'light'));
   const light = await read();
-  expect(light.bg.toLowerCase()).toBe('#ffffff');
+  expect(light.scheme).toBe('light');
+  expect(light.bg).toBe('oklch(1 0 none)');               // --ubg light, #ffffff
+
+  expect(light.bg).not.toBe(dark.bg);
 });

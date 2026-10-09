@@ -18,6 +18,7 @@
 
 <style>
   /* The per-line rules live in JSONLine.svelte; this component owns the region and its scroller. */
-  .jsonbox { position: relative; min-height: 120px; overflow: auto; padding: 10px 0; border: 1px solid var(--uoutline); border-radius: 10px; background: var(--uout); font: 400 12.5px/1.7 'IBM Plex Mono', monospace; }
-  .gf-json-body { max-height: 320px; overflow: auto; }
+  /* Both boxes scroll, so they keep `auto` rather than `clip`. */
+  .jsonbox { position: relative; min-block-size: 120px; overflow: auto; padding: 10px 0; border: 1px solid var(--uoutline); border-radius: 10px; background: var(--uout); font: 400 12.5px/1.7 var(--font-mono); }
+  .gf-json-body { max-block-size: 320px; overflow: auto; overscroll-behavior: contain; }
 </style>

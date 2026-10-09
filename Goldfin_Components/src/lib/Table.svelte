@@ -21,7 +21,7 @@
     <table {...rest} class="data-table" aria-labelledby={label ? id : undefined}>
       <caption class="sr-only">{caption || label}</caption>
       <thead><tr>{#each columns as column (column.key)}
-        <th scope="col" aria-sort={key === column.key ? direction : 'none'} style:width={column.width}>
+        <th scope="col" aria-sort={key === column.key ? direction : 'none'} style:--col-width={column.width}>
           <TableSortButton {column} active={key === column.key} {direction} onsort={sort} />
         </th>
       {/each}</tr></thead>

@@ -29,62 +29,81 @@ Keep the user-approved oval slider grip, compact tables, divided dialog footers 
 
 ## Themes and colors
 
-Dark values are declared on `:root, body`. Light overrides are declared on `body[data-theme="light"]`; dark is the default. Set the theme on the document body so portaled dialogs and menus inherit it. A theme on an inner component wrapper is insufficient.
+Every colour token is declared once on `:root` and holds **both** themes in a single `light-dark()` value. There is no second override block. `color-scheme` starts at `dark` because dark is the default; `body[data-theme="light"]` and `body[data-theme="dark"]` only select a `color-scheme`, they do not redeclare tokens. Keep setting the theme on the document body so portaled dialogs and menus inherit it — `color-scheme` inherits, so this still works. A theme on an inner component wrapper is insufficient.
 
-Use semantic CSS variables in components. The following values record the current implementation.
+Colours are written in `oklch()`. A true gray has zero chroma and takes `none` as its hue, which stops a later `color-mix()` dragging it toward red. Derive a tint, hover or transparent variant with `color-mix(in oklch, …)`, never with a second hand-written colour.
+
+Use semantic CSS variables in components. The following values record the current implementation; each was converted from the previous hex and verified to round-trip to the same 8-bit sRGB triple, so the rendered colour did not change.
 
 ### Core tokens
 
 | Token | Role | Dark | Light |
 | --- | --- | --- | --- |
-| `--ubg` | Page | `#111214` | `#ffffff` |
-| `--usurf` | Raised surface | `#17181b` | `#f7f8f9` |
-| `--uwell` | Recessed surface | `#141518` | `#fbfbfc` |
-| `--uline` | Divider/border | `#2a2c31` | `#e4e6ea` |
-| `--ufg` | Strong text | `#f3f4f6` | `#0f1115` |
-| `--ufg2` | General text | `#b9bec6` | `#3f4650` |
-| `--ufg3` | Muted text | `#8c929b` | `#646b75` |
-| `--uprim` | Primary/control fill | `#f3f4f6` | `#111317` |
-| `--uprimfg` | Primary/control contrast | `#111214` | `#ffffff` |
-| `--upill` | Neutral pill | `#212328` | `#eff1f3` |
-| `--key` | Accent/key | `#60a5fa` | `#1d4ed8` |
-| `--ok` | Success | `#34d399` | `#047857` |
-| `--bad` | Error/destructive | `#f87171` | `#c81e1e` |
-| `--warn` | Warning | `#fbbf24` | `#9a5a06` |
+| `--ubg` | Page | `oklch(18.196% 0.0044 264.46)` | `oklch(100% 0 none)` |
+| `--usurf` | Raised surface | `oklch(20.924% 0.0061 271.12)` | `oklch(97.865% 0.0017 247.84)` |
+| `--uwell` | Recessed surface | `oklch(19.595% 0.0062 271.09)` | `oklch(98.837% 0.0013 286.38)` |
+| `--uline` | Divider/border | `oklch(29.312% 0.0095 268.35)` | `oklch(92.455% 0.0058 264.53)` |
+| `--ufg` | Strong text | `oklch(96.696% 0.0029 264.54)` | `oklch(17.727% 0.0089 264.32)` |
+| `--ufg2` | General text | `oklch(79.999% 0.0126 259.82)` | `oklch(39.165% 0.0193 257.26)` |
+| `--ufg3` | Muted text | `oklch(65.792% 0.0151 258.36)` | `oklch(52.526% 0.0179 257.24)` |
+| `--uprim` | Primary/control fill | `oklch(96.696% 0.0029 264.54)` | `oklch(18.637% 0.0088 264.34)` |
+| `--uprimfg` | Primary/control contrast | `oklch(18.196% 0.0044 264.46)` | `oklch(100% 0 none)` |
+| `--upill` | Neutral pill | `oklch(25.618% 0.0098 268.29)` | `oklch(95.719% 0.0034 247.86)` |
+| `--key` | Accent/key | `oklch(71.374% 0.1434 254.62)` | `oklch(48.82% 0.2172 264.38)` |
+| `--ok` | Success | `oklch(77.294% 0.1535 163.22)` | `oklch(50.813% 0.1049 165.61)` |
+| `--bad` | Error/destructive | `oklch(71.063% 0.1661 22.22)` | `oklch(53.492% 0.2026 27.61)` |
+| `--warn` | Warning | `oklch(83.686% 0.1644 84.43)` | `oklch(52.939% 0.118 63.6)` |
 
 Boolean state is two-tone, not accent blue. Keep `--key` for its existing accent roles. Colors do not authorize invented processing states; application state and visible labels must agree.
+
+### Motion tokens
+
+| Token | Value | Use |
+| --- | --- | --- |
+| `--ease-out` | `cubic-bezier(.22, 1, .32, 1)` | The house curve. Anything that moves in space. |
+| `--ease-in-out` | `cubic-bezier(.77, 0, .175, 1)` | Two-way state changes. |
+| `--duration-press` | `150ms` | Press feedback, colour fades. |
+| `--duration-ui` | `180ms` | Hover, focus, small state changes. |
+| `--duration-menu` | `200ms` | Menus, popovers. |
+| `--duration-panel` | `320ms` | Panels, disclosure, collapse. |
+
+Never `ease-in` on UI. Never `transition: all`. A transition that moves or scales something belongs inside `@media (prefers-reduced-motion: no-preference)`; the layout state it animates stays outside, so the component is still correct when motion is refused. There is no global rule that strips motion after the fact.
+
+### Font role tokens
+
+`--font-ui` (Urbanist), `--font-body` (IBM Plex Sans), `--font-mono` (IBM Plex Mono). Declare the family once in `tokens.css` and reference the role; do not retype a stack in a component.
 
 ### Specialist tokens
 
 | Token | Dark | Light |
 | --- | --- | --- |
-| `--uout` | `#121d17` | `#f1f8f3` |
-| `--uoutline` | `#1f3a2b` | `#d3e8da` |
-| `--uhl` | `#1d2a3d` | `#e3ebf9` |
-| `--uhead` | `#1b1c1e` | `#ffffff` |
-| `--uprompt` | `#121212` | `#f4f5f7` |
-| `--upwell` | `#0d0d0d` | `#ffffff` |
-| `--uresult` | `#1c1c1c` | `#ffffff` |
-| `--urun` | `#2c2d30` | `#ffffff` |
-| `--urunfield` | `#38393c` | `#ffffff` |
-| `--urunwell` | `#232427` | `#f7f8f9` |
-| `--urunline` | `#45474b` | `#e4e6ea` |
-| `--umenu` | `#414245` | `#ffffff` |
-| `--str` | `#cbd5e1` | `#334155` |
-| `--num` | `#fbbf24` | `#9a5a06` |
-| `--p` | `#858d98` | `#6b7280` |
+| `--uout` | `oklch(21.789% 0.0197 160.35)` | `oklch(97.248% 0.0099 155.1)` |
+| `--uoutline` | `oklch(32.17% 0.0429 158.45)` | `oklch(91.154% 0.0292 156.6)` |
+| `--uhl` | `oklch(28.257% 0.0395 257.77)` | `oklch(93.816% 0.0208 261.77)` |
+| `--uhead` | `oklch(22.62% 0.0041 264.49)` | `oklch(100% 0 none)` |
+| `--uprompt` | `oklch(18.22% 0 none)` | `oklch(96.995% 0.0029 264.54)` |
+| `--upwell` | `oklch(15.907% 0 none)` | `oklch(100% 0 none)` |
+| `--uresult` | `oklch(22.645% 0 none)` | `oklch(100% 0 none)` |
+| `--urun` | `oklch(29.732% 0.0056 271.23)` | `oklch(100% 0 none)` |
+| `--urunfield` | `oklch(34.473% 0.0054 271.26)` | `oklch(100% 0 none)` |
+| `--urunwell` | `oklch(26.05% 0.0058 271.19)` | `oklch(97.865% 0.0017 247.84)` |
+| `--urunline` | `oklch(39.75% 0.0072 264.49)` | `oklch(92.455% 0.0058 264.53)` |
+| `--umenu` | `oklch(37.923% 0.0052 271.28)` | `oklch(100% 0 none)` |
+| `--str` | `oklch(86.898% 0.0198 252.89)` | `oklch(37.17% 0.0392 257.29)` |
+| `--num` | `oklch(83.686% 0.1644 84.43)` | `oklch(52.939% 0.118 63.6)` |
+| `--p` | `oklch(64.045% 0.0189 256.32)` | `oklch(55.102% 0.0234 264.36)` |
 | `--cnt` | `var(--ufg3)` | Inherited alias |
-| `--badbg` | `rgba(248,113,113,.10)` | `#fdeded` |
-| `--okbg` | `rgba(52,211,153,.10)` | `#e5f5ee` |
-| `--runchip` | `rgba(63,116,216,.16)` | `#e6eefc` |
-| `--runchipfg` | `#8fb4ff` | `#1d4ed8` |
-| `--runtext` | `#eaf1ff` | `#111214` |
-| `--seawater` | `#0a1430` | `#e9f0fb` |
-| `--seawater2` | `#0d1b44` | `#ffffff` |
-| `--seawave` | `#1a3a8f` | `#a8c2e8` |
-| `--sel` | `rgba(63,116,216,.32)` | `rgba(29,78,216,.16)` |
-| `--hover` | `rgba(255,255,255,.05)` | `rgba(0,0,0,.05)` |
-| `--scrim` | `rgba(0,0,0,.58)` | `rgba(17,19,23,.34)` |
+| `--badbg` | `color-mix(in oklch, var(--bad) 10%, transparent)` | `oklch(95.875% 0.0174 17.46)` |
+| `--okbg` | `color-mix(in oklch, var(--ok) 10%, transparent)` | `oklch(95.634% 0.0192 167.93)` |
+| `--runchip` | `oklch(57.504% 0.1637 261.7 / 0.16)` | `oklch(94.721% 0.0207 261.77)` |
+| `--runchipfg` | `oklch(77.23% 0.1154 263.77)` | `oklch(48.82% 0.2172 264.38)` |
+| `--runtext` | `oklch(95.697% 0.0203 264.47)` | `oklch(18.196% 0.0044 264.46)` |
+| `--seawater` | `oklch(20.067% 0.0576 266.48)` | `oklch(95.306% 0.0166 259.42)` |
+| `--seawater2` | `oklch(23.833% 0.0798 266.19)` | `oklch(100% 0 none)` |
+| `--seawave` | `oklch(38.183% 0.1459 264.62)` | `oklch(80.757% 0.061 257.79)` |
+| `--sel` | `oklch(57.504% 0.1637 261.7 / 0.32)` | `color-mix(in oklch, var(--key) 16%, transparent)` |
+| `--hover` | `oklch(100% 0 none / 0.05)` | `oklch(0% 0 none / 0.05)` |
+| `--scrim` | `oklch(0% 0 none / 0.58)` | `color-mix(in oklch, var(--uprim) 34%, transparent)` |
 
 Keep existing shadow tokens `--runshadow`, `--uheadshadow`, `--urunshadow`, `--upwellshadow` and `--umenushadow` centralized in the same stylesheet. Reuse their current theme-specific definitions; do not scatter replacement shadows through consumers.
 
@@ -103,6 +122,8 @@ The showcase source entry loads Urbanist 400/500/600/700, IBM Plex Sans 400/500/
 
 The compact 13px UI, smaller metadata, table padding and component-specific dimensions preserve the approved design; they are exceptions to a generic 16px-body/8px-grid baseline. Do not silently enlarge or normalize them during transfer. Dense metadata is not the recommended style for long reading passages.
 
+This is why the shared reset deliberately omits `input { font-size: max(16px, 1rem) }`, which every other reset adds to stop iOS Safari zooming when a field takes focus. Applying it would resize every control in this design. The trade-off is recorded here on purpose: **on iOS, focusing a Goldfin input will zoom the page, and the user must pinch back out.** If that proves unacceptable, the fix is a deliberate design change to the compact type scale, not a reset rule.
+
 ## Spacing, shape and layout
 
 - Default structural rhythm uses 4/8px steps and 12/16/24px grouping. Preserve existing optical exceptions such as 7/11px button geometry.
@@ -112,8 +133,21 @@ The compact 13px UI, smaller metadata, table padding and component-specific dime
 - Lay content out in normal flex/grid flow. Reserve absolute positioning for intentional overlays, chrome and decorative mosaic layers.
 - Keep `@layer od-layout` first in the shared stylesheet. Compose existing `od-row`, `od-field`, `od-fill`, `od-stat`, `od-cell`, `od-tile` and `od-screen` primitives.
 - Stacked labels, helpers, values and captions are separate block-level pieces. Data can truncate or clamp only when the full value remains accessible. Authored headings and action labels must fit without truncation.
-- Existing showcase layouts reflow below 768px, adapt three-column grids to two columns from 768–1023px and widen at 1440px. Product layouts must also accommodate 375px without page-level horizontal overflow.
+- Column counts are **intrinsic, not a breakpoint ladder**. Grids use `repeat(auto-fit, minmax(min(100%, N), 1fr))` and components that appear in slots of different widths use a container query. A table collapses to cards when its own container is under 480px, not when the viewport is; a horizontal timeline lays out when its container is over 768px. Keep viewport media queries for things that genuinely belong to the viewport, such as coarse-pointer touch targets.
+- Showcase page padding reflows below 768px and the page measure widens at 1440px. Product layouts must also accommodate 375px without page-level horizontal overflow.
 - Use full image frames for content-bearing images; preserve intrinsic ratios. Only deliberately decorative media may crop.
+
+## CSS rules
+
+- Write logical properties, never physical: `padding-inline`, `margin-block`, `inset-inline-start`, `border-start-start-radius`. Physical values remain only where no logical form exists, such as horizontal `box-shadow` offsets and the mosaic mask.
+- Put every `:hover` rule inside `@media (hover: hover) and (pointer: fine)`. A tap is not a hover, and an unguarded hover sticks after a tap.
+- Give every pressable an `:active` state.
+- Style focus with `:focus-visible` and `outline`. **Never `outline: none`.** A component that draws its own ring with `box-shadow` keeps the outline and sets `outline-color: transparent`, so forced-colors mode can still repaint it.
+- One focus ring for the whole library: `2px solid var(--ufg)` at `3px` offset. It is pinned by e2e; do not change the value.
+- Use `overflow: clip` to cut off overflow, and `overflow: hidden` only where `text-overflow: ellipsis` must draw on a browser where `clip` is untested. Keep `auto` on real scroll areas and add `overscroll-behavior: contain` to them.
+- Give an icon `flex: none` so it cannot be squeezed by the label beside it. Size travels as the `--icon-size` custom property, so a consumer can retune an icon to its label with a `cap` value without editing markup.
+- Space between siblings belongs to the parent, through `gap`. A child carries no block margin for a gap it could have inherited.
+- Naming utilities beat inline `style` attributes. One-off showcase spacing gets a named class in the stylesheet, not a `style=""`.
 
 The shared CSS currently includes global selectors, legacy reference rules and showcase layout rules. Importing it affects the host document. Integrate deliberately; extracting a separately scoped production stylesheet is future work, not part of this handoff.
 

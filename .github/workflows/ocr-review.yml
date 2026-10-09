@@ -1,0 +1,151 @@
+name: OpenCodeReview PR Review
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+
+jobs:
+  code-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # Without this the ocr launcher spawns a detached self-updater on its
+      # first invocation. It sees a newer release on npm and runs `npm i -g`,
+      # which unlinks /usr/local/bin/ocr mid-run; a concurrent `ocr config set`
+      # then dies with MODULE_NOT_FOUND. The version pin below is meaningless
+      # while the updater is allowed to replace it.
+      OCR_NO_UPDATE: "1"
+    # Concurrency is chosen before this job's if. A flat ocr-<pr> group lets a
+    # rejected comment cancel a live review. Only an authorized run joins that
+    # group; everything else gets a group unique to this run.
+    # Keep this authorization predicate in sync with code-review.if below.
+    # YAML aliases cannot splice a predicate into this longer expression.
+    concurrency:
+      group: >-
+        ${{
+          (
+            (
+              github.event_name == 'pull_request_target'
+              && github.event.pull_request.head.repo.full_name == github.repository
+            )
+            || (
+              github.event_name == 'issue_comment'
+              && github.event.issue.pull_request
+              && github.event.comment.user.type != 'Bot'
+              && (
+                github.event.comment.author_association == 'OWNER'
+                || github.event.comment.author_association == 'MEMBER'
+                || github.event.comment.author_association == 'COLLABORATOR'
+              )
+              && (
+                github.event.comment.body == '/open-code-review'
+                || startsWith(github.event.comment.body, '/open-code-review ')
+              )
+            )
+          )
+          && format('ocr-{0}', github.event.pull_request.number || github.event.issue.number)
+          || format('noop-{0}', github.run_id)
+        }}
+      cancel-in-progress: true
+    # Keep this authorization predicate in sync with code-review.concurrency.group above.
+    if: |
+      (
+        github.event_name == 'pull_request_target'
+        && github.event.pull_request.head.repo.full_name == github.repository
+      )
+      || (
+        github.event_name == 'issue_comment'
+        && github.event.issue.pull_request
+        && github.event.comment.user.type != 'Bot'
+        && (
+          github.event.comment.author_association == 'OWNER'
+          || github.event.comment.author_association == 'MEMBER'
+          || github.event.comment.author_association == 'COLLABORATOR'
+        )
+        && (
+          github.event.comment.body == '/open-code-review'
+          || startsWith(github.event.comment.body, '/open-code-review ')
+        )
+      )
+    steps:
+      - name: Get GitHub App Token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          permission-pull-requests: write
+
+      - name: Resolve comment PR refs
+        id: pr-context
+        if: github.event_name == 'issue_comment'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          COMMENT_CREATED_AT: ${{ github.event.comment.created_at }}
+        run: |
+          set -euo pipefail
+          case "$PR_NUMBER" in
+            ''|*[!0-9]*)
+              echo "Pull request number is not an integer" >&2
+              exit 1
+              ;;
+          esac
+          pr="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}")"
+          state="$(jq -er .state <<<"$pr")"
+          if [[ "$state" != "open" ]]; then
+            echo "Pull request is not open (state=${state})" >&2
+            exit 1
+          fi
+          base_ref="$(jq -er .base.ref <<<"$pr")"
+          head_sha="$(jq -er .head.sha <<<"$pr")"
+          if ! git check-ref-format "refs/heads/${base_ref}"; then
+            echo "Pull request base ref has an unexpected shape" >&2
+            exit 1
+          fi
+          if [[ ! "$head_sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Pull request head SHA has an unexpected shape" >&2
+            exit 1
+          fi
+          # Both are UTC ISO-8601 with second precision, so they compare as strings.
+          # Any PR update after the comment fails closed: the approver re-comments.
+          updated_at="$(jq -er .updated_at <<<"$pr")"
+          iso_utc='^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$'
+          if [[ ! "$updated_at" =~ $iso_utc || ! "$COMMENT_CREATED_AT" =~ $iso_utc ]]; then
+            echo "Pull request or comment timestamp has an unexpected shape" >&2
+            exit 1
+          fi
+          if [[ "$updated_at" > "$COMMENT_CREATED_AT" ]]; then
+            echo "Pull request changed after the /open-code-review comment; comment again to review the new head" >&2
+            exit 1
+          fi
+          echo "base_ref=${base_ref}" >> "$GITHUB_OUTPUT"
+          echo "head_sha=${head_sha}" >> "$GITHUB_OUTPUT"
+
+      - name: Require LLM token
+        env:
+          OCR_LLM_TOKEN: ${{ secrets.OCR_LLM_TOKEN }}
+        run: |
+          if [ -z "$OCR_LLM_TOKEN" ]; then
+            echo "::error::OCR_LLM_TOKEN secret is empty; configure it in the repository secrets so the review can authenticate against the LLM endpoint"
+            exit 1
+          fi
+
+      - uses: alibaba/open-code-review@fabbdb296b0d97e2140ada8d54ca7d6d6d1d7ad4 # v1.12.13
+        with:
+          github_token: ${{ steps.app-token.outputs.token }}
+          ocr_version: "1.12.13"
+          base_ref: ${{ steps.pr-context.outputs.base_ref }}
+          head_sha: ${{ steps.pr-context.outputs.head_sha }}
+          # MiniMax, OpenAI-compatible. China region is https://api.minimaxi.com/v1.
+          llm_url: https://api.minimax.io/v1
+          llm_auth_token: ${{ secrets.OCR_LLM_TOKEN }}
+          llm_model: ${{ vars.OCR_LLM_MODEL }}
+          llm_protocol: openai
+          llm_use_anthropic: "false"
+          llm_reasoning_effort: ${{ vars.OCR_LLM_REASONING_EFFORT || 'high' }}

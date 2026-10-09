@@ -1,47 +1,77 @@
 <script>
   import Section from '../lib/Section.svelte';
-</script><Section title="Tokens" reference="tokens.css · --ufg, --ufg2, --ufg3, --uline" data-od-id="tokens">
 
-    <p style="color:var(--ufg3);font-size:13px;margin:0 0 16px;line-height:1.6">
-      CSS custom properties on <code style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--key)">:root</code> (dark) and <code style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--key)">body[data-theme="light"]</code>.
-      Apply with <code style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--num)">var(--token)</code>.
-    </p>
+  // The chip always paints the live token, so the gallery cannot drift from
+  // tokens.css. The label is documentation and is kept beside it.
+  const groups = [
+    { heading: 'Foreground', tokens: [
+      { name: '--ufg', light: 'oklch(17.727% 0.0089 264.32)', dark: 'oklch(96.696% 0.0029 264.54)' },
+      { name: '--ufg2', light: 'oklch(39.165% 0.0193 257.26)', dark: 'oklch(79.999% 0.0126 259.82)' },
+      { name: '--ufg3', light: 'oklch(52.526% 0.0179 257.24)', dark: 'oklch(65.792% 0.0151 258.36)' }
+    ] },
+    { heading: 'Surface layers', tokens: [
+      { name: '--ubg', light: 'oklch(100% 0 none)', dark: 'oklch(18.196% 0.0044 264.46)' },
+      { name: '--usurf', light: 'oklch(97.865% 0.0017 247.84)', dark: 'oklch(20.924% 0.0061 271.12)' },
+      { name: '--uwell', light: 'oklch(98.837% 0.0013 286.38)', dark: 'oklch(19.595% 0.0062 271.09)' },
+      { name: '--uline', light: 'oklch(92.455% 0.0058 264.53)', dark: 'oklch(29.312% 0.0095 268.35)' }
+    ] },
+    { heading: 'JSON / syntax', tokens: [
+      { name: '--key', light: 'oklch(48.82% 0.2172 264.38)', dark: 'oklch(71.374% 0.1434 254.62)' },
+      { name: '--str', light: 'oklch(37.17% 0.0392 257.29)', dark: 'oklch(86.898% 0.0198 252.89)' },
+      { name: '--num', light: 'oklch(52.939% 0.118 63.6)', dark: 'oklch(83.686% 0.1644 84.43)' },
+      { name: '--ok', light: 'oklch(50.813% 0.1049 165.61)', dark: 'oklch(77.294% 0.1535 163.22)' },
+      { name: '--bad', light: 'oklch(53.492% 0.2026 27.61)', dark: 'oklch(71.063% 0.1661 22.22)' },
+      { name: '--warn', light: 'oklch(52.939% 0.118 63.6)', dark: 'oklch(83.686% 0.1644 84.43)' }
+    ] },
+    { heading: 'Semantic', tokens: [
+      { name: '--badbg', light: 'oklch(95.875% 0.0174 17.46)', dark: 'color-mix(--bad 10%)', edge: true },
+      { name: '--okbg', light: 'oklch(95.634% 0.0192 167.93)', dark: 'color-mix(--ok 10%)', edge: true },
+      { name: '--runchip', light: 'oklch(94.721% 0.0207 261.77)', dark: 'oklch(57.504% 0.1637 261.7 / .16)', edge: true }
+    ] }
+  ];
+</script>
 
-    <p class="section-id" style="margin:0 0 16px">Each swatch lists the dark value on top, the light-theme override beneath it. Chip colour is always the dark value.</p>
+<Section title="Tokens" reference="tokens.css · light-dark() · oklch" data-od-id="tokens">
+  <p class="token-note">
+    Every colour token holds both themes in one
+    <code class="code-k">light-dark()</code> value on
+    <code class="code-k">:root</code>, and the theme is chosen by
+    <code class="code-k">color-scheme</code> rather than a second block of overrides.
+    <code class="code-k">body[data-theme="light"]</code> still sets the theme,
+    so portaled dialogs and menus inherit it. Apply a token with
+    <code class="code-n">var(--token)</code>.
+  </p>
 
-    <!-- Foreground -->
-    <p class="section-id" style="margin:0 0 8px">Foreground</p>
-    <div class="swatch-grid" style="margin-bottom:20px">
-      <div class="swatch"><div class="swatch-color" style="background:#f3f4f6"></div><span class="swatch-name">--ufg</span><span class="swatch-hex">#f3f4f6</span><span class="swatch-hex lt">#0f1115</span></div>
-      <div class="swatch"><div class="swatch-color" style="background:#b9bec6"></div><span class="swatch-name">--ufg2</span><span class="swatch-hex">#b9bec6</span><span class="swatch-hex lt">#3f4650</span></div>
-      <div class="swatch"><div class="swatch-color" style="background:#8c929b"></div><span class="swatch-name">--ufg3</span><span class="swatch-hex">#8c929b</span><span class="swatch-hex lt">#646b75</span></div>
-    </div>
+  <p class="section-id token-note-sm">
+    The chip paints the live token in the current theme. Each swatch lists the dark value
+    first, then the light value. A true gray takes <code class="code-n">none</code> as its hue,
+    so a later color-mix() cannot drag it toward red.
+  </p>
 
-    <!-- Surface -->
-    <p class="section-id" style="margin:0 0 8px">Surface layers</p>
-    <div class="swatch-grid" style="margin-bottom:20px">
-      <div class="swatch"><div class="swatch-color" style="background:#111214"></div><span class="swatch-name">--ubg</span><span class="swatch-hex">#111214</span><span class="swatch-hex lt">#ffffff</span></div>
-      <div class="swatch"><div class="swatch-color" style="background:#17181b"></div><span class="swatch-name">--usurf</span><span class="swatch-hex">#17181b</span><span class="swatch-hex lt">#f7f8f9</span></div>
-      <div class="swatch"><div class="swatch-color" style="background:#141518"></div><span class="swatch-name">--uwell</span><span class="swatch-hex">#141518</span><span class="swatch-hex lt">#fbfbfc</span></div>
-      <div class="swatch"><div class="swatch-color" style="background:#2a2c31"></div><span class="swatch-name">--uline</span><span class="swatch-hex">#2a2c31</span><span class="swatch-hex lt">#e4e6ea</span></div>
-    </div>
-
-    <!-- JSON -->
-    <p class="section-id" style="margin:0 0 8px">JSON / syntax</p>
-    <div class="swatch-grid" style="margin-bottom:20px">
-      <div class="swatch"><div class="swatch-color" style="background:#60a5fa"></div><span class="swatch-name">--key</span><span class="swatch-hex">#60a5fa</span><span class="swatch-hex lt">#1d4ed8</span></div>
-      <div class="swatch"><div class="swatch-color" style="background:#cbd5e1"></div><span class="swatch-name">--str</span><span class="swatch-hex">#cbd5e1</span><span class="swatch-hex lt">#334155</span></div>
-      <div class="swatch"><div class="swatch-color" style="background:#fbbf24"></div><span class="swatch-name">--num</span><span class="swatch-hex">#fbbf24</span><span class="swatch-hex lt">#9a5a06</span></div>
-      <div class="swatch"><div class="swatch-color" style="background:#34d399"></div><span class="swatch-name">--ok</span><span class="swatch-hex">#34d399</span><span class="swatch-hex lt">#047857</span></div>
-      <div class="swatch"><div class="swatch-color" style="background:#f87171"></div><span class="swatch-name">--bad</span><span class="swatch-hex">#f87171</span><span class="swatch-hex lt">#c81e1e</span></div>
-      <div class="swatch"><div class="swatch-color" style="background:#fbbf24"></div><span class="swatch-name">--warn</span><span class="swatch-hex">#fbbf24</span><span class="swatch-hex lt">#9a5a06</span></div>
-    </div>
-
-    <!-- Semantic -->
-    <p class="section-id" style="margin:0 0 8px">Semantic</p>
+  {#each groups as group (group.heading)}
+    <p class="section-id token-group">{group.heading}</p>
     <div class="swatch-grid">
-      <div class="swatch"><div class="swatch-color" style="background:rgba(248,113,113,.10);border-color:var(--bad)"></div><span class="swatch-name">--badbg</span><span class="swatch-hex">rgba / 10%</span><span class="swatch-hex lt">#fdeded</span></div>
-      <div class="swatch"><div class="swatch-color" style="background:rgba(52,211,153,.10);border-color:var(--ok)"></div><span class="swatch-name">--okbg</span><span class="swatch-hex">rgba / 10%</span><span class="swatch-hex lt">#e5f5ee</span></div>
-      <div class="swatch"><div class="swatch-color" style="background:rgba(63,116,216,.16);border-color:#3f74d8"></div><span class="swatch-name">--runchip</span><span class="swatch-hex">rgba / 16%</span><span class="swatch-hex lt">#e6eefc</span></div>
+      {#each group.tokens as token (token.name)}
+        <div class="swatch">
+          <div class="swatch-color" class:edge={token.edge} style:background={'var(' + token.name + ')'}></div>
+          <span class="swatch-name">{token.name}</span>
+          <span class="swatch-hex">{token.dark}</span>
+          <span class="swatch-hex lt">{token.light}</span>
+        </div>
+      {/each}
     </div>
-  </Section>
+  {/each}
+</Section>
+
+<style>
+  .token-note { margin: 0 0 16px; color: var(--ufg3); font-size: 13px; line-height: 1.6; }
+  .token-note-sm { margin: 0 0 8px; line-height: 1.6; }
+  .token-group { margin: 20px 0 8px; }
+  .swatch-grid { margin-block-end: 20px; }
+  .swatch-grid:last-of-type { margin-block-end: 0; }
+  /* An alpha tint has almost nothing to show on its own, so it gets an edge in
+     the colour it is derived from. */
+  .swatch-color.edge { border-color: var(--ufg3); }
+  .code-k { font-family: var(--font-mono); font-size: 12px; color: var(--key); }
+  .code-n { font-family: var(--font-mono); font-size: 12px; color: var(--num); }
+</style>

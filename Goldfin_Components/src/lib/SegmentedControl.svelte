@@ -41,10 +41,19 @@
   /* .seg is handed to a bits-ui part, so the compiler never sees it and :global() is required.
      .seg-thumb and the root-state rules stay here: they read state the root owns. The .seg-btn
      rules live in SegmentedItem.svelte, the component that renders the class. */
-  :global(.seg) { position: relative; display: flex; width: max-content; max-width: 100%; gap: 2px; padding: 2px; border-radius: 7px; background-color: var(--upill); transition: opacity 180ms, box-shadow 180ms; }
-  :global(.seg[data-disabled]) { cursor: not-allowed; box-shadow: inset 0 2px 6px rgba(0,0,0,.2); background-image: repeating-linear-gradient(135deg, color-mix(in srgb, var(--ufg3) 42.5%, transparent) 0 1px, transparent 1px 5px); }
-  .seg-thumb { position: absolute; top: 2px; bottom: 2px; left: 0; z-index: 0; width: var(--thumb-w, 0px); transform: translateX(var(--thumb-x, 0px)); box-sizing: border-box; border: 1px solid var(--uline); border-radius: 5px; background: var(--uprim); pointer-events: none; }
-  :global(.seg[data-ready="true"]) .seg-thumb { transition: transform 220ms cubic-bezier(.22,1,.32,1), width 220ms cubic-bezier(.22,1,.32,1), background-color 200ms ease, border-color 200ms ease; }
-  :global(.seg[data-disabled]) :global(.seg-btn) { cursor: not-allowed; color: color-mix(in srgb, var(--ufg3) 60%, transparent); }
-  :global(.seg[data-disabled]) .seg-thumb { background: color-mix(in srgb, var(--ufg3) 20%, transparent); border-color: transparent; }
+  :global(.seg) { position: relative; display: flex; width: max-content; max-width: 100%; gap: 2px; padding: 2px; border-radius: 7px; background-color: var(--upill); transition: opacity var(--duration-ui) ease, box-shadow var(--duration-ui) ease; }
+  :global(.seg[data-disabled]) { cursor: not-allowed; box-shadow: inset 0 2px 6px oklch(0% 0 none / 0.2); background-image: repeating-linear-gradient(135deg, color-mix(in oklch, var(--ufg3) 42.5%, transparent) 0 1px, transparent 1px 5px); }
+  .seg-thumb { position: absolute; inset-block: 2px; inset-inline-start: 0; z-index: 0; inline-size: var(--thumb-w, 0px); box-sizing: border-box; border: 1px solid var(--uline); border-radius: 5px; background: var(--uprim); pointer-events: none; }
+
+  /* The thumb is positioned from the measured --thumb-x whether or not motion is
+     allowed; only the slide between placements is motion. `data-ready` gates it:
+     before the first measurement the thumb has no size, and sliding from nothing
+     reads as a jump. */
+  :global(.seg[data-ready="true"]) .seg-thumb { transform: translateX(var(--thumb-x, 0px)); }
+  @media (prefers-reduced-motion: no-preference) {
+    :global(.seg[data-ready="true"]) .seg-thumb { transition: transform 220ms var(--ease-out), inline-size 220ms var(--ease-out), background-color var(--duration-menu) ease, border-color var(--duration-menu) ease; }
+  }
+
+  :global(.seg[data-disabled]) :global(.seg-btn) { cursor: not-allowed; color: color-mix(in oklch, var(--ufg3) 60%, transparent); }
+  :global(.seg[data-disabled]) .seg-thumb { background: color-mix(in oklch, var(--ufg3) 20%, transparent); border-color: transparent; }
 </style>

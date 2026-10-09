@@ -6,5 +6,5 @@
 
 <style>
   /* .gf-tab-content is handed to a bits-ui part, so :global() is required. */
-  :global(.gf-tab-content) { padding-block: 16px; font-family: 'IBM Plex Sans', system-ui, sans-serif; }
+  :global(.gf-tab-content) { padding-block: 16px; font-family: var(--font-body); }
 </style>

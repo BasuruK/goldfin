@@ -27,7 +27,7 @@
   function holdWhileBusy(event) { if (busy) event.preventDefault(); }
 </script>
 <Primitive.Root {...rest} bind:open onOpenChange={changed}>
-  <Primitive.Trigger class="{tone === 'bad' ? 'btn danger dialog-trigger' : 'btn dialog-trigger'}">{trigger}</Primitive.Trigger>
+  <Primitive.Trigger class={tone === 'bad' ? 'btn danger dialog-trigger' : 'btn dialog-trigger'}>{trigger}</Primitive.Trigger>
   <Primitive.Portal>
     <Primitive.Overlay class="gf-overlay" />
     <Primitive.Content class="modal modal-confirm gf-modal" data-tone={tone}
