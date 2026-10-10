@@ -115,6 +115,19 @@ body[data-theme="light"] {
 }
 body[data-theme="dark"]  { color-scheme: dark; }
 
+/* These tokens are declared on :root, and `light-dark()` resolves against the
+   color-scheme of the element that DECLARES the token — not the one that
+   inherits it. So `body[data-theme="light"]` set above changed what the body
+   and its descendants inherited, while every light-dark() token on :root
+   kept resolving against :root's own `color-scheme: dark`. The Light toggle
+   repainted the native controls and nothing else.
+
+   :has() carries the body's choice up to the element that owns the tokens, so
+   the two cannot drift apart again. The attribute stays on the body, which is
+   what the toggle writes and what portaled dialogs and menus inherit. */
+:root:has(body[data-theme="light"]) { color-scheme: light; }
+:root:has(body[data-theme="dark"])  { color-scheme: dark; }
+
 /* ── reset ────────────────────────────────────────────────────────────── */
 @layer od-reset {
   *,

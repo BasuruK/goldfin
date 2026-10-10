@@ -2,12 +2,21 @@
   import { tokenizeJsonLine, isNullLine } from './json.js';
   let { line, index, opens = false, folded = false, count = null, ontoggle } = $props();
   const nullLine = $derived(isNullLine(line));
-  function onKeydown(event) {
-    if (!opens || (event.key !== 'Enter' && event.key !== ' ')) return;
-    event.preventDefault();
-    ontoggle(index);
-  }
-</script><div class="jsonline" class:is-null={nullLine} class:clickable={opens} role={opens ? 'button' : undefined} aria-expanded={opens ? !folded : undefined} tabindex={opens ? 0 : undefined} onclick={() => opens && ontoggle(index)} onkeydown={onKeydown}><span class="ln">{index + 1}</span><span class="mark" aria-label={nullLine ? 'Missing value' : undefined}>{nullLine ? '●' : ''}</span><span class="chev" aria-hidden="true">{opens ? (folded ? '▸' : '▾') : ''}</span><code class="segs">{#each tokenizeJsonLine(line) as token}<span class={token.cls}>{token.text}</span>{/each}{#if count !== null}<span class="k-cnt"> {count} items</span>{/if}</code></div>
+</script>
+
+<!-- The row contents are shared by both branches; only the wrapping element differs. -->
+{#snippet row()}
+  <span class="ln">{index + 1}</span><span class="mark" aria-label={nullLine ? 'Missing value' : undefined}>{nullLine ? '●' : ''}</span><span class="chev" aria-hidden="true">{opens ? (folded ? '▸' : '▾') : ''}</span><code class="segs">{#each tokenizeJsonLine(line) as token}<span class={token.cls}>{token.text}</span>{/each}{#if count !== null}<span class="k-cnt"> {count} items</span>{/if}</code>
+{/snippet}
+
+<!-- A line that opens a node is a disclosure, so it is a real <button> and gets
+     focus order, Enter and Space for free. A leaf line toggles nothing, so it
+     stays a plain <div> and sits outside the tab order entirely. -->
+{#if opens}
+  <button type="button" class="jsonline clickable" class:is-null={nullLine} aria-expanded={!folded} onclick={() => ontoggle(index)}>{@render row()}</button>
+{:else}
+  <div class="jsonline" class:is-null={nullLine}>{@render row()}</div>
+{/if}
 
 <style>
   /* :global(.gf-json) is this line's ancestor inside JSONViewer.svelte, which
@@ -16,6 +25,16 @@
   .jsonline { display: grid; grid-template-columns: 40px 14px 14px minmax(0, 1fr); background-color: var(--row-bg, transparent); }
   .jsonline.is-null { --row-bg: var(--badbg); }
   .jsonline.clickable { cursor: pointer; }
+  /* The folding branch is a <button>, so the UA's button styling is taken back
+     out and the row is left looking exactly as the plain <div> branch does. */
+  button.jsonline { border: 0; padding: 0; font: inherit; color: inherit; text-align: start; inline-size: 100%; }
+  button.jsonline:focus-visible {
+    outline: 2px solid var(--key);
+    outline-offset: 2px;
+  }
+  button.jsonline:active {
+    background-image: linear-gradient(var(--hover), var(--hover));
+  }
 
   @media (hover: hover) and (pointer: fine) {
     /* hover is a translucent overlay, so it layers over --row-bg instead of

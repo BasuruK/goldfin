@@ -6,7 +6,7 @@ test('static app shell loads with the approved dark theme', async ({ page }) => 
 
   await page.goto('/');
 
-  await expect(page).toHaveTitle('Goldfin');
+  await expect(page).toHaveTitle('Home · Goldfin');
   await expect(page.getByRole('main')).toBeVisible();
   await expect(page.getByText('Goldfin', { exact: true })).toBeVisible();
   await expect(page.getByRole('banner')).toBeVisible();
@@ -20,28 +20,30 @@ test('static app shell loads with the approved dark theme', async ({ page }) => 
   expect(errors).toEqual([]);
 });
 
-test('sidebar collapses to a rail and reopens using the keyboard', async ({ page }) => {
+test('the sidebar collapses to a rail and reopens using the keyboard', async ({ page }) => {
   await page.goto('/');
 
-  const sidebar = page.getByRole('complementary', { name: 'Sidebar' });
-  const navigation = page.getByRole('navigation', { name: 'Primary' });
-  const toggle = page.getByRole('button', { name: 'Collapse sidebar' });
+  const sidebar = page.locator('#primary-nav');
+  const toggle = page.getByRole('button', { name: 'Collapse navigation' });
   const expandedWidth = (await sidebar.boundingBox()).width;
 
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
   await toggle.focus();
   await page.keyboard.press('Enter');
 
-  const expandToggle = page.getByRole('button', { name: 'Expand sidebar' });
+  const expandToggle = page.getByRole('button', { name: 'Expand navigation' });
   await expect(expandToggle).toHaveAttribute('aria-expanded', 'false');
   await expect(expandToggle).toBeFocused();
   await expect(page.getByText('Goldfin', { exact: true })).toBeHidden();
-  await expect(navigation).toBeVisible();
-  expect((await sidebar.boundingBox()).width).toBeLessThan(expandedWidth);
+  // The rail uses --duration-sidebar (300ms cap), so poll for the settled width
+  // rather than sampling mid-transition.
+  await expect.poll(() => sidebar.evaluate((el) => el.getBoundingClientRect().width))
+    .toBeLessThan(expandedWidth);
 
   await page.keyboard.press('Space');
 
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
   await expect(page.getByText('Goldfin', { exact: true })).toBeVisible();
-  expect((await sidebar.boundingBox()).width).toBe(expandedWidth);
+  await expect.poll(() => sidebar.evaluate((el) => el.getBoundingClientRect().width))
+    .toBe(expandedWidth);
 });

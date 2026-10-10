@@ -1,108 +1,667 @@
-@import '../Goldfin_Components/src/tokens.css';
+/* ──────────────────────────────────────────────────────────────────────────
+   App shell. Tokens, the od-layout primitives and every control style this
+   shell reuses come from the component library; only the shell lives here.
 
-.app-shell {
-  --sidebar-width: 224px;
+   Nothing below restates a colour, radius, duration or font: those are library
+   values, so the shell cannot drift from the components it sits around.
+   ────────────────────────────────────────────────────────────────────────── */
+
+@import '$goldfin/goldfin.css';
+
+:root {
+  /* Shell geometry, per DESIGN.md. These describe this app, not the library.
+     The sidebar was widened ~15% from 224px to fit the group headings and the
+     count column without either wrapping. */
+  --w-sidebar-open: 258px;
+  --w-sidebar-closed: 64px;
+  --h-topbar: 56px;
+  --h-brand: 56px;
+  --icon-size: 18px;
+  --nav-icon-size: 22.08px; /* 16px default × 1.2 icon × 1.15 row */
+  --nav-link-height: 34.5px;
+  --nav-link-pad: 9px;
+  --nav-link-gap: 11.5px;
+  --brand-mark-size: 33px; /* 22px × 1.5 */
+  --wordmark-size: 21.75px; /* 14.5px × 1.5 */
+  --profile-avatar-size: 30px; /* 26px × 1.15 */
+  /* Label fade exits faster than the rail widens — motion-restraint exit beat. */
+  --duration-sidebar-exit: var(--duration-press);
+  /* Panel-class rail beat, capped at the 300ms UI ceiling (see DESIGN motion budget). */
+  --duration-sidebar: min(300ms, calc(var(--duration-panel) * 1.15));
+  /* Padding/gap follow the column but on the shorter beat to cut layout work. */
+  --duration-sidebar-padding: var(--duration-sidebar-exit);
+  /* Collapsed hairline: nav-groups gap + top margin = bottom margin (see .nav-sep). */
+  --rail-collapsed-sep-gap: 6px;
+}
+
+/* ── frame ──────────────────────────────────────────────────────────────── */
+
+.shell {
   display: grid;
-  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
-  grid-template-rows: 56px minmax(0, 1fr);
+  grid-template-columns: var(--w-sidebar) minmax(0, 1fr);
   block-size: 100dvh;
+  --w-sidebar: var(--w-sidebar-open);
+}
+.shell[data-sidebar='collapsed'] { --w-sidebar: var(--w-sidebar-closed); }
+
+/* The rail is a layout state, so the change itself is unconditional and only
+   the movement is motion-gated. Reduced motion gets the same instant change. */
+@media (prefers-reduced-motion: no-preference) {
+  .shell { transition: grid-template-columns var(--duration-sidebar) var(--ease-out); }
 }
 
-.app-shell[data-sidebar-expanded='false'] {
-  --sidebar-width: 64px;
-}
-
-.app-sidebar {
-  grid-row: 1 / -1;
-  display: flex;
-  flex-direction: column;
+.main {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   min-block-size: 0;
-  background: var(--usurf);
-  border-inline-end: 1px solid var(--uline);
+  background: var(--uhead);
 }
 
-.app-brand {
+.content {
+  min-block-size: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 24px;
+}
+.view {
+  display: grid;
+  gap: 32px;
+  max-inline-size: 900px;
+}
+/* The library's own section rhythm is for a stacked showcase page; the view
+   grid owns the spacing here, so the two do not compound. */
+.view > .section { margin-block-end: 0; }
+
+/* ── sidebar ────────────────────────────────────────────────────────────── */
+
+.sidebar {
+  display: grid;
+  grid-template-rows: var(--h-brand) minmax(0, 1fr) auto;
+  min-block-size: 0;
+  background: var(--ubg);
+  position: relative;
+  /* Depth on the content side only — the hairline is ::after so the rail width
+     stays an integer and collapsed centring does not drift. */
+  /* Falloff is always ink, never a light halo — white shadows read as glow on dark UI. */
+  box-shadow:
+    1px 0 3px -1px light-dark(oklch(0% 0 none / 0.08), oklch(0% 0 none / 0.22)),
+    4px 0 14px -3px light-dark(oklch(0% 0 none / 0.07), oklch(0% 0 none / 0.32));
+}
+.sidebar::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  inline-size: 1px;
+  background: var(--uline);
+  pointer-events: none;
+}
+
+.brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  block-size: var(--h-brand);
+  padding-inline: 14px;
+  border-block-end: 1px solid var(--uline);
+  /* The toggle is placed against the nav's edge, so the row is its containing
+     block. The nav must not paint over the half that overhangs. */
+  position: relative;
+  z-index: 1;
+}
+/* The rail toggle straddles the nav's edge: half in, half out. Absolute
+   positioning is what makes that hold in both widths — a margin can only push
+   a button past an edge, never centre it on one, and the collapsed rail needs
+   the same position as the open one. The slot is display:contents, so the
+   button itself is what carries these. */
+.brand > .btn-slot > .btn {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-end: 0;
+  translate: 0 -50%;
+  margin: 0;
+  /* Half a pill-width past the border, so the button sits on the edge rather
+     than against it. Only the width crosses the edge, so the touch override
+     below changes the width and this margin together. */
+  margin-inline-end: -12px;
+  inline-size: 24px;
+  /* An oval, not a circle: taller than wide, which is what makes it read as a
+     handle lying on the bar rather than a dot stuck to it. The full radius turns
+     the box into the smooth-ended oval. */
+  block-size: 30px;
+  border-radius: 999px;
+  background: var(--usurf);
+}
+/* A 24x30 pill is a pointer target, not a thumb target. The hit area is the
+   pseudo-element rather than the button box, so the oval can stay small without
+   the control becoming hard to hit — 40px in dense desktop UI. It extends
+   inward only: the outward half is already over the content pane, and the
+   brand row holds nothing else, so no two hit areas overlap. */
+.brand > .btn-slot > .btn::after {
+  content: '';
+  position: absolute;
+  inset: -5px -8px;
+}
+.brand > .btn-slot > .btn svg {
+  inline-size: 14px;
+  block-size: 14px;
+}
+.brand-mark {
   flex: none;
-  block-size: 56px;
-  padding-inline: 18px;
-}
-
-.logo-placeholder {
-  display: grid;
-  place-items: center;
-  flex: none;
-  inline-size: 28px;
-  block-size: 28px;
-  border: 1px dashed var(--ufg3);
-  border-radius: 7px;
-  color: var(--ufg3);
-}
-
-.logo-placeholder svg {
-  inline-size: 20px;
-  block-size: 20px;
-}
-
-.app-wordmark {
+  inline-size: var(--brand-mark-size);
+  block-size: var(--brand-mark-size);
   color: var(--ufg);
-  font-size: 18px;
-  font-weight: 600;
+}
+.wordmark {
+  font: 700 var(--wordmark-size) var(--font-ui);
+  color: var(--ufg);
+  letter-spacing: -0.01em;
 }
 
-.app-navigation {
-  flex: 1;
+/* ── nav groups ─────────────────────────────────────────────────────────── */
+
+.nav-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-block-size: 0;
+  padding: 12px 8px 8px;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
-
-.app-header {
-  display: flex;
-  align-items: center;
-  padding-inline: 16px;
-  border-block-end: 1px solid var(--uline);
+@media (prefers-reduced-motion: no-preference) {
+  .nav-groups { transition: gap var(--duration-sidebar) var(--ease-out); }
 }
 
-.sidebar-toggle {
-  position: relative;
-  display: grid;
-  place-items: center;
-  inline-size: 32px;
-  block-size: 32px;
-  padding: 0;
-  border: 0;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--ufg2);
-  cursor: pointer;
+/* A group heading, not a rule: it names the block of links under it. It sits
+   out of the tab order — it is not a control. */
+.nav-sep {
+  display: block;
+  padding-inline: 8px;
+  /* Match nav-link icon–label gap so the heading breathes before its links. */
+  margin-block-end: 10px;
+  color: var(--ufg3);
+  font: 600 10.5px var(--font-ui);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
-
-.sidebar-toggle::after {
+/* Collapsed rail: the label becomes this rule instead of vanishing. */
+.nav-sep::after {
   content: '';
-  position: absolute;
-  inset: -6px;
+  display: block;
+  margin-inline: 12px;
+  block-size: 1px;
+  background: var(--uline);
+  opacity: 0;
+  max-block-size: 0;
+  overflow: hidden;
 }
-
-.sidebar-toggle svg {
-  inline-size: 20px;
-  block-size: 20px;
-}
-
-.sidebar-toggle:active {
-  background: var(--upill);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .sidebar-toggle:hover {
-    background: var(--hover);
+@media (prefers-reduced-motion: no-preference) {
+  .nav-sep::after {
+    transition:
+      opacity var(--duration-sidebar-exit) var(--ease-out),
+      max-block-size var(--duration-sidebar) var(--ease-out);
   }
 }
 
-.app-content {
-  min-block-size: 0;
-  padding: 24px;
-  overflow: auto;
-  overscroll-behavior: contain;
+.nav-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nav-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--nav-link-gap);
+  block-size: var(--nav-link-height);
+  padding-inline: var(--nav-link-pad);
+  border-radius: 7px;
+  color: var(--ufg2);
+  font: 500 15px var(--font-ui);
+  text-decoration: none;
+  transition: background-color var(--duration-press) ease, color var(--duration-press) ease;
+}
+.nav-link .icon {
+  --icon-size: var(--nav-icon-size);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .nav-link:active { transform: scale(0.97); }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .nav-link:hover { background: var(--hover); color: var(--ufg); }
+}
+
+/* Active is three cues, not one: filled surface, stronger weight, aria-current. */
+.nav-link[aria-current='page'] {
+  background: var(--upill);
+  color: var(--ufg);
+  font-weight: 600;
+}
+
+/* ── profile disclosure ─────────────────────────────────────────────────── */
+
+.sidebar-foot {
+  padding: 8px;
+  border-block-start: 1px solid var(--uline);
+}
+
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  inline-size: 100%;
+  block-size: 40px;
+  padding-inline: 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.profile[aria-expanded='true'] { background: var(--upill); }
+@media (hover: hover) and (pointer: fine) {
+  .profile:not([aria-expanded='true']):hover { background: var(--hover); }
+}
+
+.profile-avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  inline-size: var(--profile-avatar-size);
+  block-size: var(--profile-avatar-size);
+}
+.profile-avatar-root {
+  inline-size: 100%;
+  block-size: 100%;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.profile-avatar-fallback {
+  display: grid;
+  place-items: center;
+  inline-size: 100%;
+  block-size: 100%;
+  background: var(--upill);
+  color: var(--ufg);
+  font: 600 12.5px var(--font-ui);
+}
+.profile-meta { display: grid; gap: 0; min-inline-size: 0; }
+.profile-name { font: 600 13px var(--font-ui); color: var(--ufg); }
+.profile-role { font: 500 10.5px var(--font-mono); color: var(--ufg3); letter-spacing: 0.02em; }
+.chev { display: grid; margin-inline-start: auto; color: var(--ufg3); --icon-size: 14px; }
+.shell[data-open='true'] .chev { transform: rotate(180deg); }
+
+/* The submenu is an ordinary disclosure in normal flow inside the rail — no
+   portal, no focus trap, matching the desktop rule in DESIGN.md. It reuses the
+   library's own menu surface and option rows so it cannot drift from them. */
+/* Profile submenu: grid row + opacity, same family as library overlays. */
+.profile-menu-reveal {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  margin-block-end: 0;
+  pointer-events: none;
+}
+.profile-menu-reveal[data-open='true'] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  margin-block-end: 6px;
+  pointer-events: auto;
+}
+.profile-menu-reveal__clip { overflow: hidden; min-block-size: 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .profile-menu-reveal {
+    transition:
+      grid-template-rows var(--duration-menu) var(--ease-out),
+      opacity var(--duration-menu) ease,
+      margin-block-end var(--duration-menu) var(--ease-out);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .profile-menu-reveal { transition: opacity var(--duration-press) ease; }
+}
+.profile-menu { margin-block-end: 0; }
+.menu-sep { margin-inline: 2px; }
+.profile-menu .dd-opt { text-decoration: none; }
+
+/* ── theme swap ─────────────────────────────────────────────────────────── */
+
+/* The top row of the profile menu. The inward shadow is the point of it: it
+   lifts this control out of the flat menu rows without spending a second
+   divider, so the one separator below still reads as "everything else". Drawn
+   as an inset shadow rather than a cavity — inset flips the light the other way
+   and reads as pressed, which is what a well is. */
+.theme-swap {
+  display: grid;
+  place-items: center;
+  /* Compact: sized to the glyph, not the menu. A full-width bar of nothing but
+     one icon reads as a broken row. Start-aligned so it sits on the same
+     optical line as the Settings icon below the separator. */
+  inline-size: 34px;
+  block-size: 34px;
+  /* The -1px is optical, not tidy: aligning the button's border with the row
+     below would put the glyph 3px right of the Settings glyph, because that
+     row's icon sits inside its own 8px pad. Pull the button out by that much
+     so the two icons share a line. */
+  margin: 2px 0 6px -1px;
+  border: 1px solid var(--urunline);
+  border-radius: 8px;
+  background: var(--upill);
+  color: var(--ufg);
+  cursor: pointer;
+  box-shadow: inset 0 1px 2px light-dark(oklch(0% 0 none / 0.18), oklch(100% 0 none / 0.1));
+}
+.theme-swap:focus-visible { outline: 2px solid var(--key); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .theme-swap:hover { background: var(--hover); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .theme-swap { transition: scale 120ms var(--ease-out); }
+}
+.theme-swap:active { scale: 0.96; }
+
+.menu-field { padding: 6px 8px 4px; }
+.menu-field .gf-menu-label { padding: 0 2px 6px; display: block; }
+.menu-field .seg { inline-size: 100%; }
+
+/* ── collapsed rail ─────────────────────────────────────────────────────── */
+
+/* Rail collapse is all CSS transitions (interruptible). Text exits faster than
+   it enters; width and padding track the column on the longer beat so icons
+   never snap. Static nav glyphs are not animated — only padding moves them. */
+@media (prefers-reduced-motion: no-preference) {
+  .brand,
+  .profile {
+    transition:
+      padding-inline var(--duration-sidebar-padding) var(--ease-out),
+      gap var(--duration-sidebar-padding) var(--ease-out);
+  }
+  .nav-link {
+    transition:
+      background-color var(--duration-press) ease,
+      color var(--duration-press) ease,
+      transform var(--duration-press) var(--ease-out),
+      padding-inline var(--duration-sidebar-padding) var(--ease-out),
+      gap var(--duration-sidebar-padding) var(--ease-out);
+  }
+  .wordmark,
+  .nav-label {
+    transition:
+      opacity var(--duration-sidebar) var(--ease-out),
+      filter var(--duration-sidebar) var(--ease-out),
+      max-inline-size var(--duration-sidebar) var(--ease-out);
+  }
+  .profile-meta {
+    /* Both axes. Collapsing only the block axis left it holding its full
+       text width inside a 47px row, so the avatar was pushed off centre by
+       whatever was left over. */
+    transition:
+      opacity var(--duration-sidebar) var(--ease-out),
+      filter var(--duration-sidebar) var(--ease-out),
+      max-inline-size var(--duration-sidebar) var(--ease-out),
+      max-block-size var(--duration-sidebar) var(--ease-out);
+  }
+  .nav-sep {
+    transition:
+      opacity var(--duration-sidebar) var(--ease-out),
+      max-block-size var(--duration-sidebar) var(--ease-out);
+  }
+  .chev {
+    transition:
+      transform var(--duration-sidebar) var(--ease-out),
+      opacity var(--duration-sidebar) var(--ease-out),
+      filter var(--duration-sidebar) var(--ease-out),
+      max-inline-size var(--duration-sidebar) var(--ease-out);
+  }
+}
+
+/* The ceilings have to be declared, not left to `none`. A transition from
+   `none` to `0` does not interpolate — the label snapped shut on the first
+   frame while the opacity was still fading, which reads as exactly the snap
+   this replaces. These values are far above the real content, so in the open
+   rail they constrain nothing. */
+.wordmark,
+.nav-label,
+.profile-meta { max-inline-size: 20rem; }
+.profile-meta,
+.nav-sep { max-block-size: 6rem; }
+/* Same reason, and same trap: a transition from `none` to `0` does not
+   interpolate, so the ceiling has to exist before the rail collapses. */
+.chev { max-inline-size: 6rem; }
+
+/* Scoped to wide viewports on purpose. Below the breakpoint the sidebar is a
+   drawer that is always the full rail, so a stored desktop collapse has nothing
+   to collapse and these rules must not apply at all.
+
+   Nothing is removed with `display: none` here. `display: revert` was the trap
+   before: it rolls back to the user-agent sheet rather than to this file, so
+   `.profile-meta` and `.chev` lost their `display: grid` and collapsed to
+   inline. Size is collapsed to zero instead, which the link keeps for free —
+   a zero-width label with its overflow clipped is still the link's accessible
+   name, so a screen reader still announces "Connectors" in the 64px rail. */
+@media (min-width: 768px) {
+  .shell[data-sidebar='collapsed'] .wordmark,
+  .shell[data-sidebar='collapsed'] .nav-label {
+    opacity: 0;
+    filter: blur(1.5px);
+    max-inline-size: 0;
+    overflow: hidden;
+  }
+  .shell[data-sidebar='collapsed'] .profile-meta {
+    opacity: 0;
+    filter: blur(1.5px);
+    max-inline-size: 0;
+    max-block-size: 0;
+    overflow: hidden;
+  }
+  /* A 64px rail cannot hold the word, but it can hold a hairline between groups.
+     Space above the rule is nav-groups gap + ::after margin-top; match that
+     total below the rule so Home and Connectors sit equally far from it. */
+  .shell[data-sidebar='collapsed'] .nav-sep {
+    margin-block: 0;
+    padding-inline: 0;
+    font-size: 0;
+    line-height: 0;
+    color: transparent;
+    letter-spacing: 0;
+    max-block-size: 2rem;
+    opacity: 1;
+    filter: none;
+    overflow: visible;
+  }
+  .shell[data-sidebar='collapsed'] .nav-sep::after {
+    opacity: 1;
+    max-block-size: 1px;
+    margin-block: var(--rail-collapsed-sep-gap) calc(var(--rail-collapsed-sep-gap) * 2);
+  }
+  /* The chevron still occupies its 14px after the fade, and that is what threw
+     the avatar off centre. Collapsed to zero with the rest. */
+  .shell[data-sidebar='collapsed'] .chev {
+    opacity: 0;
+    filter: blur(1px);
+    pointer-events: none;
+    margin-inline-start: 0;
+    max-inline-size: 0;
+    overflow: hidden;
+  }
+  /* The submenu never coexists with a collapsed rail — opening the disclosure
+     expands the rail first — so it needs no exit, only absence. */
+  .shell[data-sidebar='collapsed'] .profile-menu-reveal { display: none; }
+
+  /* Collapse: fade/blur exit quickly; width keeps the longer rail beat. */
+  @media (prefers-reduced-motion: no-preference) {
+    .shell[data-sidebar='collapsed'] .wordmark,
+    .shell[data-sidebar='collapsed'] .nav-label,
+    .shell[data-sidebar='collapsed'] .profile-meta {
+      transition:
+        opacity var(--duration-sidebar-exit) var(--ease-out),
+        filter var(--duration-sidebar-exit) var(--ease-out),
+        max-inline-size var(--duration-sidebar) var(--ease-out),
+        max-block-size var(--duration-sidebar) var(--ease-out);
+    }
+    .shell[data-sidebar='collapsed'] .nav-sep {
+      transition: max-block-size var(--duration-sidebar) var(--ease-out);
+    }
+    .shell[data-sidebar='collapsed'] .chev {
+      transition:
+        transform var(--duration-sidebar) var(--ease-out),
+        opacity var(--duration-sidebar-exit) var(--ease-out),
+        filter var(--duration-sidebar-exit) var(--ease-out),
+        max-inline-size var(--duration-sidebar) var(--ease-out);
+    }
+  }
+
+  /* Icons stay left-aligned in the row; padding eases them to the rail centre
+     while the column narrows. `justify-content: center` snapped the whole row
+     on frame one, so every glyph looked like it restarted from the left. */
+  .shell[data-sidebar='collapsed'] .brand {
+    gap: 0;
+    padding-inline: calc((100% - var(--brand-mark-size)) / 2);
+  }
+  .shell[data-sidebar='collapsed'] .nav-link {
+    gap: 0;
+    padding-inline: calc((100% - var(--nav-icon-size)) / 2);
+  }
+  .shell[data-sidebar='collapsed'] .profile {
+    gap: 0;
+    padding-inline: calc((100% - var(--profile-avatar-size)) / 2);
+  }
+
+  /* The toggle is positioned absolutely against the nav's edge, so it needs no
+     per-width override — the same rule serves the 258px rail and the 64px one. */
+  .shell[data-sidebar='collapsed'] .nav-groups { gap: var(--rail-collapsed-sep-gap); }
+}
+
+/* Honor reduced motion: keep the static layout change, drop blur and staged fades. */
+@media (prefers-reduced-motion: reduce) {
+  @media (min-width: 768px) {
+    .shell[data-sidebar='collapsed'] .wordmark,
+    .shell[data-sidebar='collapsed'] .nav-label,
+    .shell[data-sidebar='collapsed'] .profile-meta,
+    .shell[data-sidebar='collapsed'] .chev {
+      filter: none;
+    }
+  }
+}
+
+/* ── top bar ────────────────────────────────────────────────────────────── */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  block-size: var(--h-topbar);
+  padding-inline: 16px;
+  background: var(--uhead);
+  border-block-end: 1px solid var(--uline);
+  box-shadow: var(--uheadshadow);
+}
+.topbar-end { display: flex; align-items: center; gap: 8px; margin-inline-start: auto; }
+/* Focus handle only — the Button inside it is the real control. */
+.btn-slot { display: contents; }
+
+/* One way into navigation per layout, not two. Above the breakpoint the rail is
+   always on screen and the brand-row button collapses it, so a top-bar opener
+   would be a second control for the same thing. Below it the rail is a drawer:
+   the top bar opens, the brand-row button closes. Same button, two jobs. */
+@media (min-width: 768px) {
+  .drawer-opener { display: none; }
+}
+
+/* ── view content ───────────────────────────────────────────────────────── */
+
+.run-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.run-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding-block: 11px;
+  border-block-start: 1px solid var(--uline);
+}
+.run-row:first-child { border-block-start: 0; }
+.run-name { font: 600 13.5px var(--font-ui); color: var(--ufg); }
+.run-meta {
+  font: 500 11.5px var(--font-mono);
+  color: var(--ufg3);
+  margin-block-start: 2px;
+}
+.note {
+  padding: 14px 16px;
+  border: 1px solid var(--uline);
+  border-radius: 8px;
+  background: var(--usurf);
+  color: var(--ufg2);
+  font: 400 13px/1.6 var(--font-body);
+  max-inline-size: 68ch;
+}
+.note code { font: 500 12px var(--font-mono); color: var(--ufg); }
+.settings-row { display: grid; gap: 8px; max-inline-size: 320px; }
+.settings-label { font: 600 12px var(--font-ui); color: var(--ufg2); }
+.search-row { max-inline-size: 420px; }
+
+/* ── touch ──────────────────────────────────────────────────────────────── */
+
+@media (pointer: coarse) {
+  .nav-link, .profile { block-size: 44px; }
+  .nav-link { padding-inline: 12px; }
+  /* The top-bar toggle and the drawer's close control are the only way into and
+     out of navigation on a phone. The library ships .btn.icon at 30px, which is
+     a pointer target, not a thumb target. */
+  .btn.icon { min-inline-size: 44px; block-size: 44px; }
+  /* On touch the pill keeps its oval proportions rather than growing to a
+     44x44 box, because the hit area is the pseudo-element, not the button.
+     Overhang is tied to the visible width or the pill drifts off the edge. */
+  .brand > .btn-slot > .btn {
+    inline-size: 30px;
+    block-size: 38px;
+    margin-inline-end: -15px;
+  }
+  /* 44x44 thumb target. */
+  .brand > .btn-slot > .btn::after { inset: -3px -7px; }
+}
+
+/* ── mobile drawer ──────────────────────────────────────────────────────── */
+
+@media (max-width: 767px) {
+  .shell { grid-template-columns: minmax(0, 1fr); }
+  .content { padding: 16px; }
+
+  .sidebar {
+    position: fixed;
+    inset-block: 0;
+    inset-inline-start: 0;
+    inline-size: var(--w-sidebar-open);
+    z-index: 60;
+    box-shadow: var(--urunshadow);
+    transform: translateX(-100%);
+  }
+  .shell[data-drawer='open'] .sidebar { transform: translateX(0); }
+  @media (prefers-reduced-motion: no-preference) {
+    .sidebar { transition: transform var(--duration-sidebar) var(--ease-out); }
+  }
+
+  .scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    border: 0;
+    padding: 0;
+    background: var(--scrim);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .scrim { animation: scrim-in var(--duration-menu) ease; }
+  }
+
+  .drawer-close { display: grid; }
 }
