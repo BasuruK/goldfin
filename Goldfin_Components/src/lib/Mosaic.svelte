@@ -33,7 +33,11 @@
     const observer = new ResizeObserver(resize);
     observer.observe(band);
     document.addEventListener('visibilitychange', visibility);
-    return () => { cancelAnimationFrame(peakFrame); observer.disconnect(); document.removeEventListener('visibilitychange', visibility); };
+    return () => {
+      cancelAnimationFrame(peakFrame);
+      observer.disconnect();
+      document.removeEventListener('visibilitychange', visibility);
+    };
   });
   $effect(() => onready(tiles.length > 0));
 </script>

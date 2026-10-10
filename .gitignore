@@ -21,3 +21,5 @@ prototypes/UI improvement discussion.zip
 /playwright/.cache/
 /playwright/.auth/
 .cursor/hooks/state/continual-learning.json
+
+.codacy/

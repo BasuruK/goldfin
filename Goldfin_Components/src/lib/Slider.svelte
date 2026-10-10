@@ -20,7 +20,13 @@
       aria-labelledby={id + '-label'} aria-describedby={description ? id + '-description' : undefined}
       aria-valuetext={unit ? text + ' ' + unit : text}>
       <svg width="20" height="10" viewBox="0 0 20 10" fill="none" aria-hidden="true">
-        <path d="M5 2 2 5l3 3M10 1v8M15 2l3 3-3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+        <path
+          d="M5 2 2 5l3 3M10 1v8M15 2l3 3-3 3"
+          stroke="currentColor"
+          stroke-width="1.4"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
       </svg>
     </Primitive.Thumb>
   </Primitive.Root>

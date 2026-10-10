@@ -1,6 +1,15 @@
 <script>
   import { RadioGroup as Primitive, Label, useId } from 'bits-ui';
-  let { id = useId(), value = $bindable(''), label, items, disabled = false, invalid = false, card = false, ...rest } = $props();
+  let {
+    id = useId(),
+    value = $bindable(''),
+    label,
+    items,
+    disabled = false,
+    invalid = false,
+    card = false,
+    ...rest
+  } = $props();
 </script>
 <Primitive.Root {...rest} bind:value {disabled} aria-label={label} class={['ctl-list', card && 'gf-radio-cards']}>
   {#each items as item, index (item.value)}

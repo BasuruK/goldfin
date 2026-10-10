@@ -23,6 +23,7 @@
   --nav-link-gap: 11.5px;
   --brand-mark-size: 33px; /* 22px × 1.5 */
   --wordmark-size: 21.75px; /* 14.5px × 1.5 */
+  --rail-toggle-icon-size: 10.5px; /* half of 21px after tight viewBox */
   --profile-avatar-size: 30px; /* 26px × 1.15 */
   /* Label fade exits faster than the rail widens — motion-restraint exit beat. */
   --duration-sidebar-exit: var(--duration-press);
@@ -125,12 +126,19 @@
      below changes the width and this margin together. */
   margin-inline-end: -12px;
   inline-size: 24px;
+  /* `.btn.icon` sets width: 30px; beat it so flex centering matches the oval. */
+  width: 24px;
+  min-inline-size: 0;
   /* An oval, not a circle: taller than wide, which is what makes it read as a
      handle lying on the bar rather than a dot stuck to it. The full radius turns
      the box into the smooth-ended oval. */
   block-size: 30px;
   border-radius: 999px;
   background: var(--usurf);
+  gap: 0;
+  padding: 0;
+  justify-content: center;
+  align-items: center;
 }
 /* A 24x30 pill is a pointer target, not a thumb target. The hit area is the
    pseudo-element rather than the button box, so the oval can stay small without
@@ -142,9 +150,10 @@
   position: absolute;
   inset: -5px -8px;
 }
+.brand > .btn-slot > .btn .rail-toggle-icon,
 .brand > .btn-slot > .btn svg {
-  inline-size: 14px;
-  block-size: 14px;
+  inline-size: var(--rail-toggle-icon-size);
+  block-size: var(--rail-toggle-icon-size);
 }
 .brand-mark {
   flex: none;

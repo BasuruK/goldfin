@@ -2,11 +2,32 @@
   import { useId } from 'bits-ui';
   let { open = $bindable(true), first, second, label = 'result pane' } = $props();
   const id = useId();
-</script><div class="gf-split"><div class="demo-pane">{@render first?.()}</div><div class="divider" class:is-collapsed={!open}><button type="button" class="knob" aria-expanded={open} aria-controls={id} aria-label={(open ? 'Collapse ' : 'Expand ') + label} onclick={() => open = !open}></button></div><div class="demo-pane" id={id} inert={!open}>{@render second?.()}</div></div>
+</script>
+
+<div class="gf-split">
+  <div class="demo-pane">{@render first?.()}</div>
+  <div class="divider" class:is-collapsed={!open}>
+    <button
+      type="button"
+      class="knob"
+      aria-expanded={open}
+      aria-controls={id}
+      aria-label={(open ? 'Collapse ' : 'Expand ') + label}
+      onclick={() => open = !open}
+    ></button>
+  </div>
+  <div class="demo-pane" id={id} inert={!open}>{@render second?.()}</div>
+</div>
 
 <style>
   .gf-split { display: flex; min-block-size: 80px; max-inline-size: 500px; }
-  .gf-split .demo-pane { padding: 12px; background: var(--usurf); font: 12px var(--font-mono); color: var(--ufg3); overflow-wrap: anywhere; }
+  .gf-split .demo-pane {
+    padding: 12px;
+    background: var(--usurf);
+    font: 12px var(--font-mono);
+    color: var(--ufg3);
+    overflow-wrap: anywhere;
+  }
   .gf-split .demo-pane:last-child { background: var(--uresult); }
 
   .divider { position: relative; flex: none; inline-size: 5px; background: var(--uline); cursor: col-resize; }
@@ -47,6 +68,11 @@
   }
 
   @media (prefers-reduced-motion: no-preference) {
-    .demo-pane { transition: flex-basis var(--duration-panel) var(--ease-out), padding var(--duration-panel) var(--ease-out), opacity var(--duration-menu) ease; }
+    .demo-pane {
+      transition:
+        flex-basis var(--duration-panel) var(--ease-out),
+        padding var(--duration-panel) var(--ease-out),
+        opacity var(--duration-menu) ease;
+    }
   }
 </style>

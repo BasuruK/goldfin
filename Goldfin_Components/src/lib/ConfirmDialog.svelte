@@ -10,8 +10,12 @@
   let error = $state('');
   const result = createConfirmation(value => onResult?.(value));
   function changed(next) {
-    if (next) { result.begin(); error = ''; }
-    else result.close();
+    if (next) {
+      result.begin();
+      error = '';
+    } else {
+      result.close();
+    }
   }
   async function confirm() {
     if (busy) return;
@@ -19,7 +23,9 @@
     error = '';
     try {
       await onConfirm();
-      result.confirm(); result.close(); open = false;
+      result.confirm();
+      result.close();
+      open = false;
     } catch {
       error = 'The action failed. Try again or cancel.';
     } finally { busy = false; }
@@ -27,7 +33,9 @@
   function holdWhileBusy(event) { if (busy) event.preventDefault(); }
 </script>
 <Primitive.Root {...rest} bind:open onOpenChange={changed}>
-  <Primitive.Trigger class={tone === 'bad' ? 'btn danger dialog-trigger' : 'btn dialog-trigger'}>{trigger}</Primitive.Trigger>
+  <Primitive.Trigger class={tone === 'bad' ? 'btn danger dialog-trigger' : 'btn dialog-trigger'}>
+    {trigger}
+  </Primitive.Trigger>
   <Primitive.Portal>
     <Primitive.Overlay class="gf-overlay" />
     <Primitive.Content class="modal modal-confirm gf-modal" data-tone={tone}
@@ -43,7 +51,12 @@
       {/if}
       <DialogFooter>
         {#snippet cancel()}<Primitive.Cancel class="btn" disabled={busy}>Cancel</Primitive.Cancel>{/snippet}
-        <Primitive.Action class={tone === 'bad' ? 'btn danger' : 'btn primary'} onclick={confirm} disabled={busy} aria-busy={busy}>
+        <Primitive.Action
+          class={tone === 'bad' ? 'btn danger' : 'btn primary'}
+          onclick={confirm}
+          disabled={busy}
+          aria-busy={busy}
+        >
           {busy ? 'Working…' : action}
         </Primitive.Action>
       </DialogFooter>

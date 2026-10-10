@@ -5,9 +5,9 @@
 </script>
 
 <svg
-  class="icon rail-toggle-icon"
+  class="rail-toggle-icon"
   class:mirrored
-  viewBox="0 0 24 25"
+  viewBox="5.3 5.3 14.15 14.15"
   fill="none"
   xmlns="http://www.w3.org/2000/svg"
   aria-hidden="true"
@@ -25,10 +25,10 @@
 
 <style>
   .rail-toggle-icon {
-    flex: none;
     display: block;
-    inline-size: 14px;
-    block-size: 14px;
+    flex: none;
+    transform-box: fill-box;
+    transform-origin: center;
   }
   .rail-toggle-icon.mirrored {
     scale: -1 1;

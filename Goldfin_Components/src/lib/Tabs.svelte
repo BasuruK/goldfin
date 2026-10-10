@@ -8,9 +8,16 @@
 </script>
 <Primitive.Root bind:value={() => active, next => { if (next) value = next; }}>
   <TabList {label}>
-    {#each items as item (item.value)}<TabTrigger value={item.value} active={active === item.value} disabled={item.disabled}>{item.label}</TabTrigger>{/each}
+    {#each items as item (item.value)}
+      <TabTrigger value={item.value} active={active === item.value} disabled={item.disabled}>
+        {item.label}
+      </TabTrigger>
+    {/each}
   </TabList>
   {#each items as item (item.value)}
-    <TabContent value={item.value}>{#if item.content}{item.content}{/if}{#if item.children}{@render item.children()}{/if}</TabContent>
+    <TabContent value={item.value}>
+      {#if item.content}{item.content}{/if}
+      {#if item.children}{@render item.children()}{/if}
+    </TabContent>
   {/each}
 </Primitive.Root>
