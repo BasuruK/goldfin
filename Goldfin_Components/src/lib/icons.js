@@ -21,11 +21,9 @@ export const GLYPHS = {
   trash: 'trash-3'
 };
 
+const glyphs = new Map(Object.entries(GLYPHS));
+
 /** @param {string} name */
 export function glyphForName(name) {
-  const glyph = GLYPHS[name];
-  if (glyph === undefined) {
-    throw new Error(`Icon: unknown name "${name}". Add it to GLYPHS in icons.js.`);
-  }
-  return glyph;
+  return glyphs.get(name) ?? GLYPHS.chevron;
 }

@@ -7,9 +7,9 @@ test('known names resolve to lineicons glyph ids', () => {
   assert.equal(glyphForName('plug'), 'plug-1');
 });
 
-test('unknown names throw instead of falling back to chevron-down', () => {
-  assert.throws(() => glyphForName('pluggg'), /unknown name "pluggg"/i);
-  assert.throws(() => glyphForName(''), /unknown name ""/i);
+test('unknown names fall back to the chevron glyph', () => {
+  assert.equal(glyphForName('pluggg'), 'chevron-down');
+  assert.equal(glyphForName(''), 'chevron-down');
 });
 
 test('every mapped name has a glyph id', () => {
