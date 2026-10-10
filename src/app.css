@@ -239,6 +239,10 @@
 .nav-link .icon {
   --icon-size: var(--nav-icon-size);
 }
+.nav-link:active {
+  background: var(--hover);
+  color: var(--ufg);
+}
 @media (prefers-reduced-motion: no-preference) {
   .nav-link:active { transform: scale(0.97); }
 }
@@ -277,6 +281,7 @@
   cursor: pointer;
 }
 .profile[aria-expanded='true'] { background: var(--upill); }
+.profile:not([aria-expanded='true']):active { background: var(--hover); }
 @media (hover: hover) and (pointer: fine) {
   .profile:not([aria-expanded='true']):hover { background: var(--hover); }
 }

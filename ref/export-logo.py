@@ -19,7 +19,7 @@ from fontTools.varLib.instancer import instantiateVariableFont
 from fontTools.pens.svgPathPen import SVGPathPen
 from fontTools.pens.transformPen import TransformPen
 
-REF, TTF = pathlib.Path(sys.argv[1]), sys.argv[2]
+REF, TTF = pathlib.Path(sys.argv[1]).resolve(), sys.argv[2]
 CHROME = os.environ.get('CHROME', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')
 VIEWBOX = (-577, -180, 880, 818)
 MARK = (-158.75, 132, 598)  # bird bounds: centre and width, tail tip T to beak tip P (height 484 fits inside)

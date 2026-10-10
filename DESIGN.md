@@ -29,9 +29,13 @@ Keep the user-approved oval slider grip, compact tables, divided dialog footers 
 
 ## Main app shell
 
-The desktop shell has a persistent left sidebar and a header above the content. The sidebar starts expanded at 224px and collapses to a 64px icon rail; it remains a navigation landmark in both states. The header and brand row are 56px high. The brand uses a logo placeholder and the Goldfin wordmark; collapse hides the wordmark and retains the placeholder.
+The desktop shell has a persistent left sidebar and a header above the content. The sidebar starts expanded at **258px** (`--w-sidebar-open`) and collapses to a **64px** icon rail (`--w-sidebar-closed`); it remains a navigation landmark in both states. The brand row is **56px** high (`--h-brand`). The brand uses the Goldfin mark and wordmark; collapse hides the wordmark and retains the mark.
 
-The header currently contains only the sidebar toggle. It exposes the expanded state and keeps keyboard focus when toggled. Navigation items, header actions and the mobile drawer remain to be designed. Desktop navigation uses ordinary landmarks and a button, with no modal focus trap.
+**Navigation (shipped):** grouped links — Home, then a Connectors section with Connectors — each with a Lineicons glyph and label. A rail-collapse control straddles the sidebar edge on desktop (`aria-expanded` reflects open vs collapsed). Below **768px** the same nav is a full-width drawer opened from the top bar, with a scrim and focus moved into the drawer when open; the in-rail control closes the drawer on touch widths.
+
+**Sidebar foot:** a profile disclosure (avatar, name, role) opens an in-sidebar menu — theme swap (sun/moon icon) and Settings — without a modal focus trap. Expanded state is ordinary `aria-expanded` disclosure semantics.
+
+**Top bar:** on narrow viewports, the drawer opener; on all widths, the shared theme control (`ThemeToggle`) at the end. Desktop rail collapse is not duplicated in the top bar.
 
 ## Themes and colors
 
