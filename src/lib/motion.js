@@ -1,7 +1,7 @@
 import { browser } from '$app/environment';
 
 /** Matches `--duration-menu` in tokens.css. */
-export const MENU_MS = 200;
+const MENU_MS = 200;
 
 export function menuFadeMs() {
   if (!browser) return 0;

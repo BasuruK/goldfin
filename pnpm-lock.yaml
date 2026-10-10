@@ -18,9 +18,6 @@ importers:
         specifier: 5.57.1
         version: 5.57.1
     devDependencies:
-      '@opentelemetry/api':
-        specifier: ^1.0.0
-        version: 1.9.1
       '@playwright/test':
         specifier: ^1.63.0
         version: 1.64.0
@@ -714,7 +711,8 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.6.0
 
-  '@opentelemetry/api@1.9.1': {}
+  '@opentelemetry/api@1.9.1':
+    optional: true
 
   '@oxc-project/types@0.153.0': {}
 

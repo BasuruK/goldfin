@@ -19,7 +19,7 @@ const read = (key, fallback) => {
 /* Below this width the sidebar is a drawer rather than a rail. app.css carries
    the same boundary as a `max-width: 767px` and a `min-width: 768px` query, so
    if you move this number, move those two with it. */
-export const MOBILE_MAX = 767;
+const MOBILE_MAX = 767;
 
 export const SIDES = [
   { value: 'expanded', label: 'Expanded' },

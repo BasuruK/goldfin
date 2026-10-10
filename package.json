@@ -31,7 +31,6 @@
     "svelte": "5.57.1"
   },
   "devDependencies": {
-    "@opentelemetry/api": "^1.0.0",
     "@playwright/test": "^1.63.0",
     "@sveltejs/adapter-static": "4.0.0",
     "@sveltejs/kit": "3.0.1",
