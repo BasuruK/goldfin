@@ -149,3 +149,6 @@ jobs:
           llm_protocol: openai
           llm_use_anthropic: "false"
           llm_reasoning_effort: ${{ vars.OCR_LLM_REASONING_EFFORT || 'high' }}
+          # The action defaults extra_body to {"thinking":{"type":"disabled"}}.
+          # MiniMax-M3.1 requires adaptive thinking and 400s on that.
+          llm_extra_body: "{}"

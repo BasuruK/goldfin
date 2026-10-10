@@ -19,8 +19,52 @@ from fontTools.varLib.instancer import instantiateVariableFont
 from fontTools.pens.svgPathPen import SVGPathPen
 from fontTools.pens.transformPen import TransformPen
 
-REF, TTF = pathlib.Path(sys.argv[1]).resolve(), sys.argv[2]
-CHROME = os.environ.get('CHROME', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')
+_DEFAULT_CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+
+
+def _resolve_ref_dir(raw: str) -> pathlib.Path:
+    ref = pathlib.Path(raw).expanduser().resolve()
+    if not ref.is_dir():
+        sys.exit(f'ref folder is not a directory: {ref}')
+    if not (ref / 'goldfin-logo.html').is_file():
+        sys.exit(f'missing {ref / "goldfin-logo.html"}')
+    return ref
+
+
+def _resolve_ttf(raw: str) -> pathlib.Path:
+    ttf = pathlib.Path(raw).expanduser().resolve()
+    if not ttf.is_file():
+        sys.exit(f'font file not found: {ttf}')
+    if ttf.suffix.lower() != '.ttf':
+        sys.exit(f'expected a .ttf file: {ttf}')
+    return ttf
+
+
+def _chrome_binary() -> pathlib.Path:
+    raw = os.environ.get('CHROME', _DEFAULT_CHROME)
+    chrome = pathlib.Path(raw).expanduser().resolve()
+    if not chrome.is_file():
+        sys.exit(f'Chrome binary not found: {chrome} (set CHROME to override)')
+    return chrome
+
+
+def _path_under_ref(path: pathlib.Path) -> pathlib.Path:
+    resolved = path.expanduser().resolve()
+    try:
+        resolved.relative_to(REF)
+    except ValueError:
+        sys.exit(f'path escapes ref folder: {resolved}')
+    return resolved
+
+
+def _run_chrome(argv: list[str], *, text: bool = False) -> subprocess.CompletedProcess:
+    """Invoke headless Chrome with a fixed argv tail (no shell, no user-controlled binary)."""
+    cmd = [str(_chrome_binary()), *argv]
+    return subprocess.run(cmd, capture_output=True, text=text, check=True)
+
+
+REF = _resolve_ref_dir(sys.argv[1])
+TTF = _resolve_ttf(sys.argv[2])
 VIEWBOX = (-577, -180, 880, 818)
 MARK = (-158.75, 132, 598)  # bird bounds: centre and width, tail tip T to beak tip P (height 484 fits inside)
 SIZE, BASELINE, CENTRE, TRACK = 209, 568, -137, -0.01  # must match .word in the HTML
@@ -28,8 +72,11 @@ SIZE, BASELINE, CENTRE, TRACK = 209, 568, -137, -0.01  # must match .word in the
 WEIGHT, TEXT = 800, 'Goldfın'
 
 # 1. the bird, exactly as the page's construction code builds it
-dom = subprocess.run([CHROME, '--headless', '--disable-gpu', '--virtual-time-budget=3000', '--dump-dom',
-                      (REF / 'goldfin-logo.html').as_uri()], capture_output=True, text=True, check=True).stdout
+_logo_html = _path_under_ref(REF / 'goldfin-logo.html')
+dom = _run_chrome(
+    ['--headless', '--disable-gpu', '--virtual-time-budget=3000', '--dump-dom', _logo_html.as_uri()],
+    text=True,
+).stdout
 bird = re.search(r'<g id="bird">(.*?)</g>', dom, re.S).group(1)
 guides = re.search(r'<g id="guides">(.*?)</g>', dom, re.S).group(1)
 assert bird.count('<path') == 4, 'expected body, cap and two wing paths'
@@ -38,7 +85,7 @@ assert guides, 'expected the construction circles and lines'
 # 2. the wordmark as outlines: shape with HarfBuzz (kerning), draw from a static 800 instance
 font = instantiateVariableFont(TTFont(TTF), {'wght': WEIGHT})
 upem = font['head'].unitsPerEm
-face = hb.Face(open(TTF, 'rb').read())
+face = hb.Face(TTF.read_bytes())
 hbfont = hb.Font(face)
 hbfont.set_variations({'wght': WEIGHT})
 buf = hb.Buffer()
@@ -84,13 +131,27 @@ def square(pad):  # viewBox around the bird with `pad` of its width on every sid
     return (MARK[0] - side / 2, MARK[1] - side / 2, side, side)
 
 def png(svg_text, out, w, h):
-    src = out.with_suffix('.tmp.svg')
-    page = out.with_suffix('.tmp.html')
+    width = int(w)
+    height = int(h)
+    if width <= 0 or height <= 0 or width > 8192 or height > 8192:
+        raise ValueError(f'png dimensions out of range: {width}x{height}')
+    dest = _path_under_ref(out)
+    src = _path_under_ref(dest.with_suffix('.tmp.svg'))
+    page = _path_under_ref(dest.with_suffix('.tmp.html'))
     try:
         src.write_text(svg_text)
-        page.write_text(f'<body style="margin:0;background:transparent"><img src="{src.name}" width="{w}" height="{h}" style="display:block">')
-        subprocess.run([CHROME, '--headless', '--disable-gpu', '--hide-scrollbars', '--default-background-color=00000000',
-                        f'--window-size={w},{h}', f'--screenshot={out}', page.as_uri()], capture_output=True, check=True)
+        page.write_text(
+            f'<body style="margin:0;background:transparent"><img src="{src.name}" width="{width}" height="{height}" style="display:block">'
+        )
+        _run_chrome([
+            '--headless',
+            '--disable-gpu',
+            '--hide-scrollbars',
+            '--default-background-color=00000000',
+            f'--window-size={width},{height}',
+            f'--screenshot={dest}',
+            page.as_uri(),
+        ])
     finally:
         # Chrome failing leaves the scratch files behind otherwise, and the next
         # run has to overwrite them cleanly.
