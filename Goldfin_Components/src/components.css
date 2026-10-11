@@ -481,8 +481,8 @@ html { scroll-padding-block-start: var(--page-header-offset, 24px); }
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .dd-trigger svg { transform: none; transition: transform var(--duration-ui) var(--ease-out); }
-  .dd-trigger[aria-expanded="true"] svg { transform: rotate(180deg); }
+  .dd-trigger .icon { transform: none; transition: transform var(--duration-ui) var(--ease-out); }
+  .dd-trigger[aria-expanded="true"] .icon { transform: rotate(180deg); }
 }
 
 .dd-label { overflow-wrap: anywhere; }

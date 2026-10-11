@@ -9,12 +9,10 @@
   <span class="ln">{index + 1}</span>
   <span class="mark" aria-label={nullLine ? 'Missing value' : undefined}>{nullLine ? '●' : ''}</span>
   <span class="chev" aria-hidden="true">{opens ? (folded ? '▸' : '▾') : ''}</span>
-  <code class="segs">
-    {#each tokenizeJsonLine(line) as token, tokenIndex (tokenIndex)}
-      <span class={token.cls}>{token.text}</span>
-    {/each}
-    {#if count !== null}<span class="k-cnt"> {count} items</span>{/if}
-  </code>
+  <!-- No whitespace between the blocks: .segs is pre-wrap, so any gap here is
+       rendered as a trailing space on every line and lands in copied JSON. -->
+  <code class="segs">{#each tokenizeJsonLine(line) as token, tokenIndex (tokenIndex)}<span
+    class={token.cls}>{token.text}</span>{/each}{#if count !== null}<span class="k-cnt"> {count} items</span>{/if}</code>
 {/snippet}
 
 <!-- A line that opens a node is a disclosure, so it is a real <button> and gets

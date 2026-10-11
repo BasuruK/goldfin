@@ -173,13 +173,19 @@ test.describe('showcase', () => {
     expect(now).toBeLessThanOrEqual(max);
   });
 
-  test('dropdown triggers use the shared svg chevron', async ({ page }) => {
+  // Icons are the shared Lineicons <Icon>, not inline SVG, so the trigger's
+  // chevron is the .icon span and that span is what turns when the menu opens.
+  test('dropdown triggers use the shared chevron icon, and it turns when open', async ({ page }) => {
     const triggers = page.locator('.dd-trigger');
     expect(await triggers.count()).toBeGreaterThan(0);
     for (const trigger of await triggers.all()) {
-      await expect(trigger.locator('svg')).toHaveCount(1);
+      await expect(trigger.locator('.icon.lni-chevron-down')).toHaveCount(1);
       await expect(trigger).not.toContainText('⌄');
     }
+    const first = triggers.first();
+    await first.click();
+    await expect(first).toHaveAttribute('aria-expanded', 'true');
+    await expect(first.locator('.icon')).toHaveCSS('transform', /^matrix\(-1, /);
   });
 
   test('visual snapshots for review', async ({ page }) => {
