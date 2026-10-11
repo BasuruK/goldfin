@@ -50,3 +50,30 @@ test('coarse-pointer controls are not stacked on top of each other', async ({ pa
   expect(crowded).toBe(false);
   expect(box).not.toBeNull();
 });
+test('controls outside the .btn family still meet the 44px target', async ({ page }) => {
+  const selectors = ['.input', '.price-input', '.copy-btn', '.dd-trigger', '.theme-btn',
+    '.loading-search', '.timeline-details summary', '.run-btn', '.gf-json .jsonline', '.gf-index a'];
+  const heights = await page.evaluate((list) => Object.fromEntries(list.map((selector) => {
+    const el = document.querySelector(selector);
+    return [selector, el ? el.getBoundingClientRect().height : -1];
+  })), selectors);
+  for (const selector of selectors) expect(heights[selector], selector).toBeGreaterThanOrEqual(44);
+});
+
+test('a tap does not leave the Run button in its hover state', async ({ page }) => {
+  const btn = page.locator('#run .run-btn');
+  await btn.scrollIntoViewIfNeeded();
+  await btn.tap();
+  await expect(btn).toHaveCSS('filter', 'none');
+});
+
+test('the SplitPane knob answers a tap 44px wide', async ({ page }) => {
+  const knob = page.locator('.knob').first();
+  await knob.scrollIntoViewIfNeeded();
+  const hits = await knob.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    return [-20, 20].map((dx) => el.contains(document.elementFromPoint(cx + dx, cy)));
+  });
+  expect(hits).toEqual([true, true]);
+});

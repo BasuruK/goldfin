@@ -36,6 +36,11 @@
   /* :global(.gf-json) is this line's ancestor inside JSONViewer.svelte, which
      owns that class; the compiler in this file cannot see it. */
   :global(.gf-json) .jsonline { min-block-size: 24px; }
+  /* Every row, not only the ones that fold: uneven rows would break the code
+     block's rhythm and the line numbers' alignment. */
+  @media (pointer: coarse) {
+    :global(.gf-json) .jsonline { min-block-size: 44px; align-items: center; }
+  }
   .jsonline {
     display: grid;
     grid-template-columns: 40px 14px 14px minmax(0, 1fr);

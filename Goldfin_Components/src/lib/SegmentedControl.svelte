@@ -1,46 +1,16 @@
 <script>
   import { ToggleGroup as Primitive } from 'bits-ui';
   import SegmentedItem from './SegmentedItem.svelte';
-  import { activeIndex, resolveValue, thumbVars } from './segment.js';
+  import { resolveValue } from './segment.js';
   let { value = $bindable(''), items, label = 'Options', disabled = false } = $props();
-  let root = $state(null);
-  let placed = $state(false);
   const selected = $derived(resolveValue(value, items));
-  const index = $derived(activeIndex(selected, items));
-  $effect(() => {
-    if (!root || placed) return;
-    const frame = requestAnimationFrame(() => { placed = true; });
-    return () => cancelAnimationFrame(frame);
-  });
-  $effect(() => {
-    const next = index;
-    if (!root || !items.length) return;
-    const place = () => {
-      const bounds = root.getBoundingClientRect();
-      const boxes = [...root.querySelectorAll('.seg-btn')].map(button => {
-        const rect = button.getBoundingClientRect();
-        return { x: rect.left - bounds.left, width: rect.width };
-      });
-      const vars = thumbVars(boxes, next);
-      if (!vars) return;
-      root.style.setProperty('--thumb-x', vars.x);
-      root.style.setProperty('--thumb-w', vars.width);
-    };
-    place();
-    const observer = new ResizeObserver(place);
-    observer.observe(root);
-    for (const button of root.querySelectorAll('.seg-btn')) observer.observe(button);
-    return () => observer.disconnect();
-  });
 </script>
 
 <Primitive.Root
   type="single"
   bind:value={() => selected, next => { if (next) value = next; }}
-  bind:ref={root}
   {disabled}
   class="seg"
-  data-ready={placed}
   aria-label={label}
 >
   <span class="seg-thumb" aria-hidden="true"></span>
@@ -64,6 +34,9 @@
     padding: 2px;
     border-radius: 7px;
     background-color: var(--upill);
+    /* Each control scopes its anchor, so two controls on a page do not both
+       follow the last active segment. */
+    anchor-scope: --seg-active;
     transition: opacity var(--duration-ui) ease, box-shadow var(--duration-ui) ease;
   }
   :global(.seg[data-disabled]) {
@@ -77,10 +50,11 @@
   }
   .seg-thumb {
     position: absolute;
+    position-anchor: --seg-active;
     inset-block: 2px;
-    inset-inline-start: 0;
+    inset-inline-start: anchor(start);
     z-index: 0;
-    inline-size: var(--thumb-w, 0px);
+    inline-size: anchor-size(inline);
     box-sizing: border-box;
     border: 1px solid var(--uline);
     border-radius: 5px;
@@ -88,15 +62,13 @@
     pointer-events: none;
   }
 
-  /* The thumb is positioned from the measured --thumb-x whether or not motion is
-     allowed; only the slide between placements is motion. `data-ready` gates it:
-     before the first measurement the thumb has no size, and sliding from nothing
-     reads as a jump. */
-  :global(.seg[data-ready="true"]) .seg-thumb { transform: translateX(var(--thumb-x, 0px)); }
+  /* The thumb is placed on the active segment from the first paint, before any
+     script runs, so the first placement has nothing to slide from. Only the
+     move between segments is motion. */
   @media (prefers-reduced-motion: no-preference) {
-    :global(.seg[data-ready="true"]) .seg-thumb {
+    .seg-thumb {
       transition:
-        transform 220ms var(--ease-out),
+        inset-inline-start 220ms var(--ease-out),
         inline-size 220ms var(--ease-out),
         background-color var(--duration-menu) ease,
         border-color var(--duration-menu) ease;
@@ -110,5 +82,17 @@
   :global(.seg[data-disabled]) .seg-thumb {
     background: color-mix(in oklch, var(--ufg3) 20%, transparent);
     border-color: transparent;
+  }
+
+  /* Without anchor positioning the thumb has no width, and the active label is
+     --uprimfg, which is unreadable on the bare track. The segment paints the
+     thumb's surface itself instead; it does not slide. */
+  @supports not (anchor-name: --a) {
+    .seg-thumb { display: none; }
+    :global(.seg-btn.active) { background: var(--uprim); border-color: var(--uline); }
+    :global(.seg[data-disabled] .seg-btn.active) {
+      background: color-mix(in oklch, var(--ufg3) 20%, transparent);
+      border-color: transparent;
+    }
   }
 </style>

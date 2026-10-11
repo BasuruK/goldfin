@@ -423,7 +423,7 @@ html { scroll-padding-block-start: var(--page-header-offset, 24px); }
   color: var(--ufg);
   font: 400 13px var(--font-mono);
 }
-.price-input:focus-within { border-color: var(--ufg3); }
+.price-input:focus-within { border-color: var(--ufg3); box-shadow: 0 0 0 2px var(--key); }
 .price-input .unit { font-size: 11px; color: var(--ufg3); white-space: nowrap; }
 
 /* ── drop ───────────────────────────────────────────────────────────────── */
@@ -551,10 +551,12 @@ html { scroll-padding-block-start: var(--page-header-offset, 24px); }
 
 /* ── run-btn ──────────────────────────────────────────────── */
 .run-btn { position: relative; overflow: clip; width: 100%; height: 42px; padding: 0; border: 0; border-radius: 9px; background: var(--uprim); color: var(--uprimfg); font: 700 15px var(--font-ui); cursor: pointer; }
-.run-btn .label { position: relative; z-index: 2; display: flex; align-items: center; justify-content: center; gap: 9px; height: 100%; font-variant-numeric: tabular-nums; transition: color 400ms ease; }
+.run-btn .label { position: relative; z-index: 2; display: flex; align-items: center; justify-content: center; gap: 9px; height: 100%; transition: color 400ms ease; }
 .run-btn:not([aria-busy="true"]) .label { transition: color 200ms ease; }
 .run-btn:disabled { opacity: .45; cursor: not-allowed; }
-.run-btn:not(:disabled):hover { filter: brightness(.92); }
+@media (hover: hover) and (pointer: fine) {
+  .run-btn:not(:disabled):hover { filter: brightness(.92); }
+}
 .run-btn:not(:disabled):active { filter: brightness(.84); }
 
 /* ── sea animation ────────────────────────────────────────── */
@@ -680,7 +682,9 @@ html { scroll-padding-block-start: var(--page-header-offset, 24px); }
 
 
 /* ── loading ─────────────────────────────────────────────── */
-.loading-gallery { --od-cols: 2; --od-gap: 16px; }
+/* Two columns at most, one when a column would drop under 320px. The count
+   follows the room, so it needs no breakpoint. */
+.loading-gallery { --od-gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, max(320px, (100% - 16px) / 2)), 1fr)); }
 .loading-example { --od-gap: 12px; min-width: 0; padding: 16px; border: 1px solid var(--uline); border-radius: 8px; background: var(--ubg); }
 .loading-example h3, .timeline-example h3 { margin: 0; color: var(--ufg); font-size: 13px; font-weight: 600; }
 .loading-example p { margin: 0; }
@@ -788,10 +792,11 @@ html { scroll-padding-block-start: var(--page-header-offset, 24px); }
 .timeline[data-tone="semantic"] .timeline-item[data-state="complete"] .timeline-marker { background: var(--okbg); border-color: var(--ok); color: var(--ok); }
 .timeline[data-tone="semantic"] .timeline-item[data-state="failed"] .timeline-marker { background: var(--badbg); }
 
-/* The horizontal layout depends on the room the timeline was given, not on the
-   viewport: a timeline in a narrow column lays out horizontally at the same
-   width as one on a wide phone. */
-.timeline-example { container-type: inline-size; }
+/* Every layout depends on the room the timeline was given, not on the
+   viewport: a timeline in a narrow column of a wide page folds the same way it
+   does on a phone. The frame comes from Timeline.svelte, so this holds in any
+   slot, not just the showcase card. */
+.timeline-frame { container-type: inline-size; }
 
 @container (min-width: 768px) {
   .timeline[data-layout="horizontal"] { display: grid; grid-template-columns: repeat(var(--timeline-columns), minmax(0, 1fr)); }
@@ -808,10 +813,7 @@ html { scroll-padding-block-start: var(--page-header-offset, 24px); }
   .timeline-details summary:hover { background: var(--hover); }
 }
 
-@media (max-width: 767px) {
-  .loading-gallery { --od-cols: 1; }
-  .loading-example .btn, .loading-search { min-height: 44px; }
-  .timeline-details summary { min-height: 44px; }
+@container (width < 768px) {
   .timeline[data-layout="date-column"] .timeline-item { grid-template-columns: 64px var(--timeline-marker) minmax(0, 1fr); column-gap: 8px; }
   .timeline[data-layout="alternating"] .timeline-item { grid-template-columns: var(--timeline-marker) minmax(0, 1fr); }
   .timeline[data-layout="alternating"] .timeline-rail { grid-column: 1; }
@@ -931,7 +933,12 @@ html { scroll-padding-block-start: var(--page-header-offset, 24px); }
 @media (pointer: coarse) {
   .ctl { min-height: 44px; align-items: center; }
   .gf-control { margin-block-start: 0; }
-  .dd-trigger, .btn, .seg-btn, .tab, .table-sort { min-height: 44px; }
+  /* Keyed to the pointer, not the width: a tablet or a touch laptop is wide
+     and still needs the thumb target. */
+  .dd-trigger, .btn, .seg-btn, .tab, .table-sort,
+  .input, .price-input, .copy-btn, .dd-opt, .theme-btn,
+  .loading-search, .timeline-details summary { min-height: 44px; }
+  .run-btn { height: 44px; }
 }
 
 /* ── native Goldfin compositions ───────────────────────────────────────── */
@@ -949,6 +956,9 @@ html { scroll-padding-block-start: var(--page-header-offset, 24px); }
 /* ── showcase composition ──────────────────────────────────────────────── */
 .gf-index { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-block-end: 24px; }
 .gf-index a { padding-block: 8px; color: var(--ufg2); text-decoration: none; }
+@media (pointer: coarse) {
+  .gf-index a { display: inline-flex; align-items: center; min-block-size: 44px; padding-block: 0; }
+}
 
 @media (hover: hover) and (pointer: fine) {
   .gf-index a:hover { color: var(--ufg); text-decoration: underline; }

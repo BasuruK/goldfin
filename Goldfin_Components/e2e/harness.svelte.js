@@ -4,6 +4,7 @@ import Tabs from '../src/lib/Tabs.svelte';
 import JSONViewer from '../src/lib/JSONViewer.svelte';
 import RunButton from '../src/lib/RunButton.svelte';
 import SegmentedControl from '../src/lib/SegmentedControl.svelte';
+import HarnessTimelines from './HarnessTimelines.svelte';
 import '../src/goldfin.css';
 
 // Mutable on purpose: the harness swaps value to test how each component reacts to new input.
@@ -28,6 +29,7 @@ mount(SegmentedControl, {
   target: document.getElementById('seg'),
   props: { label: 'Harness segments', value: 'missing', items: [{ value: 'one', label: 'One' }, { value: 'two', label: 'Two' }] }
 });
+mount(HarnessTimelines, { target: document.getElementById('timelines') });
 
 window.harness = {
   setJson(value) { jsonProps.value = value; },

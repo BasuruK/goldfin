@@ -19,7 +19,6 @@
     color: var(--ufg);
     font-size: 13px;
     font-weight: 600;
-    font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
   .chip-dot { flex: none; inline-size: 7px; block-size: 7px; border-radius: 50%; background: var(--chip-fg); }

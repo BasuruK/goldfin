@@ -56,6 +56,8 @@
     transition: color var(--duration-press) ease, border-color var(--duration-press) ease;
   }
   .knob::before { content: '>'; font-family: var(--font-mono); font-size: 11px; font-weight: 700; line-height: 1; }
+  /* The only control for the pane, so the 14x24 knob gets a 44px hit area. */
+  .knob::after { content: ''; position: absolute; inset: min(0px, (100% - 44px) / 2); }
   .knob[aria-expanded="false"]::before { content: '<'; }
 
   /* The collapsed state is a layout value, so it is declared unconditionally and
