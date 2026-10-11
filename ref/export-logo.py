@@ -5,7 +5,7 @@ Setup:  python3 -m venv venv && venv/bin/pip install fonttools uharfbuzz pillow
 Usage:  venv/bin/python export-logo.py <this folder> Urbanist.ttf   (needs Google Chrome)
         CHROME overrides the Chrome binary path.
 """
-import os, re, subprocess, sys, pathlib
+import html, os, re, subprocess, sys, pathlib
 
 # Before the third-party imports, so a missing argument prints usage rather than
 # an ImportError from an environment that has not been set up yet.
@@ -48,10 +48,11 @@ def _chrome_binary() -> pathlib.Path:
     return chrome
 
 
-def _path_under_ref(path: pathlib.Path) -> pathlib.Path:
+def _path_under_ref(path: pathlib.Path, ref: pathlib.Path) -> pathlib.Path:
     resolved = path.expanduser().resolve()
+    root = ref.resolve()
     try:
-        resolved.relative_to(REF)
+        resolved.relative_to(root)
     except ValueError:
         sys.exit(f'path escapes ref folder: {resolved}')
     return resolved
@@ -72,7 +73,7 @@ SIZE, BASELINE, CENTRE, TRACK = 209, 568, -137, -0.01  # must match .word in the
 WEIGHT, TEXT = 800, 'Goldfın'
 
 # 1. the bird, exactly as the page's construction code builds it
-_logo_html = _path_under_ref(REF / 'goldfin-logo.html')
+_logo_html = _path_under_ref(REF / 'goldfin-logo.html', REF)
 dom = _run_chrome(
     ['--headless', '--disable-gpu', '--virtual-time-budget=3000', '--dump-dom', _logo_html.as_uri()],
     text=True,
@@ -135,13 +136,14 @@ def png(svg_text, out, w, h):
     height = int(h)
     if width <= 0 or height <= 0 or width > 8192 or height > 8192:
         raise ValueError(f'png dimensions out of range: {width}x{height}')
-    dest = _path_under_ref(out)
-    src = _path_under_ref(dest.with_suffix('.tmp.svg'))
-    page = _path_under_ref(dest.with_suffix('.tmp.html'))
+    dest = _path_under_ref(out, REF)
+    src = _path_under_ref(dest.with_suffix('.tmp.svg'), REF)
+    page = _path_under_ref(dest.with_suffix('.tmp.html'), REF)
     try:
         src.write_text(svg_text)
+        img_src = html.escape(src.name, quote=True)
         page.write_text(
-            f'<body style="margin:0;background:transparent"><img src="{src.name}" width="{width}" height="{height}" style="display:block">'
+            f'<body style="margin:0;background:transparent"><img src="{img_src}" width="{width}" height="{height}" style="display:block">'
         )
         _run_chrome([
             '--headless',
