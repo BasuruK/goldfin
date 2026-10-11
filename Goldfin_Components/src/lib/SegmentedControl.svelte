@@ -87,7 +87,7 @@
   /* Without anchor positioning the thumb has no width, and the active label is
      --uprimfg, which is unreadable on the bare track. The segment paints the
      thumb's surface itself instead; it does not slide. */
-  @supports not (anchor-scope: --a) {
+  @supports not (anchor-name: --a) {
     .seg-thumb { display: none; }
     :global(.seg-btn.active) { background: var(--uprim); border-color: var(--uline); }
     :global(.seg[data-disabled] .seg-btn.active) {
