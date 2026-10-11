@@ -137,7 +137,6 @@ html { scroll-padding-block-start: var(--page-header-offset, 24px); }
 .table-frame[data-variant="contained"] tbody tr:last-child > :first-child { border-end-start-radius: var(--table-radius); }
 .table-frame[data-variant="contained"] tbody tr:last-child > :last-child { border-end-end-radius: var(--table-radius); }
 .table-name { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.table-name svg { flex: none; inline-size: 16px; block-size: 16px; color: var(--ufg2); }
 .table-name span { min-width: 0; overflow-wrap: break-word; }
 .data-table .table-mono { font-family: var(--font-mono); font-size: 12px; font-variant-numeric: tabular-nums; }
 .data-table .table-nowrap { white-space: nowrap; overflow-wrap: normal; }
@@ -214,7 +213,6 @@ html { scroll-padding-block-start: var(--page-header-offset, 24px); }
 .input:disabled { cursor: not-allowed; opacity: .45; background: var(--urunwell); }
 
 .field-msg { display: flex; align-items: center; gap: 5px; font-size: 12px; line-height: 1.45; color: var(--ufg3); }
-.field-msg svg { flex: none; inline-size: 12px; stroke: currentColor; }
 .field-msg.error { color: var(--bad); }
 .field-msg.ok { color: var(--ok); }
 .field-msg.ok .i-err { display: none; }
@@ -387,7 +385,6 @@ html { scroll-padding-block-start: var(--page-header-offset, 24px); }
   background: var(--uwell);
   color: var(--ufg);
 }
-.switch-card-icon svg { display: block; inline-size: 18px; block-size: 18px; }
 .ctl.switch-card > .field-content { display: grid; gap: 4px; min-width: 0; }
 .switch-card .label { display: block; color: var(--ufg); font-size: 14px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
 .switch-card .field-desc { display: block; margin: 0; color: var(--ufg2); font: 400 13px/1.5 var(--font-body); overflow-wrap: anywhere; }
@@ -648,7 +645,8 @@ html { scroll-padding-block-start: var(--page-header-offset, 24px); }
 
 
 
-.modal-icon svg { filter: drop-shadow(var(--modal-icon-shadow)); }
+/* The icon is a Lineicons glyph, and drop-shadow follows the glyph's shape. */
+.modal-icon .icon { filter: drop-shadow(var(--modal-icon-shadow)); }
 .modal-head.has-mosaic::before { display: none; }
 .modal-head > .modal-mosaic { position: absolute; z-index: 0; inset-block-start: 0; inset-inline-start: 0; inline-size: 100%; block-size: 100%; display: grid; grid-template-columns: repeat(var(--mosaic-columns, 1), 8px); grid-auto-rows: 8px; gap: 2px; align-content: start; border-radius: 11px 11px 0 0; overflow: clip; color: var(--modal-mosaic-tone); opacity: var(--modal-mosaic-opacity); pointer-events: none; -webkit-mask-image: linear-gradient(to bottom, #000 0 calc(var(--modal-header-height) * .48), transparent var(--modal-header-height)); mask-image: linear-gradient(to bottom, #000 0 calc(var(--modal-header-height) * .48), transparent var(--modal-header-height)); }
 .modal-mosaic-cell { display: block; inline-size: 8px; block-size: 8px; border-radius: 1px; background: currentColor; opacity: var(--tile-base); animation: mosaic-wave var(--modal-wave-cycle) ease-in-out var(--tile-delay) infinite; animation-play-state: paused; }
@@ -743,7 +741,6 @@ html { scroll-padding-block-start: var(--page-header-offset, 24px); }
 
 .timeline-rail { display: flex; flex-direction: column; align-items: center; min-width: 0; }
 .timeline-marker { display: grid; place-items: center; flex: none; inline-size: var(--timeline-marker); block-size: var(--timeline-marker); border: 1px solid var(--ufg3); border-radius: 50%; background: var(--ubg); color: var(--ufg2); }
-.timeline-marker svg { inline-size: 12px; block-size: 12px; }
 .timeline-marker .spinner { --spinner-size: 12px; }
 .timeline-connector { flex: 1; inline-size: 1px; min-block-size: 16px; background: var(--uline); }
 .timeline-item:last-child .timeline-connector { visibility: hidden; }
