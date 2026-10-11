@@ -1,0 +1,131 @@
+/* Two grid columns — the control, then everything textual — so a boolean
+   control can carry the same label / description / message slots a text
+   field does. */
+.ctl {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 2px 9px;
+  cursor: pointer;
+}
+
+.ctl > .field-content { grid-area: 1 / 2; }
+
+.ctl > .field-msg {
+  grid-area: 2 / 2;
+  margin-block-start: 4px;
+}
+
+.ctl-list {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+.ctl[data-disabled="true"] {
+  cursor: not-allowed;
+  opacity: .45;
+}
+
+.ctl[data-checked] .label { color: var(--ufg); }
+
+/* The bits-ui controls: Checkbox, RadioGroup and Switch render these. */
+.gf-control {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  margin-block-start: 2px;
+  padding: 0;
+  border: 1px solid var(--uprim);
+  border-radius: 4px;
+  background: var(--uprimfg);
+  color: var(--uprim);
+  cursor: pointer;
+}
+
+.gf-control[data-state="checked"],
+.gf-control[data-state="indeterminate"] {
+  color: var(--uprimfg);
+  background: var(--uprim);
+}
+
+.gf-control[data-disabled],
+.gf-switch[data-disabled] { cursor: not-allowed; }
+
+.gf-control[aria-invalid="true"],
+.gf-switch[aria-invalid="true"] { border-color: var(--bad); }
+
+.gf-radio { border-radius: 50%; }
+
+.gf-radio-dot {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.gf-switch {
+  position: relative;
+  display: block;
+  flex: none;
+  width: 36px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--uprim);
+  border-radius: 999px;
+  background: var(--uprimfg);
+  cursor: pointer;
+}
+
+.gf-switch[data-state="checked"] { background: var(--uprim); }
+
+.gf-switch-thumb {
+  display: block;
+  width: 16px;
+  height: 16px;
+  margin: 1px;
+  border-radius: 50%;
+  background: var(--uprim);
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition: transform var(--duration-ui) var(--ease-out);
+  }
+}
+
+.gf-switch[data-state="checked"] .gf-switch-thumb {
+  transform: translateX(16px);
+  background: var(--uprimfg);
+}
+
+.ctl[data-size="sm"] .gf-switch {
+  width: 28px;
+  height: 16px;
+}
+
+.ctl[data-size="sm"] .gf-switch-thumb {
+  width: 12px;
+  height: 12px;
+}
+
+.ctl[data-size="sm"] .gf-switch[data-state="checked"] .gf-switch-thumb { transform: translateX(12px); }
+
+/* The label is a sibling of the control, not its parent. :active reaches the
+   shared .ctl from either, so pressing the text presses the control too. */
+.ctl:active :is(.gf-control, .gf-switch):not([data-disabled]) { transform: scale(.95); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .gf-control,
+  .gf-switch { transition: transform var(--duration-press) var(--ease-out); }
+}
+
+.ctl .field-content { cursor: pointer; }
+.ctl[data-disabled="true"] .field-content { cursor: not-allowed; }
+
+.gf-radio-cards .ctl {
+  border: 1px solid var(--uline);
+  border-radius: 8px;
+  padding: 12px;
+}

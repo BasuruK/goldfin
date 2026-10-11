@@ -1,0 +1,64 @@
+.input {
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--urunline);
+  border-radius: 8px;
+  background: var(--urunfield);
+  color: var(--ufg);
+  font: 400 13px var(--font-mono);
+  /* The ring is drawn with box-shadow, so the outline is made transparent
+     rather than removed and forced-colors mode can still repaint it. */
+  outline-color: transparent;
+
+  &:focus-visible {
+    border-color: var(--ufg3);
+    box-shadow: 0 0 0 2px var(--key);
+  }
+
+  &[aria-invalid="true"] { border-color: var(--bad); }
+
+  &[aria-invalid="true"]:focus-visible {
+    border-color: var(--bad);
+    box-shadow: 0 0 0 2px color-mix(in oklch, var(--bad) 40%, transparent);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: .45;
+    background: var(--urunwell);
+  }
+}
+
+.price-input {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--urunline);
+  border-radius: 8px;
+  background: var(--urunfield);
+
+  &:focus-within {
+    border-color: var(--ufg3);
+    box-shadow: 0 0 0 2px var(--key);
+  }
+}
+
+.price-input input {
+  flex: 1;
+  min-width: 0;
+  margin-inline-start: 3px;
+  padding: 0;
+  border: 0;
+  outline-color: transparent;
+  background: transparent;
+  color: var(--ufg);
+  font: 400 13px var(--font-mono);
+}
+
+.price-input .unit {
+  font-size: 11px;
+  color: var(--ufg3);
+  white-space: nowrap;
+}

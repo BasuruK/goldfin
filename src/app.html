@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Urbanist:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    %sveltekit.head%
+  </head>
+  <body data-theme="dark" data-sveltekit-preload-data="hover">
+    <script>
+      /* The stored theme has to land before the first paint, or a light-theme
+         visitor gets a dark flash before the toggle hydrates. The hard-coded
+         attribute above stays as the fallback; storage can throw, so both the
+         read and the write are guarded. */
+      try {
+        const stored = localStorage.getItem('goldfin.theme');
+        if (stored === 'light' || stored === 'dark') document.body.dataset.theme = stored;
+      } catch {}
+    </script>
+    <div style="display: contents">%sveltekit.body%</div>
+  </body>
+</html>

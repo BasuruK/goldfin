@@ -3,7 +3,17 @@
   import { sortRows, nextDirection } from './table.js';
   import TableSortButton from './TableSortButton.svelte';
   import TableEmpty from './TableEmpty.svelte';
-  let { columns = [], rows = [], label = 'Table', variant = 'contained', cell, rowKey = 'id', caption = '', empty = 'No rows to display.', ...rest } = $props();
+  let {
+    columns = [],
+    rows = [],
+    label = 'Table',
+    variant = 'contained',
+    cell,
+    rowKey = 'id',
+    caption = '',
+    empty = 'No rows to display.',
+    ...rest
+  } = $props();
   const id = useId();
   let key = $state('');
   let direction = $state('ascending');
@@ -25,10 +35,23 @@
           <TableSortButton {column} active={key === column.key} {direction} onsort={sort} />
         </th>
       {/each}</tr></thead>
-      <tbody>{#each sorted as row, rowIndex (row[rowKey] ?? rowIndex)}<tr>{#each columns as column, index (column.key)}
-        {#if index === 0}<th scope="row" class="table-primary" data-label={column.label}>{#if cell}{@render cell(row, column)}{:else}{row[column.key] ?? '—'}{/if}</th>
-        {:else}<td data-label={column.label}>{#if cell}{@render cell(row, column)}{:else}{row[column.key] ?? '—'}{/if}</td>{/if}
-      {/each}</tr>{/each}</tbody>
+      <tbody>
+        {#each sorted as row, rowIndex (row[rowKey] ?? rowIndex)}
+          <tr>
+            {#each columns as column, index (column.key)}
+              {#if index === 0}
+                <th scope="row" class="table-primary" data-label={column.label}>
+                  {#if cell}{@render cell(row, column)}{:else}{row[column.key] ?? '—'}{/if}
+                </th>
+              {:else}
+                <td data-label={column.label}>
+                  {#if cell}{@render cell(row, column)}{:else}{row[column.key] ?? '—'}{/if}
+                </td>
+              {/if}
+            {/each}
+          </tr>
+        {/each}
+      </tbody>
     </table>
     {#if !rows.length}<TableEmpty text={empty} />{/if}
   </div>

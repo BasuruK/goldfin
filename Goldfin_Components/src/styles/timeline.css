@@ -1,0 +1,317 @@
+.timeline {
+  --timeline-marker: 24px;
+  --timeline-gap: 16px;
+  --timeline-columns: 3;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--ufg2);
+}
+
+.timeline-item {
+  display: grid;
+  grid-template-columns: var(--timeline-marker) minmax(0, 1fr);
+  column-gap: 16px;
+  min-width: 0;
+}
+
+.timeline-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+}
+
+.timeline-marker {
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: var(--timeline-marker);
+  block-size: var(--timeline-marker);
+  border: 1px solid var(--ufg3);
+  border-radius: 50%;
+  background: var(--ubg);
+  color: var(--ufg2);
+}
+
+.timeline-marker .spinner { --spinner-size: 12px; }
+
+.timeline-connector {
+  flex: 1;
+  inline-size: 1px;
+  min-block-size: 16px;
+  background: var(--uline);
+}
+
+.timeline-item:last-child .timeline-connector { visibility: hidden; }
+
+.timeline-item[data-state="complete"] .timeline-marker {
+  border-color: var(--uprim);
+  background: var(--uprim);
+  color: var(--uprimfg);
+}
+
+.timeline-item[data-state="complete"] .timeline-connector { background: var(--ufg2); }
+
+.timeline-item[data-state="current"] .timeline-marker {
+  border-color: var(--uprim);
+  color: var(--ufg);
+}
+
+.timeline-item[data-state="failed"] .timeline-marker {
+  border-color: var(--bad);
+  color: var(--bad);
+}
+
+.timeline[data-markers="outline"] .timeline-marker {
+  --timeline-marker: 16px;
+  margin-block: 4px;
+  background: var(--ubg);
+}
+
+.timeline[data-markers="outline"] .timeline-item[data-state="complete"] .timeline-marker { border-color: var(--ufg); }
+
+.timeline-body {
+  --od-gap: 4px;
+  padding-block-end: var(--timeline-gap);
+  min-width: 0;
+}
+
+.timeline-item:last-child .timeline-body { padding-block-end: 0; }
+
+.timeline-title {
+  margin: 0;
+  color: var(--ufg);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.timeline-description {
+  margin: 0;
+  font: 400 13px/1.5 var(--font-body);
+  color: var(--ufg2);
+  overflow-wrap: anywhere;
+}
+
+.timeline-time,
+.timeline-meta {
+  display: block;
+  margin: 0;
+  color: var(--ufg2);
+  font: 400 11px/1.5 var(--font-mono);
+}
+
+.timeline-heading { --od-gap: 8px; }
+
+.timeline-status {
+  block-size: 20px;
+  padding-inline: 6px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+/* ── layouts ── */
+.timeline[data-layout="date-column"] .timeline-item { grid-template-columns: 88px var(--timeline-marker) minmax(0, 1fr); }
+
+.timeline-date {
+  padding-block-start: 4px;
+  text-align: end;
+}
+
+.timeline[data-layout="alternating"] .timeline-item { grid-template-columns: minmax(0, 1fr) var(--timeline-marker) minmax(0, 1fr); }
+
+.timeline[data-layout="alternating"] .timeline-rail {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.timeline[data-layout="alternating"] .timeline-body {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.timeline[data-layout="alternating"] .timeline-item:nth-child(even) .timeline-body {
+  grid-column: 1;
+  text-align: end;
+}
+
+.timeline[data-layout="alternating"] .timeline-item:nth-child(even) .timeline-heading { justify-content: flex-end; }
+
+.timeline[data-layout="compact"] {
+  --timeline-marker: 8px;
+  --timeline-gap: 8px;
+}
+
+.timeline[data-layout="compact"] .timeline-marker { margin-block: 5px; }
+
+.timeline[data-layout="compact"] .timeline-item[data-state="complete"] .timeline-marker {
+  background: var(--ok);
+  border-color: var(--ok);
+}
+
+.timeline[data-layout="compact"] .timeline-item[data-state="current"] .timeline-marker {
+  background: var(--key);
+  border-color: var(--key);
+}
+
+.timeline[data-layout="compact"] .timeline-item[data-state="failed"] .timeline-marker {
+  background: var(--bad);
+  border-color: var(--bad);
+}
+
+/* ── details disclosure ── */
+.timeline-details {
+  border: 1px solid var(--uline);
+  border-radius: 8px;
+  background: var(--usurf);
+}
+
+.timeline-details summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 36px;
+  padding: 8px 12px;
+  color: var(--ufg);
+  cursor: pointer;
+  list-style: none;
+  font-size: 13px;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover { background: var(--hover); }
+  }
+
+  &:active { background: color-mix(in oklch, var(--ufg) 10%, transparent); }
+}
+
+.timeline-details summary::-webkit-details-marker { display: none; }
+
+.timeline-details summary::after {
+  content: '';
+  display: block;
+  flex: none;
+  inline-size: 6px;
+  block-size: 6px;
+  border-inline-end: 1.5px solid currentColor;
+  border-block-end: 1.5px solid currentColor;
+  transform: rotate(45deg);
+}
+
+.timeline-details[open] summary::after { transform: rotate(225deg); }
+
+.timeline-details .timeline-description {
+  padding: 8px 12px;
+  border-block-start: 1px solid var(--uline);
+}
+
+/* `interpolate-size` is set on :root so `height: auto` can be transitioned.
+   Padding stays on the description, never on ::details-content, where it
+   would show while closed. */
+.timeline-details::details-content {
+  block-size: 0;
+  overflow: clip;
+}
+
+.timeline-details[open]::details-content { block-size: auto; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .timeline-details summary::after { transition: transform var(--duration-ui) ease; }
+
+  .timeline-details::details-content {
+    transition:
+      block-size var(--duration-panel) var(--ease-out),
+      content-visibility var(--duration-panel) allow-discrete;
+  }
+}
+
+/* ── tones ── */
+.timeline[data-tone="semantic"] .timeline-item[data-state="complete"] .timeline-marker {
+  background: var(--okbg);
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.timeline[data-tone="semantic"] .timeline-item[data-state="failed"] .timeline-marker { background: var(--badbg); }
+
+/* ── container layouts ──
+   Every layout depends on the room the timeline was given, not on the
+   viewport: a timeline in a narrow column of a wide page folds the same way it
+   does on a phone. The frame comes from Timeline.svelte, so this holds in any
+   slot, not just the showcase card. */
+.timeline-frame { container-type: inline-size; }
+
+@container (width >= 768px) {
+  .timeline[data-layout="horizontal"] {
+    display: grid;
+    grid-template-columns: repeat(var(--timeline-columns), minmax(0, 1fr));
+  }
+
+  .timeline[data-layout="horizontal"] .timeline-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 8px;
+  }
+
+  .timeline[data-layout="horizontal"] .timeline-rail { flex-direction: row; }
+
+  .timeline[data-layout="horizontal"] .timeline-connector {
+    inline-size: auto;
+    block-size: 1px;
+    min-block-size: 0;
+    margin-inline: 4px;
+  }
+
+  .timeline[data-layout="horizontal"] .timeline-body {
+    padding-block: 0;
+    padding-inline: 0 16px;
+    align-content: start;
+  }
+
+  .timeline-leading .timeline-date {
+    grid-row: 1;
+    text-align: start;
+    padding: 0;
+  }
+
+  .timeline-leading .timeline-rail { grid-row: 2; }
+  .timeline-leading .timeline-body { grid-row: 3; }
+}
+
+@container (width < 768px) {
+  .timeline[data-layout="date-column"] .timeline-item {
+    grid-template-columns: 64px var(--timeline-marker) minmax(0, 1fr);
+    column-gap: 8px;
+  }
+
+  .timeline[data-layout="alternating"] .timeline-item { grid-template-columns: var(--timeline-marker) minmax(0, 1fr); }
+  .timeline[data-layout="alternating"] .timeline-rail { grid-column: 1; }
+
+  .timeline[data-layout="alternating"] .timeline-body,
+  .timeline[data-layout="alternating"] .timeline-item:nth-child(even) .timeline-body {
+    grid-column: 2;
+    text-align: start;
+  }
+
+  .timeline[data-layout="alternating"] .timeline-item:nth-child(even) .timeline-heading { justify-content: flex-start; }
+  .timeline-leading .timeline-item { grid-template-columns: var(--timeline-marker) minmax(0, 1fr); }
+
+  .timeline-leading .timeline-date {
+    grid-column: 2;
+    grid-row: 1;
+    text-align: start;
+    padding: 0;
+  }
+
+  .timeline-leading .timeline-rail {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+  }
+
+  .timeline-leading .timeline-body {
+    grid-column: 2;
+    grid-row: 2;
+  }
+}

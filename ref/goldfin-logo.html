@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Goldfin logo: geometric construction</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@500;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: light;
+    --ink: light-dark(#151d26, #fdfcfa);
+    --bg: light-dark(#fdfcfa, #151d26);
+    --gold: #ffc835;
+    --eye: #151d26; /* ink on the light theme, background on the dark one: dark on yellow either way */
+  }
+  :root[data-theme="dark"] { color-scheme: dark; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--bg); }
+  svg { width: min(92vw, 820px); height: auto; }
+  .ink { fill: var(--ink); }
+  .gold { fill: var(--gold); }
+  .eye { fill: var(--eye); }
+  .word { fill: var(--ink); font: 800 209px Urbanist, "Avenir Next", system-ui, sans-serif; letter-spacing: -0.01em; }
+  #guides { fill: none; stroke: var(--ink); stroke-opacity: 0.4; stroke-width: 1; stroke-dasharray: 6 5; vector-effect: non-scaling-stroke; }
+  #guides circle.pt { fill: var(--ink); stroke: none; }
+  :root:not(.guides) #guides { display: none; }
+  nav { position: fixed; top: 1rem; right: 1rem; display: flex; gap: 0.5rem; }
+  button { font: 500 14px Urbanist, system-ui, sans-serif; color: var(--ink); background: transparent; border: 1px solid currentColor; border-radius: 6px; padding: 0.4rem 0.8rem; cursor: pointer; }
+</style>
+</head>
+<body>
+<nav>
+  <button type="button" id="theme" aria-pressed="false">Dark theme</button>
+  <button type="button" id="guide" aria-pressed="false">Construction</button>
+</nav>
+<svg id="logo" viewBox="-577 -180 880 818" role="img" aria-labelledby="logo-title">
+  <title id="logo-title">Goldfin</title>
+  <g id="draft"></g>
+  <g id="bird"></g>
+  <g id="guides"></g>
+  <!-- Must match TEXT in export-logo.py so the dotless ı lookup and export stay aligned. -->
+  <text class="word" id="word" x="-137" y="568" text-anchor="middle">Goldfın</text>
+  <circle class="gold" id="dot" r="0"/>
+</svg>
+<script>
+/*
+  Every edge of the bird is an arc of a construction circle or a straight line, and every
+  corner is an intersection or tangent point computed below. Nothing is hand-placed except
+  the module r and the angles. Origin = centre of the head circle. Add ?draft to the URL to
+  lay the AI draft (LogoDRAFT.png, same folder) underneath for comparison.
+
+  The circles
+    H   head        radius r
+    F   face        radius φr/2, inside H and tangent to it
+    W   wing        radius φr/2, tangent to H (outside) and to the back line L
+    B   breast      radius 2r
+    K   belly cut   radius 2r, tangent to W (inside); B minus K is the yellow belly crescent
+    Bb  bib         radius 2r/3, through the point where H meets B
+    G1, G2          radius 6r and 4r, the two arcs of the white wing-bar lens
+    G3  tail        radius 12r
+    eye             radius r/φ⁴
+*/
+const φ = (1 + Math.sqrt(5)) / 2;
+const r = 110;
+
+const pt = (x, y) => ({ x, y });
+const add = (p, q, k = 1) => pt(p.x + k * q.x, p.y + k * q.y);
+const sub = (p, q) => pt(p.x - q.x, p.y - q.y);
+const len = (p) => Math.hypot(p.x, p.y);
+const dir = (deg) => pt(Math.cos((deg * Math.PI) / 180), -Math.sin((deg * Math.PI) / 180)); // 0° = right, 90° = up (screen y points down)
+const circle = (c, radius) => ({ c, r: radius });
+const on = (C, deg) => add(C.c, dir(deg), C.r);
+const highest = (ps) => ps.reduce((a, b) => (a.y < b.y ? a : b));
+const lowest = (ps) => ps.reduce((a, b) => (a.y > b.y ? a : b));
+
+function meet(A, B) { // circle ∩ circle
+  const d = sub(B.c, A.c), D = len(d);
+  const a = (D * D + A.r * A.r - B.r * B.r) / (2 * D), h = Math.sqrt(A.r * A.r - a * a);
+  if (!(h >= 0)) throw new Error('circles do not meet');
+  const m = add(A.c, d, a / D), n = pt(-d.y / D, d.x / D);
+  return [add(m, n, h), add(m, n, -h)];
+}
+function cut(p, u, C) { // ray p + t·u (unit u) ∩ circle, nearest first
+  const w = sub(p, C.c), b = w.x * u.x + w.y * u.y, q = b * b - (len(w) ** 2 - C.r * C.r);
+  if (q < 0) throw new Error('line misses circle');
+  return [-b - Math.sqrt(q), -b + Math.sqrt(q)].map((t) => add(p, u, t));
+}
+function cross(p, u, q, v) { // line ∩ line
+  const w = sub(q, p), t = (w.x * v.y - w.y * v.x) / (u.x * v.y - u.y * v.x);
+  return add(p, u, t);
+}
+function through(p, q, R) { // both circles of radius R through p and q
+  const m = add(p, sub(q, p), 0.5), d = len(sub(q, p)), h = Math.sqrt(R * R - (d / 2) ** 2);
+  const n = pt(-(q.y - p.y) / d, (q.x - p.x) / d);
+  return [add(m, n, h), add(m, n, -h)].map((c) => circle(c, R));
+}
+
+// ── construction ────────────────────────────────────────────────────────────
+const O = pt(0, 0);
+const H = circle(O, r);
+const F = circle(add(O, dir(-65), r - (φ * r) / 2), (φ * r) / 2); // tangent inside H at -65°
+
+// back line L: tangent to H, rising at 50°
+const Lu = dir(50), Ld = dir(230), Ln = dir(-40); // up, down, inward normal
+const At = add(O, Ln, -r);                          // tangent point on H
+
+// wing W: radius φr/2, touching L and H. Along L the centre sits 2√(r·ρ) from At.
+const ρw = (φ * r) / 2;
+const V = add(At, Ld, 2 * Math.sqrt(r * ρw));       // tangent point on L
+const W = circle(add(V, Ln, ρw), ρw);
+
+// ground and tail
+const ground = 3.4 * r;
+const T = cross(At, Ld, pt(0, ground), pt(1, 0));  // tail tip: L meets the ground
+const T2 = add(T, pt(r / 3, 0));
+
+// eye and beak: tip P on the eye's horizontal, 4r/3 from O; edges at 30° and 45°
+const E = pt(r / 4, -0.4 * r);
+const P = pt(Math.sqrt((4 * r / 3) ** 2 - E.y ** 2), E.y);
+const U = cut(P, dir(150), H)[0];
+const D = cut(P, dir(225), H)[0];
+
+// nape N: tangent to F at 36°, closing the cap against L
+const S = on(F, 36 + 90);
+const A = cross(S, dir(36), At, Lu);
+
+// breast, belly and bib
+const B = circle(pt(-1.34 * r, 0.73 * r), 2 * r);
+const K = circle(add(W.c, dir(-22), -(2 * r - ρw)), 2 * r); // touches W inside at -22°
+const Wt = on(W, -22);
+const Z = lowest(meet(B, K));                       // belly tip
+const Q = lowest(meet(H, B));                       // throat: head meets breast
+const Bb = circle(add(Q, dir(50), (2 * r) / 3), (2 * r) / 3);
+const R = highest(meet(Bb, F));
+
+// wing bar: lens between J on L and Ew on W
+const J = add(At, Ld, 3.8 * r);
+const Ew = on(W, 0);
+const below = ([a, b]) => (a.c.y > b.c.y ? a : b), above = ([a, b]) => (a.c.y > b.c.y ? b : a);
+const G1 = below(through(J, Ew, 6 * r));           // upper edge of the bar
+const G2 = above(through(J, Ew, 4 * r));           // lower edge of the bar
+const X = on(W, -72);
+const G3 = below(through(X, T2, 12 * r));          // underside of the tail
+
+// ── paths ───────────────────────────────────────────────────────────────────
+const f = (n) => +n.toFixed(2);
+const M = (p) => `M${f(p.x)} ${f(p.y)}`;
+const Lt = (p) => `L${f(p.x)} ${f(p.y)}`;
+const angle = (C, p) => Math.atan2(p.y - C.c.y, p.x - C.c.x);
+function arc(C, from, to, cw) { // cw = clockwise on screen
+  const turn = 2 * Math.PI;
+  const d = (((cw ? angle(C, to) - angle(C, from) : angle(C, from) - angle(C, to)) % turn) + turn) % turn;
+  return `A${f(C.r)} ${f(C.r)} 0 ${d > Math.PI ? 1 : 0} ${cw ? 1 : 0} ${f(to.x)} ${f(to.y)}`;
+}
+
+const cap = [M(A), Lt(At), arc(H, At, U, true), Lt(P), Lt(D), arc(H, D, Q, true),
+  arc(Bb, Q, R, true), arc(F, R, S, false), 'Z'].join('');
+const body = [M(A), Lt(V), arc(W, V, Wt, true), arc(K, Wt, Z, true), arc(B, Z, Q, false),
+  arc(Bb, Q, R, true), arc(F, R, S, false), 'Z'].join('');
+const wingUpper = [M(J), Lt(V), arc(W, V, Ew, true), arc(G1, Ew, J, false), 'Z'].join('');
+const wingLower = [M(T), Lt(J), arc(G2, J, Ew, false), arc(W, Ew, X, true), arc(G3, X, T2, false), 'Z'].join('');
+
+const NS = 'http://www.w3.org/2000/svg';
+const el = (parent, tag, attrs) => {
+  const node = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+  parent.appendChild(node);
+  return node;
+};
+const bird = document.getElementById('bird');
+el(bird, 'path', { class: 'gold', d: body });
+el(bird, 'path', { class: 'ink', d: cap });
+el(bird, 'path', { class: 'ink', d: wingUpper });
+el(bird, 'path', { class: 'ink', d: wingLower });
+el(bird, 'circle', { class: 'eye', cx: f(E.x), cy: f(E.y), r: f(r / φ ** 4) });
+
+// construction sheet
+const guides = document.getElementById('guides');
+for (const C of [H, F, W, B, K, Bb, G1, G2, G3]) el(guides, 'circle', { cx: f(C.c.x), cy: f(C.c.y), r: f(C.r) });
+const line = (p, u) => el(guides, 'line', { x1: f(p.x - 2000 * u.x), y1: f(p.y - 2000 * u.y), x2: f(p.x + 2000 * u.x), y2: f(p.y + 2000 * u.y) });
+line(At, Lu); line(S, dir(36)); line(pt(0, ground), pt(1, 0)); line(E, pt(1, 0));
+for (const p of [A, At, V, T, T2, U, D, P, S, Q, R, Z, Wt, J, Ew, X]) el(guides, 'circle', { class: 'pt', cx: f(p.x), cy: f(p.y), r: 3 });
+
+// the dot of the i is a gold circle centred over the dotless ı
+document.fonts.ready.then(() => {
+  const word = document.getElementById('word'), box = word.getExtentOfChar(word.textContent.indexOf('ı'));
+  const em = parseFloat(getComputedStyle(word).fontSize), dot = document.getElementById('dot');
+  dot.setAttribute('cx', box.x + box.width / 2);
+  dot.setAttribute('cy', word.y.baseVal[0].value - 0.636 * em); // top of the dot meets the ascender line
+  dot.setAttribute('r', 0.079 * em);
+});
+
+if (new URLSearchParams(location.search).has('draft')) {
+  el(document.getElementById('draft'), 'image', { href: 'LogoDRAFT.png', x: -905, y: -300, width: 1536, height: 1024, opacity: 0.35 });
+}
+
+// self-check: every shared corner lies on each curve that meets there; every tangency holds
+const onC = (p, C) => Math.abs(len(sub(p, C.c)) - C.r) < 1e-6;
+const checks = {
+  'Q on H, B, Bb': onC(Q, H) && onC(Q, B) && onC(Q, Bb),
+  'R on Bb, F': onC(R, Bb) && onC(R, F),
+  'Z on B, K': onC(Z, B) && onC(Z, K),
+  'Wt on W, K': onC(Wt, W) && onC(Wt, K),
+  'U, D on H': onC(U, H) && onC(D, H),
+  'J, Ew on G1, G2': onC(J, G1) && onC(J, G2) && onC(Ew, G1) && onC(Ew, G2),
+  'X, T2 on G3': onC(X, G3) && onC(T2, G3),
+  'F inside H, tangent': Math.abs(len(sub(F.c, O)) - (r - F.r)) < 1e-6,
+  'W touches H': Math.abs(len(sub(W.c, O)) - (r + ρw)) < 1e-6,
+  'K touches W': Math.abs(len(sub(K.c, W.c)) - (K.r - ρw)) < 1e-6,
+};
+for (const [name, ok] of Object.entries(checks)) console.assert(ok, `construction: ${name}`);
+
+const root = document.documentElement;
+document.getElementById('theme').onclick = (e) => {
+  const dark = root.dataset.theme !== 'dark';
+  root.dataset.theme = dark ? 'dark' : 'light';
+  e.currentTarget.setAttribute('aria-pressed', dark);
+  e.currentTarget.textContent = dark ? 'Light theme' : 'Dark theme';
+};
+document.getElementById('guide').onclick = (e) => {
+  e.currentTarget.setAttribute('aria-pressed', root.classList.toggle('guides'));
+};
+</script>
+</body>
+</html>

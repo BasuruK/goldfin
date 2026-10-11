@@ -1,0 +1,204 @@
+.loading-example {
+  --od-gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--uline);
+  border-radius: 8px;
+  background: var(--ubg);
+}
+
+.loading-example h3 {
+  margin: 0;
+  color: var(--ufg);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.loading-example p { margin: 0; }
+
+.loading-example .loading-hint {
+  color: var(--ufg2);
+  font: 400 13px/1.5 var(--font-body);
+}
+
+.spinner {
+  --spinner-size: 16px;
+  --spinner-cycle: 900ms;
+  display: inline-block;
+  flex: none;
+  width: var(--spinner-size);
+  height: var(--spinner-size);
+  border: 2px solid currentColor;
+  border-inline-end-color: transparent;
+  border-radius: 50%;
+  animation: goldfin-spin var(--spinner-cycle) linear infinite;
+}
+
+.spinner[data-size="sm"] { --spinner-size: 12px; }
+.spinner[data-size="lg"] { --spinner-size: 24px; }
+.spinner[data-size="xl"] { --spinner-size: 32px; }
+
+.loading-dots {
+  --dots-cycle: 900ms;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.loading-dots i {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: goldfin-dot var(--dots-cycle) ease-in-out infinite;
+}
+
+.loading-dots i:nth-child(2) { animation-delay: 300ms; }
+.loading-dots i:nth-child(3) { animation-delay: 600ms; }
+
+[data-loading-tone="key"]  { color: var(--key); }
+[data-loading-tone="ok"]   { color: var(--ok); }
+[data-loading-tone="bad"]  { color: var(--bad); }
+[data-loading-tone="warn"] { color: var(--warn); }
+
+.loading-feedback {
+  display: block;
+  min-height: 20px;
+  color: var(--ufg2);
+  font: 400 12px/1.5 var(--font-body);
+}
+
+.loading-example .btn:disabled {
+  opacity: .65;
+  cursor: not-allowed;
+}
+
+.loading-example .btn[aria-busy="true"] { opacity: 1; }
+
+.loading-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-inline: 12px;
+  min-height: 36px;
+  border: 1px solid var(--urunline);
+  border-radius: 8px;
+  background: var(--urunfield);
+  color: var(--ufg2);
+
+  &:focus-within {
+    outline: 2px solid var(--key);
+    outline-offset: 2px;
+  }
+}
+
+/* The wrapper draws the ring with :focus-within, so the input's own outline is
+   made transparent rather than removed. */
+.loading-search input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline-color: transparent;
+  background: transparent;
+  color: var(--ufg);
+  font: 400 13px var(--font-body);
+}
+
+.loading-stage {
+  display: grid;
+  min-height: 144px;
+  border: 1px solid var(--uline);
+  border-radius: 8px;
+  background: var(--usurf);
+}
+
+.loading-content,
+.loading-overlay {
+  grid-area: 1 / 1;
+  padding: 16px;
+  border-radius: inherit;
+}
+
+.loading-content {
+  --od-gap: 8px;
+  transition: opacity 150ms ease;
+}
+
+.loading-stage[data-state="running"] .loading-content {
+  opacity: .25;
+  pointer-events: none;
+}
+
+.loading-overlay {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  background: var(--usurf);
+  color: var(--ufg);
+}
+
+.loading-example[data-example="content-overlay"] .loading-overlay { background: color-mix(in oklch, var(--usurf) 92%, transparent); }
+
+.loading-empty { min-block-size: 168px; }
+
+.loading-skeleton {
+  display: grid;
+  gap: 8px;
+  width: min(240px, 100%);
+  margin-block-start: 8px;
+}
+
+.loading-skeleton span {
+  display: block;
+  block-size: 8px;
+  border-radius: 4px;
+  background: var(--uline);
+}
+
+.loading-skeleton span:last-child { width: 65%; }
+
+.loading-demo [hidden],
+.loading-search [hidden] { display: none !important; }
+
+/* A loading button holds one size and stays centred: the label keeps its box and
+   is only hidden, and the spinner is centred over the whole button rather than
+   sitting beside the text. .btn is already position: relative, so the spinner
+   needs no extra anchor. `translate` is used, not `transform`, because the
+   spin keyframes own `transform` and would otherwise clobber the centring. */
+.btn .spinner {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  translate: -50% -50%;
+  opacity: 0;
+  animation: none;
+  transition: opacity var(--duration-press) ease;
+}
+
+.btn .spinner.is-on {
+  opacity: 1;
+  animation: goldfin-spin var(--spinner-cycle) linear infinite;
+}
+
+.btn-label.is-hidden { visibility: hidden; }
+
+.loading-content[inert] { pointer-events: none; }
+
+@keyframes goldfin-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes goldfin-dot {
+  0%, 100% { opacity: .35; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner,
+  .loading-dots i { animation: none !important; }
+
+  .loading-dots i { opacity: 1; }
+}

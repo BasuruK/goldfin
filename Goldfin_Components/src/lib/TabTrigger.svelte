@@ -2,7 +2,9 @@
   import { Tabs as Primitive } from 'bits-ui';
   let { value, active = false, disabled = false, children } = $props();
 </script>
-<Primitive.Trigger class={['tab', active && 'active']} {value} {disabled}>{@render children?.()}</Primitive.Trigger>
+<Primitive.Trigger class={['tab', active && 'active']} {value} {disabled}>
+  {@render children?.()}
+</Primitive.Trigger>
 
 <style>
   /* .tab is handed to a bits-ui part, so :global() is required. */

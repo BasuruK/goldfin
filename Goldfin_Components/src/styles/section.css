@@ -1,0 +1,35 @@
+/* Sections are spaced by their own bottom margin, so one reorderable block
+   never needs a per-page override. */
+.section {
+  min-width: 0;
+  margin-block-end: 48px;
+}
+
+.section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-block-end: 16px;
+
+  @media (max-width: 767px) {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+
+.section-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ufg);
+}
+
+.section-id {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ufg3);
+  letter-spacing: .04em;
+
+  @media (max-width: 767px) {
+    overflow-wrap: anywhere;
+  }
+}

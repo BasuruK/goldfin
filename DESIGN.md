@@ -27,6 +27,16 @@ Compact, dark-first, cool neutral tooling. Hierarchy comes from type, alignment,
 
 Keep the user-approved oval slider grip, compact tables, divided dialog footers and animated mosaic headers. No avatars in the supplied table or timeline designs. Do not introduce new gradients, glass treatments, decorative cards or unregistered colors. Existing sea and mosaic effects are approved exceptions with defined component scope.
 
+## Main app shell
+
+The desktop shell has a persistent left sidebar and a header above the content. The sidebar starts expanded at **258px** (`--w-sidebar-open`) and collapses to a **64px** icon rail (`--w-sidebar-closed`); it remains a navigation landmark in both states. The brand row is **56px** high (`--h-brand`). The brand uses the Goldfin mark and wordmark; collapse hides the wordmark and retains the mark.
+
+**Navigation (shipped):** grouped links — Home, then a Connectors section with Connectors — each with a Lineicons glyph and label. A rail-collapse control straddles the sidebar edge on desktop (`aria-expanded` reflects open vs collapsed). Below **768px** the same nav is a full-width drawer opened from the top bar, with a scrim and focus moved into the drawer when open; the in-rail control closes the drawer on touch widths.
+
+**Sidebar foot:** a profile disclosure (avatar, name, role) opens an in-sidebar menu — theme swap (sun/moon icon) and Settings — without a modal focus trap. Expanded state is ordinary `aria-expanded` disclosure semantics.
+
+**Top bar:** on narrow viewports, the drawer opener; on all widths, the shared theme control (`ThemeToggle`) at the end. Desktop rail collapse is not duplicated in the top bar.
+
 ## Themes and colors
 
 Every colour token is declared once on `:root` and holds **both** themes in a single `light-dark()` value. There is no second override block. `color-scheme` starts at `dark` because dark is the default; `body[data-theme="light"]` and `body[data-theme="dark"]` only select a `color-scheme`, they do not redeclare tokens. Keep setting the theme on the document body so portaled dialogs and menus inherit it — `color-scheme` inherits, so this still works. A theme on an inner component wrapper is insufficient.

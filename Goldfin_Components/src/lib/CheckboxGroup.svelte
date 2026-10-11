@@ -15,10 +15,13 @@
       checked={selected.includes(item.value)} invalid={item.invalid || false}
       onCheckedChange={checked => toggle(item.value, checked)} />
   {/each}
-  <p class="field-desc" role="status">{state.count} of {items.length} selected</p>
+  <p class="field-desc field-count" role="status">{state.count} of {items.length} selected</p>
 </div>
 
 <style>
   /* The checkbox itself is a child component, so its .ctl box needs the card edge. */
   .gf-check-cards :global(.ctl) { border: 1px solid var(--uline); border-radius: 8px; padding: 12px; }
+  /* The count changes as boxes are ticked. Urbanist draws a narrower 1 and has no
+     tabular figures, so the count is set in the mono face, where it cannot shift. */
+  .field-count { font-family: var(--font-mono); }
 </style>

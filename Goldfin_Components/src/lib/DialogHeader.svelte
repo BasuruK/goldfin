@@ -12,5 +12,9 @@
     <Title class="modal-title">{title}</Title>
     <Description class="modal-desc">{description}</Description>
   </div>
-  {#if close}<Close class="btn icon modal-x" aria-label="Close dialog"><Icon name="close" size={13} /></Close>{/if}
+  {#if close}
+    <Close class="btn icon modal-x" aria-label="Close dialog">
+      <Icon name="close" size={13} />
+    </Close>
+  {/if}
 </MosaicHeader>

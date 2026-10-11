@@ -45,6 +45,11 @@ test.describe('showcase', () => {
     const input = page.locator('input.input:not([disabled])').first();
     await input.focus();
     await expect(input).not.toHaveCSS('box-shadow', 'none');
+
+    // The framed input gives up its own outline, so the frame has to draw the ring.
+    const priced = page.locator('.price-input input').first();
+    await priced.focus();
+    await expect(page.locator('.price-input').first()).not.toHaveCSS('box-shadow', 'none');
   });
 
   test('Input clears a blur error while typing a valid value', async ({ page }) => {
@@ -168,13 +173,28 @@ test.describe('showcase', () => {
     expect(now).toBeLessThanOrEqual(max);
   });
 
-  test('dropdown triggers use the shared svg chevron', async ({ page }) => {
+  // Icons are the shared Lineicons <Icon>, not inline SVG, so the trigger's
+  // chevron is the .icon span and that span is what turns when the menu opens.
+  test('table file icons are muted to --ufg2', async ({ page }) => {
+    await expect(page.locator('.table-name .icon').first()).toHaveCSS('color', await cssVar(page, '--ufg2'));
+  });
+
+  test('the dialog header icon keeps its drop shadow', async ({ page }) => {
+    await page.getByRole('button', { name: 'Delete suite' }).click();
+    await expect(page.locator('.modal-icon .icon').first()).toHaveCSS('filter', /drop-shadow/);
+  });
+
+  test('dropdown triggers use the shared chevron icon, and it turns when open', async ({ page }) => {
     const triggers = page.locator('.dd-trigger');
     expect(await triggers.count()).toBeGreaterThan(0);
     for (const trigger of await triggers.all()) {
-      await expect(trigger.locator('svg')).toHaveCount(1);
+      await expect(trigger.locator('.icon.lni-chevron-down')).toHaveCount(1);
       await expect(trigger).not.toContainText('⌄');
     }
+    const first = triggers.first();
+    await first.click();
+    await expect(first).toHaveAttribute('aria-expanded', 'true');
+    await expect(first.locator('.icon')).toHaveCSS('transform', /^matrix\(-1, /);
   });
 
   test('visual snapshots for review', async ({ page }) => {
@@ -245,9 +265,28 @@ test.describe('harness defaults', () => {
     expect(thumb).toBeCloseTo(button, 0);
   });
 
+  // The viewport is wide in both cases; only the slot width differs.
+  test('Timeline lays out from the width of its own slot, not the viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const tops = await page.locator('#timeline-wide .timeline-item').evaluateAll(items =>
+      items.map(item => Math.round(item.getBoundingClientRect().top)));
+    expect(new Set(tops).size).toBe(1);
+    const columns = await page.locator('#timeline-narrow .timeline-item').first().evaluate(item =>
+      getComputedStyle(item).gridTemplateColumns.split(' ').length);
+    expect(columns).toBe(2);
+  });
+
+  test('SegmentedControl thumb moves to the segment that was picked', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const seg = page.locator('#seg .seg');
+    await seg.locator('.seg-btn').nth(1).click();
+    const [thumb, button] = await seg.evaluate(el => [el.querySelector('.seg-thumb'), el.querySelectorAll('.seg-btn')[1]]
+      .map(node => { const r = node.getBoundingClientRect(); return [Math.round(r.left), Math.round(r.width)]; }));
+    expect(thumb).toEqual(button);
+  });
+
   test('SegmentedControl thumb follows a segment that changes size', async ({ page }) => {
     const seg = page.locator('#seg .seg');
-    await expect(seg).toHaveAttribute('data-ready', 'true');
     await page.addStyleTag({ content: '#seg .seg-btn { padding: 0 40px; }' });
     await expect.poll(() => seg.evaluate(el =>
       Math.round(el.querySelector('.seg-thumb').getBoundingClientRect().width - el.querySelector('.seg-btn').getBoundingClientRect().width))).toBe(0);

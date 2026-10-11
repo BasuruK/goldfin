@@ -1,0 +1,111 @@
+/* Shared look, not Button.svelte's own. Dialog, DropdownMenu, ConfirmDialog and
+   LoadingGallery all write class="btn" on their own elements, so this rule cannot
+   move into Button.svelte until every one of them routes through <Button>. */
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  padding: 0 11px;
+  border: 1px solid var(--uline);
+  border-radius: 7px;
+  background: var(--ubg);
+  color: var(--ufg);
+  font: 600 13px var(--font-ui);
+  cursor: pointer;
+  white-space: nowrap;
+  /* A colour fade is not motion, so it stays outside the motion query. */
+  transition:
+    background-color var(--duration-press) ease,
+    opacity var(--duration-press) ease;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover { background: var(--uwell); }
+  }
+
+  /* `transform`, not `scale`: the loading spinner is centred with `translate`
+     precisely so it does not collide with this, and e2e pins the settled matrix. */
+  &:active:not(:disabled) { transform: scale(.97); }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: .45;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition:
+      background-color var(--duration-press) ease,
+      opacity var(--duration-press) ease,
+      transform var(--duration-press) var(--ease-out);
+  }
+}
+
+.btn.icon {
+  width: 30px;
+  padding: 0;
+  justify-content: center;
+  color: var(--ufg2);
+}
+
+/* The unboxed variants, link and text, have nothing to shrink, so they answer
+   a press with a colour step instead of a scale. */
+.btn.link {
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--key);
+  font-size: 12px;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover { color: var(--ufg); }
+  }
+
+  &:active:not(:disabled) { color: var(--ufg3); }
+}
+
+.btn.text {
+  height: 26px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ufg3);
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover { color: var(--ufg2); }
+  }
+
+  &:active:not(:disabled) { color: var(--ufg); }
+}
+
+.btn.primary {
+  background: var(--uprim);
+  color: var(--uprimfg);
+  border-color: transparent;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover { opacity: .88; }
+  }
+}
+
+.btn.warning {
+  background: var(--warn);
+  color: var(--uprimfg);
+  border-color: transparent;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover { filter: brightness(.9); }
+  }
+}
+
+.btn.danger {
+  background: var(--bad);
+  color: var(--uprimfg);
+  border-color: transparent;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover { filter: brightness(.9); }
+  }
+}

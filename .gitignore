@@ -2,6 +2,8 @@
 .env
 .env.*
 node_modules/
+.svelte-kit/
+/build/
 
 # local agent runtime artefacts (canvas assets etc.)
 .mavis/
@@ -19,3 +21,5 @@ prototypes/UI improvement discussion.zip
 /playwright/.cache/
 /playwright/.auth/
 .cursor/hooks/state/continual-learning.json
+
+.codacy/
