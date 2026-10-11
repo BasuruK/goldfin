@@ -3,9 +3,17 @@
   import DialogHeader from './DialogHeader.svelte';
   import DialogBody from './DialogBody.svelte';
   import DialogFooter from './DialogFooter.svelte';
+  import Icon from './Icon.svelte';
   import { createConfirmation } from './confirmation.js';
-  let { open = $bindable(false), trigger, title, description, action = 'Confirm',
+  let { open = $bindable(false), trigger, iconTrigger = false, title, description, action = 'Confirm',
     tone = 'neutral', icon = 'link', onConfirm = () => {}, onResult, children, ...rest } = $props();
+  const triggerClass = $derived(
+    iconTrigger
+      ? `btn icon dialog-icon-trigger${tone === 'bad' ? ' dialog-icon-trigger--bad' : ''}`
+      : tone === 'bad'
+        ? 'btn danger dialog-trigger'
+        : 'btn dialog-trigger'
+  );
   let busy = $state(false);
   let error = $state('');
   const result = createConfirmation(value => onResult?.(value));
@@ -33,8 +41,12 @@
   function holdWhileBusy(event) { if (busy) event.preventDefault(); }
 </script>
 <Primitive.Root {...rest} bind:open onOpenChange={changed}>
-  <Primitive.Trigger class={tone === 'bad' ? 'btn danger dialog-trigger' : 'btn dialog-trigger'}>
-    {trigger}
+  <Primitive.Trigger class={triggerClass} aria-label={iconTrigger ? trigger : undefined}>
+    {#if iconTrigger}
+      <Icon name={icon} size={16} />
+    {:else}
+      {trigger}
+    {/if}
   </Primitive.Trigger>
   <Primitive.Portal>
     <Primitive.Overlay class="gf-overlay" />

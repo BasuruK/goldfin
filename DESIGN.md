@@ -1,3 +1,83 @@
+---
+name: Goldfin
+description: Dark-first cool-neutral tooling for document extraction evaluation.
+colors:
+  page-bg: "oklch(18.196% 0.0044 264.46)"
+  surface-raised: "oklch(20.924% 0.0061 271.12)"
+  surface-recessed: "oklch(19.595% 0.0062 271.09)"
+  border: "oklch(29.312% 0.0095 268.35)"
+  text-strong: "oklch(96.696% 0.0029 264.54)"
+  text-default: "oklch(79.999% 0.0126 259.82)"
+  text-muted: "oklch(65.792% 0.0151 258.36)"
+  primary-fill: "oklch(96.696% 0.0029 264.54)"
+  primary-on: "oklch(18.196% 0.0044 264.46)"
+  accent-key: "oklch(71.374% 0.1434 254.62)"
+  semantic-ok: "oklch(77.294% 0.1535 163.22)"
+  semantic-bad: "oklch(71.063% 0.1661 22.22)"
+  semantic-warn: "oklch(83.686% 0.1644 84.43)"
+  pill-neutral: "oklch(25.618% 0.0098 268.29)"
+typography:
+  ui:
+    fontFamily: "Urbanist, system-ui, sans-serif"
+    fontSize: "13px"
+    fontWeight: 600
+    lineHeight: 1.5
+  page-title:
+    fontFamily: "Urbanist, system-ui, sans-serif"
+    fontSize: "22px"
+    fontWeight: 600
+    lineHeight: 1.25
+  body:
+    fontFamily: "'IBM Plex Sans', system-ui, sans-serif"
+    fontSize: "13px"
+    fontWeight: 400
+    lineHeight: 1.5
+  mono:
+    fontFamily: "'IBM Plex Mono', monospace"
+    fontSize: "11px"
+    fontWeight: 400
+    lineHeight: 1.5
+rounded:
+  button: "7px"
+  container: "8px"
+  pill: "999px"
+spacing:
+  xs: "4px"
+  sm: "8px"
+  md: "16px"
+  lg: "24px"
+  shell-gap: "32px"
+components:
+  button-neutral:
+    backgroundColor: "{colors.page-bg}"
+    textColor: "{colors.text-strong}"
+    rounded: "{rounded.button}"
+    padding: "0 11px"
+    height: "30px"
+  button-neutral-hover:
+    backgroundColor: "{colors.surface-recessed}"
+  button-primary:
+    backgroundColor: "{colors.primary-fill}"
+    textColor: "{colors.primary-on}"
+    rounded: "{rounded.button}"
+    padding: "0 11px"
+    height: "30px"
+  button-danger:
+    backgroundColor: "{colors.semantic-bad}"
+    textColor: "{colors.primary-on}"
+    rounded: "{rounded.button}"
+    padding: "0 11px"
+    height: "30px"
+  chip:
+    backgroundColor: "{colors.pill-neutral}"
+    textColor: "{colors.text-strong}"
+    rounded: "{rounded.pill}"
+    padding: "0 11px"
+    height: "28px"
+---
+
+<!-- Impeccable document pass: YAML frontmatter is normative for tools; the handoff contract below remains binding for humans and agents. Re-run `/impeccable document` after large visual changes. -->
+
 # Goldfin Design System
 
 Version: 1.0, source handoff, 2026-10-04.
@@ -164,6 +244,8 @@ The shared CSS currently includes global selectors, legacy reference rules and s
 ## Icons
 
 Use `Icon.svelte` for the existing family: 24-unit viewbox, outline strokes, round caps/joins and 1.8 stroke width. Typical controls use 16–18px glyphs. Decorative glyphs are hidden from assistive technology; their parent control still needs an accessible name. Do not use emoji as functional icons.
+
+When a control shows both an icon and a text label, **icon first, label second** in markup and in reading order. Do not trail the label with a decorative arrow unless the design artefact calls for it.
 
 ## Component contract
 

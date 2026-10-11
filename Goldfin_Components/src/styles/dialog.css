@@ -95,9 +95,29 @@
   color: var(--ufg);
 }
 
+.modal-head-end {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  margin-inline-start: auto;
+}
+
 .modal-x {
   flex: none;
-  margin-inline-start: auto;
+}
+
+.dialog-icon-trigger--bad {
+  color: var(--bad);
+  border-color: transparent;
+  background: transparent;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .dialog-icon-trigger--bad:hover {
+    background: var(--badbg);
+    color: var(--bad);
+  }
 }
 
 .modal-body {
@@ -119,9 +139,43 @@
 .modal-foot {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: 8px;
   padding: 18px;
   border-block-start: 1px solid var(--urunline);
+}
+
+/* bits-ui Close/Cancel/Action must match .btn geometry in every dialog foot. */
+.modal-foot :where(.btn, button.btn) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: 30px;
+  min-height: 30px;
+  padding: 0 11px;
+  font: 600 13px/1 var(--font-ui);
+  line-height: 1;
+  white-space: nowrap;
+  border-style: solid;
+  border-width: 1px;
+  border-color: var(--uline);
+}
+
+.modal-foot :where(.btn.primary, button.btn.primary) {
+  border-color: transparent;
+}
+
+/* Cancel + primary share equal column width so neither shrinks to its label. */
+.modal-foot-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(4.75rem, 1fr));
+  gap: 8px;
+}
+
+.modal-foot-actions :where(.btn, button.btn) {
+  inline-size: 100%;
+  min-inline-size: 0;
 }
 
 .modal-copy { --od-gap: 8px; }

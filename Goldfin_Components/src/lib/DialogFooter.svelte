@@ -3,6 +3,8 @@
   let { cancel, children } = $props();
 </script>
 <div class="modal-foot">
-  {@render cancel?.()}
-  {@render children?.()}
+  <div class="modal-foot-actions">
+    {@render cancel?.()}
+    {@render children?.()}
+  </div>
 </div>

@@ -16,7 +16,8 @@ export default defineConfig({
     // `#lib` is declared here rather than left to SvelteKit: this project keeps its
     // config inline instead of in svelte.config.js, and kit does not register the
     // alias for the client bundle without one.
-    alias: { $goldfin: goldfin, '#lib': lib },
+    // `$lib` is required by Impeccable live-inject; app code prefers `#lib`.
+    alias: { $goldfin: goldfin, '#lib': lib, $lib: lib },
     // The library is consumed from source, so without this its own node_modules
     // would put a second svelte and bits-ui in the bundle. Two runtimes means
     // broken context. Dedupe forces one copy, the app's.

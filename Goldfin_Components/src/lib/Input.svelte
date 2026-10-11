@@ -1,8 +1,8 @@
 <script>
   import { useId } from 'bits-ui';
   let { id = useId(), value = $bindable(''), label, description = '', message = '',
-    error = '', validate, onblur, oninput, type = 'text', disabled = false, required = false,
-    affix = false, prefix, suffix, ...rest } = $props();
+    error = '', inlineMessage = false, validate, onblur, oninput, type = 'text', disabled = false,
+    required = false, affix = false, prefix, suffix, ...rest } = $props();
   let localError = $state('');
   const shownError = $derived(error || localError);
   /* The framed input is styled by `.price-input input`, so it carries no class of its own. */
@@ -18,7 +18,16 @@
 </script>
 <div class="field" data-invalid={shownError || undefined}>
   <div class="field-content">
-    <label class="label" for={id}>{label}{required ? ' *' : ''}</label>
+    <div class="label-row" class:label-row--with-msg={inlineMessage && (shownError || message)}>
+      <label class="label" for={id}>{label}{required ? ' *' : ''}</label>
+      {#if inlineMessage && (shownError || message)}
+        <span
+          class={shownError ? 'field-msg error' : 'field-msg ok'}
+          id={id + '-message'}
+          role={shownError ? 'alert' : undefined}
+        >{shownError || message}</span>
+      {/if}
+    </div>
     {#if description}<p class="field-desc" id={id + '-description'}>{description}</p>{/if}
   </div>
   {#snippet control()}<input {...controlAttrs} {id} {type} bind:value {disabled} {required}
@@ -36,7 +45,7 @@
   {:else}
     {@render control()}
   {/if}
-  {#if shownError || message}
+  {#if !inlineMessage && (shownError || message)}
     <p
       class={shownError ? 'field-msg error' : 'field-msg ok'}
       id={id + '-message'}

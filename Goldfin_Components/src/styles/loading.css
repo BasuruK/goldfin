@@ -183,6 +183,14 @@
   animation: goldfin-spin var(--spinner-cycle) linear infinite;
 }
 
+.btn .btn-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  line-height: 1;
+}
+
 .btn-label.is-hidden { visibility: hidden; }
 
 .loading-content[inert] { pointer-events: none; }
