@@ -175,6 +175,10 @@ test.describe('showcase', () => {
 
   // Icons are the shared Lineicons <Icon>, not inline SVG, so the trigger's
   // chevron is the .icon span and that span is what turns when the menu opens.
+  test('table file icons are muted to --ufg2', async ({ page }) => {
+    await expect(page.locator('.table-name .icon').first()).toHaveCSS('color', await cssVar(page, '--ufg2'));
+  });
+
   test('the dialog header icon keeps its drop shadow', async ({ page }) => {
     await page.getByRole('button', { name: 'Delete suite' }).click();
     await expect(page.locator('.modal-icon .icon').first()).toHaveCSS('filter', /drop-shadow/);
