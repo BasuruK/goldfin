@@ -82,6 +82,8 @@
   @media (hover: hover) and (pointer: fine) {
     &:hover { color: var(--key); }
   }
+
+  &:active { color: var(--ufg2); }
 }
 
 .table-sort svg {

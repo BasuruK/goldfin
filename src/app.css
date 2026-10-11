@@ -378,7 +378,12 @@
 /* The well stays 34px; the hit area grows to 44px around it. The menu's clip
    trims about 1px of it on the inline-start side, which is harmless. */
 .theme-swap { position: relative; }
-.theme-swap::after { content: ''; position: absolute; inset: min(0px, (100% - 44px) / 2); }
+.theme-swap::after {
+  content: '';
+  position: absolute;
+  inset-block: min(0px, (100% - 44px) / 2);
+  inset-inline: min(0px, (100% - 44px) / 2);
+}
 @media (hover: hover) and (pointer: fine) {
   .theme-swap:hover { background: var(--hover); }
 }

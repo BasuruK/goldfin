@@ -213,6 +213,7 @@
   transform: translate(-50%, -50%);
   margin: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
   animation: modal-fade var(--duration-menu) var(--ease-out);
 
   @media (max-width: 767px) {
