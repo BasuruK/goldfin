@@ -1,0 +1,288 @@
+/* The showcase page only: index.html and the example galleries. No library
+   component reads these classes. */
+
+/* The in-page index jumps to sections under this header, so the scroll root
+   reserves room for it. The offset lives outside the motion query, so people
+   who ask for reduced motion still get the clearance. */
+html { scroll-padding-block-start: var(--page-header-offset, 24px); }
+
+/* One token for the page measure; the 1440px step widens it rather than
+   adding a second column template. */
+.page {
+  --page-max: 900px;
+  width: 100%;
+  min-width: 0;
+  max-width: var(--page-max);
+  margin-inline: auto;
+  padding-block: 48px 96px;
+  padding-inline: 24px;
+
+  @media (max-width: 767px) {
+    padding: 24px 16px;
+  }
+
+  @media (min-width: 1440px) {
+    --page-max: 1200px;
+  }
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-block-end: 48px;
+  padding-block-end: 24px;
+  border-block-end: 1px solid var(--uline);
+
+  @media (max-width: 767px) {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+}
+
+.page-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ufg);
+}
+
+.page-subtitle {
+  margin-block: 4px 0;
+  margin-inline: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ufg3);
+  letter-spacing: .04em;
+}
+
+/* Intrinsic grids: the column count follows the room available, so they need
+   no per-breakpoint column ladder. `min(100%, …)` keeps a single column from
+   exceeding its container on a narrow screen. */
+.grid-2,
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--grid-min)), 1fr));
+  gap: 12px;
+}
+
+.grid-2 { --grid-min: 320px; }
+.grid-3 { --grid-min: 240px; }
+
+.grid-2 > *,
+.grid-3 > * { min-width: 0; }
+
+.grid-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.gf-index {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-block-end: 24px;
+}
+
+.gf-index a {
+  padding-block: 8px;
+  color: var(--ufg2);
+  text-decoration: none;
+
+  @media (pointer: coarse) {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 44px;
+    padding-block: 0;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      color: var(--ufg);
+      text-decoration: underline;
+    }
+  }
+}
+
+/* The skip link is off-screen until it takes focus. That offset is how it is
+   hidden, not decoration, so it stays outside the motion query. */
+.gf-skip {
+  position: fixed;
+  inset-block-start: 8px;
+  inset-inline-start: 8px;
+  z-index: 1200;
+  padding: 8px 16px;
+  background: var(--uprim);
+  color: var(--uprimfg);
+  transform: translateY(-160%);
+
+  &:focus { transform: translateY(0); }
+}
+
+/* ── token gallery ── */
+.tone-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-block-start: 8px;
+}
+
+.tone-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ufg3);
+  width: 60px;
+}
+
+.swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.swatch {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.swatch-color {
+  height: 40px;
+  border-radius: 6px;
+  border: 1px solid var(--uline);
+}
+
+.swatch-name {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ufg3);
+}
+
+.swatch-hex {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ufg);
+  overflow-wrap: anywhere;
+}
+
+.swatch-hex.lt {
+  font-size: 10px;
+  color: var(--ufg3);
+}
+
+/* ── example galleries ── */
+
+.price-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+  gap: 10px;
+}
+
+.field-group .label { margin: 0; }
+
+.switch-card-section .section-head { flex-wrap: wrap; }
+
+.switch-card-variant-title {
+  margin-block: 24px 12px;
+  margin-inline: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ufg2);
+}
+
+.table-name {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.table-name span {
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+/* Three classes: Icon.svelte's scoped `.icon` sets `color: inherit` at two. */
+.table-name .icon.lni { color: var(--ufg2); }
+
+.data-table .table-badge {
+  block-size: 24px;
+  padding: 0 8px;
+  font-size: 12px;
+  border-radius: 5px;
+}
+
+/* Two columns at most, one when a column would drop under 320px. The count
+   follows the room, so it needs no breakpoint. */
+.loading-gallery {
+  --od-gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, max(320px, (100% - 16px) / 2)), 1fr));
+}
+
+.loading-center {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 8px;
+  min-height: 80px;
+  text-align: center;
+}
+
+.loading-badge {
+  height: 24px;
+  padding-inline: 8px;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.loading-button-stack {
+  --od-gap: 8px;
+  align-items: start;
+}
+
+.timeline-gallery { --od-gap: 16px; }
+
+.timeline-example {
+  --od-gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--uline);
+  border-radius: 8px;
+  min-width: 0;
+}
+
+.timeline-example h3 {
+  margin: 0;
+  color: var(--ufg);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.slider-gallery { --od-gap: 16px; }
+
+/* ── spacing and slots ──
+   One-off spacing in the showcase, named rather than written as an inline
+   style. Sections already own their block-end margin, so these only cover the
+   gap between two things inside one section. */
+.mt-8  { margin-block-start: 8px; }
+.mt-16 { margin-block-start: 16px; }
+.mt-24 { margin-block-start: 24px; }
+.grid-start { align-items: start; }
+
+/* A capped slot for the components that are designed at a fixed measure, such
+   as the budget bar and the run button. */
+.run-slot { max-width: 400px; }
+#run .run-slot { max-width: 320px; }
+
+/* A recessed surface for composed samples. */
+.demo-surface {
+  max-width: 400px;
+  padding: 16px;
+  border: 1px solid var(--urunline);
+  border-radius: 10px;
+  background: var(--urun);
+}

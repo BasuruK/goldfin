@@ -1,0 +1,25 @@
+/* The coarse-pointer block DESIGN.md names. Keyed to the pointer, not the
+   width: a tablet or a touch laptop is wide and still needs the thumb target. */
+@media (pointer: coarse) {
+  .ctl {
+    min-height: 44px;
+    align-items: center;
+  }
+
+  .gf-control { margin-block-start: 0; }
+
+  .dd-trigger,
+  .btn,
+  .seg-btn,
+  .tab,
+  .table-sort,
+  .input,
+  .price-input,
+  .copy-btn,
+  .dd-opt,
+  .theme-btn,
+  .loading-search,
+  .timeline-details summary { min-height: 44px; }
+
+  .run-btn { height: 44px; }
+}

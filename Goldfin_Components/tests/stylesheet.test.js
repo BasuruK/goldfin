@@ -2,7 +2,9 @@ import test from 'node:test'; import assert from 'node:assert/strict'; import { 
 const read = (p) => readFileSync(new URL(p, import.meta.url), 'utf8');
 // The stylesheet is split by responsibility. A rule that belongs to one component now lives
 // in that component, so this file reads every stylesheet plus the component that owns it.
-const styles = () => ['../src/layout.css', '../src/tokens.css', '../src/components.css']
+const componentSheets = () => [...read('../src/components.css').matchAll(/@import "\.\/([^"]+)"/g)]
+  .map(([, path]) => `../src/${path}`);
+const styles = () => ['../src/layout.css', '../src/tokens.css', ...componentSheets()]
   .map(read).join('\n');
 // ponytail: covers SplitPane only. A component's class: directive and the rule it targets are
 // one contract split across two files, and nothing in the build fails when they drift apart.

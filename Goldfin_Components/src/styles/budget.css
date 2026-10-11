@@ -1,0 +1,46 @@
+.budget-bar {
+  display: flex;
+  block-size: 8px;
+  margin-block-start: 4px;
+  border-radius: 4px;
+  background: var(--urunline);
+  overflow: clip;
+}
+
+.budget-bar .p { background: var(--key); }
+.budget-bar .c { background: var(--num); }
+
+.legend {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 10px;
+  margin-block-start: 10px;
+  font-size: 13.5px;
+}
+
+.legend .k {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--ufg2);
+}
+
+.legend .sw {
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 2px;
+}
+
+.legend .v {
+  text-align: end;
+  font: 400 13px var(--font-mono);
+  color: var(--ufg);
+}
+
+.legend .k.dim { color: var(--ufg3); }
+
+/* Legend swatches take their colour from a class so the bar and the legend
+   cannot disagree about it. */
+.legend .sw-key  { background: var(--key); }
+.legend .sw-num  { background: var(--num); }
+.legend .sw-rest { background: var(--urunline); }

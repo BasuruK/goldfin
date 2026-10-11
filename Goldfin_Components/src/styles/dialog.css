@@ -1,0 +1,310 @@
+/* The panel is bits-ui Dialog or AlertDialog content: the focus trap, Escape, the
+   page scroll lock and focus-return to the trigger all come from bits-ui, so the
+   only thing this component has to draw is the panel. The scrim is .gf-overlay. */
+.modal {
+  --modal-mosaic-tone: var(--key);
+  --modal-mosaic-opacity: .44;
+  --modal-header-height: 64px;
+  --modal-wave-cycle: 5000ms;
+  --modal-icon-shadow: 0 2px 3px oklch(0% 0 none / 0.32);
+  width: min(440px, calc(100% - 32px));
+  max-height: calc(100vh - 64px);
+  padding: 0;
+  border: 1px solid var(--urunline);
+  border-radius: 12px;
+  background: var(--urun);
+  color: var(--ufg2);
+  box-shadow: var(--umenushadow);
+}
+
+.modal[data-tone="bad"] { --modal-mosaic-tone: var(--bad); }
+
+.modal-head {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-height: var(--modal-header-height);
+  padding: 16px 18px;
+}
+
+/* The static mosaic, shown until Mosaic.svelte has measured the header and
+   drawn the live one. */
+.modal-head::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  border-start-start-radius: 11px;
+  border-start-end-radius: 11px;
+  background: var(--modal-mosaic-tone);
+  opacity: var(--modal-mosaic-opacity);
+  pointer-events: none;
+  -webkit-mask-image:
+    linear-gradient(to bottom, black 0 calc(var(--modal-header-height) * .48), transparent var(--modal-header-height)),
+    var(--modal-mosaic-pattern);
+  mask-image:
+    linear-gradient(to bottom, black 0 calc(var(--modal-header-height) * .48), transparent var(--modal-header-height)),
+    var(--modal-mosaic-pattern);
+  -webkit-mask-size: 100% 100%, 80px 80px;
+  mask-size: 100% 100%, 80px 80px;
+  -webkit-mask-repeat: no-repeat, repeat;
+  mask-repeat: no-repeat, repeat;
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+
+.modal-head > * {
+  position: relative;
+  z-index: 1;
+}
+
+.modal-head .modal-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.modal-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: 30px;
+  block-size: 30px;
+  border-radius: 8px;
+  background: var(--badbg);
+  color: var(--bad);
+}
+
+/* The icon is a Lineicons glyph, and drop-shadow follows the glyph's shape. */
+.modal-icon .icon { filter: drop-shadow(var(--modal-icon-shadow)); }
+
+.modal-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--ufg);
+}
+
+.modal-title .mono,
+.modal-desc .mono {
+  font: 500 13px var(--font-mono);
+  color: var(--ufg);
+}
+
+.modal-x {
+  flex: none;
+  margin-inline-start: auto;
+}
+
+.modal-body {
+  padding-block: 10px 12px;
+  padding-inline: 18px;
+}
+
+.modal-desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.modal-head .modal-desc {
+  color: var(--ufg2);
+  overflow-wrap: anywhere;
+}
+
+.modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 18px;
+  border-block-start: 1px solid var(--urunline);
+}
+
+.modal-copy { --od-gap: 8px; }
+
+.modal-confirm .modal-head { gap: 12px; }
+
+.modal-confirm .modal-icon {
+  background: var(--upill);
+  color: var(--ufg);
+}
+
+.modal-confirm[data-tone="bad"] .modal-icon {
+  color: var(--bad);
+  background: var(--badbg);
+}
+
+.modal-confirm .modal-foot {
+  margin: 0;
+  padding: 12px 18px;
+}
+
+.dialog-trigger { align-self: flex-start; }
+
+.modal-head.has-mosaic::before { display: none; }
+
+.modal-head > .modal-mosaic {
+  position: absolute;
+  z-index: 0;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  display: grid;
+  grid-template-columns: repeat(var(--mosaic-columns, 1), 8px);
+  grid-auto-rows: 8px;
+  gap: 2px;
+  align-content: start;
+  border-start-start-radius: 11px;
+  border-start-end-radius: 11px;
+  overflow: clip;
+  color: var(--modal-mosaic-tone);
+  opacity: var(--modal-mosaic-opacity);
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom, black 0 calc(var(--modal-header-height) * .48), transparent var(--modal-header-height));
+  mask-image: linear-gradient(to bottom, black 0 calc(var(--modal-header-height) * .48), transparent var(--modal-header-height));
+}
+
+.modal-mosaic-cell {
+  display: block;
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 1px;
+  background: currentColor;
+  opacity: var(--tile-base);
+  animation: mosaic-wave var(--modal-wave-cycle) ease-in-out var(--tile-delay) infinite;
+  animation-play-state: paused;
+}
+
+@keyframes mosaic-wave {
+  0%, 24%, 100% { opacity: var(--tile-base); }
+  12% { opacity: var(--tile-peak); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal .modal-mosaic-cell {
+    animation: none !important;
+    opacity: var(--tile-base);
+  }
+}
+
+/* The scrim sits under the panel and only fades. */
+.gf-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: var(--scrim);
+  -webkit-backdrop-filter: blur(5px) saturate(.85);
+  backdrop-filter: blur(5px) saturate(.85);
+  animation: scrim-in var(--duration-menu) ease;
+}
+
+/* `overflow-y: auto` stays auto, not clip: this is the dialog's scroll area and
+   it must not push the page behind it. */
+.gf-modal {
+  position: fixed;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  z-index: 1001;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  overflow-y: auto;
+  animation: modal-in var(--duration-menu) var(--ease-out);
+
+  @media (max-width: 767px) {
+    max-width: calc(100vw - 32px);
+  }
+}
+
+.gf-modal .modal-mosaic-cell { animation-play-state: running; }
+
+.gf-dialog-error {
+  padding-block: 0 12px;
+  padding-inline: 18px;
+}
+
+/* modal-in animates `transform` from an untransformed state, so it restates
+   the centring translate from .gf-modal. */
+@keyframes modal-in {
+  from { opacity: 0; transform: translate(-50%, -50%) translateY(10px) scale(.985); }
+}
+
+@keyframes scrim-in {
+  from { opacity: 0; }
+}
+
+/* The 80px tile behind the static mosaic: an 8 x 8 grid of squares at fixed
+   opacities. It stays inline so an opening dialog never waits on a fetch. */
+.modal {
+  --modal-mosaic-pattern: url("data:image/svg+xml,\
+<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'>\
+    <rect x='1' y='1' width='8' height='8' rx='1' fill='white' opacity='0.28'/>\
+    <rect x='11' y='1' width='8' height='8' rx='1' fill='white' opacity='0.6'/>\
+    <rect x='21' y='1' width='8' height='8' rx='1' fill='white' opacity='0.18'/>\
+    <rect x='31' y='1' width='8' height='8' rx='1' fill='white' opacity='0.78'/>\
+    <rect x='41' y='1' width='8' height='8' rx='1' fill='white' opacity='0.34'/>\
+    <rect x='51' y='1' width='8' height='8' rx='1' fill='white' opacity='0.48'/>\
+    <rect x='61' y='1' width='8' height='8' rx='1' fill='white' opacity='0.86'/>\
+    <rect x='71' y='1' width='8' height='8' rx='1' fill='white' opacity='0.22'/>\
+    <rect x='1' y='11' width='8' height='8' rx='1' fill='white' opacity='0.68'/>\
+    <rect x='11' y='11' width='8' height='8' rx='1' fill='white' opacity='0.16'/>\
+    <rect x='21' y='11' width='8' height='8' rx='1' fill='white' opacity='0.46'/>\
+    <rect x='31' y='11' width='8' height='8' rx='1' fill='white' opacity='0.3'/>\
+    <rect x='41' y='11' width='8' height='8' rx='1' fill='white' opacity='0.84'/>\
+    <rect x='51' y='11' width='8' height='8' rx='1' fill='white' opacity='0.24'/>\
+    <rect x='61' y='11' width='8' height='8' rx='1' fill='white' opacity='0.56'/>\
+    <rect x='71' y='11' width='8' height='8' rx='1' fill='white' opacity='0.4'/>\
+    <rect x='1' y='21' width='8' height='8' rx='1' fill='white' opacity='0.32'/>\
+    <rect x='11' y='21' width='8' height='8' rx='1' fill='white' opacity='0.76'/>\
+    <rect x='21' y='21' width='8' height='8' rx='1' fill='white' opacity='0.22'/>\
+    <rect x='31' y='21' width='8' height='8' rx='1' fill='white' opacity='0.54'/>\
+    <rect x='41' y='21' width='8' height='8' rx='1' fill='white' opacity='0.14'/>\
+    <rect x='51' y='21' width='8' height='8' rx='1' fill='white' opacity='0.64'/>\
+    <rect x='61' y='21' width='8' height='8' rx='1' fill='white' opacity='0.38'/>\
+    <rect x='71' y='21' width='8' height='8' rx='1' fill='white' opacity='0.88'/>\
+    <rect x='1' y='31' width='8' height='8' rx='1' fill='white' opacity='0.56'/>\
+    <rect x='11' y='31' width='8' height='8' rx='1' fill='white' opacity='0.26'/>\
+    <rect x='21' y='31' width='8' height='8' rx='1' fill='white' opacity='0.8'/>\
+    <rect x='31' y='31' width='8' height='8' rx='1' fill='white' opacity='0.18'/>\
+    <rect x='41' y='31' width='8' height='8' rx='1' fill='white' opacity='0.44'/>\
+    <rect x='51' y='31' width='8' height='8' rx='1' fill='white' opacity='0.72'/>\
+    <rect x='61' y='31' width='8' height='8' rx='1' fill='white' opacity='0.2'/>\
+    <rect x='71' y='31' width='8' height='8' rx='1' fill='white' opacity='0.5'/>\
+    <rect x='1' y='41' width='8' height='8' rx='1' fill='white' opacity='0.18'/>\
+    <rect x='11' y='41' width='8' height='8' rx='1' fill='white' opacity='0.48'/>\
+    <rect x='21' y='41' width='8' height='8' rx='1' fill='white' opacity='0.34'/>\
+    <rect x='31' y='41' width='8' height='8' rx='1' fill='white' opacity='0.66'/>\
+    <rect x='41' y='41' width='8' height='8' rx='1' fill='white' opacity='0.24'/>\
+    <rect x='51' y='41' width='8' height='8' rx='1' fill='white' opacity='0.42'/>\
+    <rect x='61' y='41' width='8' height='8' rx='1' fill='white' opacity='0.78'/>\
+    <rect x='71' y='41' width='8' height='8' rx='1' fill='white' opacity='0.3'/>\
+    <rect x='1' y='51' width='8' height='8' rx='1' fill='white' opacity='0.74'/>\
+    <rect x='11' y='51' width='8' height='8' rx='1' fill='white' opacity='0.22'/>\
+    <rect x='21' y='51' width='8' height='8' rx='1' fill='white' opacity='0.58'/>\
+    <rect x='31' y='51' width='8' height='8' rx='1' fill='white' opacity='0.36'/>\
+    <rect x='41' y='51' width='8' height='8' rx='1' fill='white' opacity='0.82'/>\
+    <rect x='51' y='51' width='8' height='8' rx='1' fill='white' opacity='0.16'/>\
+    <rect x='61' y='51' width='8' height='8' rx='1' fill='white' opacity='0.46'/>\
+    <rect x='71' y='51' width='8' height='8' rx='1' fill='white' opacity='0.62'/>\
+    <rect x='1' y='61' width='8' height='8' rx='1' fill='white' opacity='0.4'/>\
+    <rect x='11' y='61' width='8' height='8' rx='1' fill='white' opacity='0.84'/>\
+    <rect x='21' y='61' width='8' height='8' rx='1' fill='white' opacity='0.26'/>\
+    <rect x='31' y='61' width='8' height='8' rx='1' fill='white' opacity='0.48'/>\
+    <rect x='41' y='61' width='8' height='8' rx='1' fill='white' opacity='0.6'/>\
+    <rect x='51' y='61' width='8' height='8' rx='1' fill='white' opacity='0.32'/>\
+    <rect x='61' y='61' width='8' height='8' rx='1' fill='white' opacity='0.18'/>\
+    <rect x='71' y='61' width='8' height='8' rx='1' fill='white' opacity='0.72'/>\
+    <rect x='1' y='71' width='8' height='8' rx='1' fill='white' opacity='0.62'/>\
+    <rect x='11' y='71' width='8' height='8' rx='1' fill='white' opacity='0.3'/>\
+    <rect x='21' y='71' width='8' height='8' rx='1' fill='white' opacity='0.7'/>\
+    <rect x='31' y='71' width='8' height='8' rx='1' fill='white' opacity='0.2'/>\
+    <rect x='41' y='71' width='8' height='8' rx='1' fill='white' opacity='0.5'/>\
+    <rect x='51' y='71' width='8' height='8' rx='1' fill='white' opacity='0.8'/>\
+    <rect x='61' y='71' width='8' height='8' rx='1' fill='white' opacity='0.36'/>\
+    <rect x='71' y='71' width='8' height='8' rx='1' fill='white' opacity='0.24'/>\
+</svg>");
+}

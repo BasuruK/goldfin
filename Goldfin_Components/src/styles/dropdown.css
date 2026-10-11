@@ -1,0 +1,137 @@
+/* The trigger is the anchor; the menu is portalled and positioned by bits-ui,
+   so only its look lives here. */
+.dd {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.dd-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 36px;
+  padding-block: 0;
+  padding-inline: 12px 10px;
+  text-align: start;
+  cursor: pointer;
+  border: 1px solid var(--urunline);
+  border-radius: 8px;
+  background: var(--urunfield);
+  color: var(--ufg);
+  font: 400 13px var(--font-mono);
+  transition: border-color var(--duration-ui) ease;
+
+  &[aria-expanded="true"] { border-color: var(--ufg3); }
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover { border-color: var(--ufg3); }
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .dd-trigger .icon {
+    transform: none;
+    transition: transform var(--duration-ui) var(--ease-out);
+  }
+
+  .dd-trigger[aria-expanded="true"] .icon { transform: rotate(180deg); }
+}
+
+.dd-label { overflow-wrap: anywhere; }
+
+.dd-menu {
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--urunline);
+  border-radius: 10px;
+  background: var(--umenu);
+  box-shadow: var(--umenushadow);
+  /* Stays visible: clipping here would cut the menu's own 32px-blur shadow. */
+  overflow: visible;
+}
+
+.dd-opt {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding-block: 8px;
+  padding-inline: 8px 10px;
+  border: 0;
+  border-radius: 7px;
+  text-align: start;
+  background: transparent;
+  cursor: pointer;
+  color: var(--ufg);
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover { background: var(--upill); }
+  }
+
+  &[aria-selected="true"] { background: var(--upill); }
+}
+
+.dd-opt .check {
+  color: var(--ufg);
+  font-size: 12px;
+  text-align: center;
+}
+
+.dd-lead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.dd-lead .dot {
+  font-size: 10px;
+  line-height: 1;
+}
+
+.dd-opt .text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.dd-opt .id {
+  font: 400 13px var(--font-mono);
+  color: var(--ufg);
+}
+
+.dd-opt .note {
+  font: 500 12px var(--font-ui);
+  color: var(--ufg3);
+}
+
+/* A scroll area: the menu keeps its own overscroll and stops the page behind
+   it from moving. Scrollbar-gutter is deliberate here, a short list must not
+   shift the options when it grows. */
+.gf-menu.dd-menu {
+  position: relative;
+  inset: auto;
+  z-index: 1100;
+  width: var(--bits-select-anchor-width);
+  min-width: 180px;
+  max-width: calc(100vw - 32px);
+  max-height: min(320px, var(--bits-select-content-available-height, 320px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.gf-menu [data-highlighted] { background: var(--upill); }
+
+.gf-menu [data-disabled] {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.gf-actions .dd-opt { display: block; }

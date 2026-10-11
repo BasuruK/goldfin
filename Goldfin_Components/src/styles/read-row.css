@@ -1,0 +1,21 @@
+.row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ufg2);
+}
+
+.row .read {
+  font: 400 12.5px var(--font-mono);
+  color: var(--ufg3);
+}
+
+.meta {
+  font: 400 12px var(--font-mono);
+  color: var(--ufg3);
+  white-space: nowrap;
+}
+
+.meta.ok { color: var(--ok); }
+.meta.bad { color: var(--bad); }

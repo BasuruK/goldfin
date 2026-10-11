@@ -1,0 +1,26 @@
+.theme-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--uline);
+  border-radius: 8px;
+  background: var(--usurf);
+  color: var(--ufg);
+  font: 600 13px var(--font-ui);
+  cursor: pointer;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover { background: var(--uwell); }
+  }
+
+  &:active { transform: scale(.97); }
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition:
+      background-color var(--duration-press) ease,
+      transform var(--duration-press) var(--ease-out);
+  }
+}

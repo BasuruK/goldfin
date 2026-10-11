@@ -1,0 +1,99 @@
+/* The grip is an inline SVG in Slider.svelte painted with currentColor, so it
+   follows --uprimfg across themes on its own. */
+.slider-field {
+  --od-gap: 0px;
+  --slider-track: 4px;
+  --slider-thumb-width: 28px;
+  --slider-thumb-height: 16px;
+  --slider-grip-width: 20px;
+  --slider-grip-height: 10px;
+  --slider-hit: 32px;
+
+  @media (pointer: coarse) {
+    --slider-hit: 44px;
+  }
+}
+
+.slider-field[data-size="sm"] {
+  --slider-track: 2px;
+  --slider-thumb-width: 24px;
+  --slider-thumb-height: 12px;
+  --slider-grip-width: 16px;
+  --slider-grip-height: 8px;
+}
+
+.slider-heading { justify-content: space-between; }
+
+.slider-heading label {
+  color: var(--ufg2);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.slider-value {
+  color: var(--ufg);
+  font: 500 11px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Bits UI elements use the existing Goldfin geometry and tokens. */
+.gf-slider {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  height: var(--slider-hit);
+  touch-action: none;
+  user-select: none;
+}
+
+.gf-slider-track {
+  display: block;
+  position: relative;
+  height: var(--slider-track);
+  width: 100%;
+  border-radius: 999px;
+  background: var(--uwell);
+  box-shadow: inset 0 0 0 1px var(--urunline);
+}
+
+.gf-slider-range {
+  position: absolute;
+  height: 100%;
+  background: var(--uprim);
+  border-radius: inherit;
+}
+
+.gf-slider-thumb {
+  display: grid;
+  place-items: center;
+  width: var(--slider-thumb-width);
+  height: var(--slider-thumb-height);
+  border: 1px solid var(--uprim);
+  border-radius: 999px;
+  color: var(--uprimfg);
+  background: var(--uprim);
+  cursor: ew-resize;
+
+  &:focus-visible {
+    outline: 2px solid var(--key);
+    outline-offset: 3px;
+  }
+}
+
+.gf-slider-thumb svg {
+  width: var(--slider-grip-width);
+  height: var(--slider-grip-height);
+}
+
+.gf-slider[data-disabled] {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.gf-slider[data-disabled] .gf-slider-thumb { cursor: not-allowed; }
+
+@media (hover: hover) and (pointer: fine) {
+  .gf-slider:not([data-disabled]) .gf-slider-thumb:hover { box-shadow: 0 0 0 4px var(--hover); }
+}

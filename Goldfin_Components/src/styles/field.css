@@ -1,0 +1,90 @@
+/* The composition layer. Every control gets the same four slots: label and
+   description (.field-content), the control itself, then a message. The Field
+   owns the stack and the label styling; the control only owns its own box.
+   Siblings are spaced by the parent's gap, so no child carries a block margin
+   of its own. */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.field-set {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+/* `margin-block`, not `margin-block-end`: this is a <p>, so the UA's 1em
+   margin-top has to be reset explicitly. */
+.field-legend {
+  margin-block: 0 10px;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ufg3);
+}
+
+.field-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.field-desc {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--ufg3);
+}
+
+.field .label,
+.ctl .label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ufg2);
+}
+
+.field label.label {
+  cursor: pointer;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover { color: var(--ufg); }
+  }
+}
+
+/* The Field is invalid because its control is — one source, read upward. */
+.field:has([aria-invalid="true"]) .label {
+  color: var(--bad);
+
+  /* The label hover above outranks this rule, so the colour is restated. */
+  @media (hover: hover) and (pointer: fine) {
+    &:hover { color: var(--bad); }
+  }
+}
+
+.label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.label-row .value {
+  font: 500 12.5px var(--font-mono);
+  color: var(--ufg);
+}
+
+.field-msg {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ufg3);
+}
+
+.field-msg.error { color: var(--bad); }
+.field-msg.ok { color: var(--ok); }
+.field-set .field-msg { padding-inline-start: 24px; }
