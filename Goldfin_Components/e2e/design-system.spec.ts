@@ -243,3 +243,55 @@ test('core tokens resolve in dark and light', async ({ page }) => {
 
   expect(light.bg).not.toBe(dark.bg);
 });
+
+/* ── press states on the boolean controls (DESIGN.md:154) ───────────────── */
+
+test('pressing a checkbox label presses the checkbox', async ({ page }) => {
+  const row = page.locator('.ctl[data-type="check"]:not([data-disabled="true"])').first();
+  const label = row.locator('.label');
+  await label.scrollIntoViewIfNeeded();
+  const box = await label.boundingBox();
+
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(250);
+  const pressed = await row.locator('.gf-control').evaluate((el) => getComputedStyle(el).transform);
+  await page.mouse.up();
+
+  expect(pressed).toBe('matrix(0.95, 0, 0, 0.95, 0, 0)');
+});
+
+/* ── SwitchCard outside its grid ────────────────────────────────────────── */
+
+test('a SwitchCard outside .switch-card-grid keeps its padding and gap', async ({ page }) => {
+  await page.goto('/e2e/harness.html');
+  const card = page.locator('#switch-card .switch-card');
+  await expect(card).toBeVisible();
+
+  const spacing = await card.evaluate((el) => {
+    const s = getComputedStyle(el);
+    return { padding: s.paddingInlineStart, gap: s.columnGap, radius: s.borderStartStartRadius };
+  });
+  expect(spacing).toEqual({ padding: '16px', gap: '16px', radius: '8px' });
+});
+
+/* ── reduced motion keeps the state and drops the movement (DESIGN.md:80) ── */
+
+test.describe('with reduced motion', () => {
+  test.use({ reducedMotion: 'reduce' });
+
+  test('an open dropdown still flips its chevron', async ({ page }) => {
+    const trigger = page.locator('.dd-trigger').first();
+    await trigger.click();
+    await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+
+    const a = await trigger.locator('.icon').evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).a);
+    expect(a).toBeCloseTo(-1);
+  });
+
+  test('a dialog fades in without sliding', async ({ page }) => {
+    await page.getByRole('button', { name: 'New test suite' }).click();
+    const animation = await page.locator('.gf-modal').evaluate((el) => getComputedStyle(el).animationName);
+    expect(animation).toBe('modal-fade');
+  });
+});

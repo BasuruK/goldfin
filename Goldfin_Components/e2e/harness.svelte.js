@@ -4,6 +4,7 @@ import Tabs from '../src/lib/Tabs.svelte';
 import JSONViewer from '../src/lib/JSONViewer.svelte';
 import RunButton from '../src/lib/RunButton.svelte';
 import SegmentedControl from '../src/lib/SegmentedControl.svelte';
+import SwitchCard from '../src/lib/SwitchCard.svelte';
 import HarnessTimelines from './HarnessTimelines.svelte';
 import '../src/goldfin.css';
 
@@ -30,6 +31,11 @@ mount(SegmentedControl, {
   props: { label: 'Harness segments', value: 'missing', items: [{ value: 'one', label: 'One' }, { value: 'two', label: 'Two' }] }
 });
 mount(HarnessTimelines, { target: document.getElementById('timelines') });
+// Outside any .switch-card-grid on purpose: the card must carry its own spacing.
+mount(SwitchCard, {
+  target: document.getElementById('switch-card'),
+  props: { label: 'Harness card', description: 'Standalone' }
+});
 
 window.harness = {
   setJson(value) { jsonProps.value = value; },

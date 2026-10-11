@@ -140,6 +140,7 @@ body[data-theme="dark"]  { color-scheme: dark; }
   }
 }
 
+/* stylelint-disable-next-line no-duplicate-selectors -- document behaviour, kept apart from the token list */
 :root {
   /* Lets the details disclosure animate to `height: auto` without a script. */
   interpolate-size: allow-keywords;

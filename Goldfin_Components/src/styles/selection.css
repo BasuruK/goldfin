@@ -112,6 +112,15 @@
 
 .ctl[data-size="sm"] .gf-switch[data-state="checked"] .gf-switch-thumb { transform: translateX(12px); }
 
+/* The label is a sibling of the control, not its parent. :active reaches the
+   shared .ctl from either, so pressing the text presses the control too. */
+.ctl:active :is(.gf-control, .gf-switch):not([data-disabled]) { transform: scale(.95); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .gf-control,
+  .gf-switch { transition: transform var(--duration-press) var(--ease-out); }
+}
+
 .ctl .field-content { cursor: pointer; }
 .ctl[data-disabled="true"] .field-content { cursor: not-allowed; }
 

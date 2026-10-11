@@ -213,10 +213,14 @@
   transform: translate(-50%, -50%);
   margin: 0;
   overflow-y: auto;
-  animation: modal-in var(--duration-menu) var(--ease-out);
+  animation: modal-fade var(--duration-menu) var(--ease-out);
 
   @media (max-width: 767px) {
     max-width: calc(100vw - 32px);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    animation: modal-in var(--duration-menu) var(--ease-out);
   }
 }
 
@@ -233,12 +237,17 @@
   from { opacity: 0; transform: translate(-50%, -50%) translateY(10px) scale(.985); }
 }
 
+@keyframes modal-fade {
+  from { opacity: 0; }
+}
+
 @keyframes scrim-in {
   from { opacity: 0; }
 }
 
 /* The 80px tile behind the static mosaic: an 8 x 8 grid of squares at fixed
    opacities. It stays inline so an opening dialog never waits on a fetch. */
+/* stylelint-disable-next-line no-duplicate-selectors -- kept last so the data URI does not split the panel rules */
 .modal {
   --modal-mosaic-pattern: url("data:image/svg+xml,\
 <svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'>\

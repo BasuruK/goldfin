@@ -183,6 +183,8 @@
   @media (hover: hover) and (pointer: fine) {
     &:hover { background: var(--hover); }
   }
+
+  &:active { background: color-mix(in oklch, var(--ufg) 10%, transparent); }
 }
 
 .timeline-details summary::-webkit-details-marker { display: none; }

@@ -29,15 +29,20 @@
   @media (hover: hover) and (pointer: fine) {
     &:hover { border-color: var(--ufg3); }
   }
+
+  &:active:not(:disabled) { transform: scale(.98); }
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition:
+      border-color var(--duration-ui) ease,
+      transform var(--duration-press) var(--ease-out);
+  }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .dd-trigger .icon {
-    transform: none;
-    transition: transform var(--duration-ui) var(--ease-out);
-  }
+.dd-trigger[aria-expanded="true"] .icon { transform: rotate(180deg); }
 
-  .dd-trigger[aria-expanded="true"] .icon { transform: rotate(180deg); }
+@media (prefers-reduced-motion: no-preference) {
+  .dd-trigger .icon { transition: transform var(--duration-ui) var(--ease-out); }
 }
 
 .dd-label { overflow-wrap: anywhere; }
@@ -75,6 +80,8 @@
   }
 
   &[aria-selected="true"] { background: var(--upill); }
+
+  &:active { background: color-mix(in oklch, var(--upill), var(--ufg) 8%); }
 }
 
 .dd-opt .check {

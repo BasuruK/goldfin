@@ -13,6 +13,12 @@
   font: 600 13px var(--font-ui);
   cursor: pointer;
   gap: 7px;
+
+  &:active { transform: scale(.97); }
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition: transform var(--duration-press) var(--ease-out);
+  }
 }
 
 .copy-labels {

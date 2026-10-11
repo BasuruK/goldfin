@@ -106,12 +106,12 @@
 .wave.mid   { inset-block-start: 48%; --wave-cycle: 2.6s; --delay: -1.2s; }
 .wave.front { inset-block-start: 72%; --wave-cycle: 2.1s; --delay: -.6s; }
 
-/* The water is the point of this button, so it keeps its rise and sink under
-   reduced motion; only the endless scroll and bob stop. A reader who asked for
-   less movement still sees the run finish. */
+/* Under reduced motion nothing here moves: the water fills the button for the
+   whole run and the sink, then disappears. A reader who asked for less
+   movement still sees the run start and finish. */
 @media (prefers-reduced-motion: no-preference) {
   .sea-body { animation: sea-rise 800ms cubic-bezier(.2, .8, .25, 1) both; }
-  .sea.sinking .sea-body { animation: sea-sink 1100ms cubic-bezier(.55, 0, .75, .2) both; }
+  .sea.sinking .sea-body { animation: sea-sink 1100ms var(--ease-in-out) both; }
 
   .sea-crest svg,
   .wave svg { animation: sea-scroll var(--wave-cycle, 3s) linear infinite; }
