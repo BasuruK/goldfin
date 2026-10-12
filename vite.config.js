@@ -12,6 +12,11 @@ const lib = fileURLToPath(new URL('./src/lib', import.meta.url));
 
 export default defineConfig({
   plugins: [sveltekit({ adapter: adapter() })],
+  server: {
+    fs: {
+      allow: [goldfin]
+    }
+  },
   resolve: {
     // `#lib` is declared here rather than left to SvelteKit: this project keeps its
     // config inline instead of in svelte.config.js, and kit does not register the

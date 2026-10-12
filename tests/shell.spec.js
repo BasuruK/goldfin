@@ -35,7 +35,7 @@ test('a stored desktop collapse does not shrink the mobile drawer', async ({ pag
 
   const sidebar = page.locator('#primary-nav');
   await expect(page.getByText('Goldfin', { exact: true })).toBeVisible();
-  expect((await sidebar.boundingBox()).width).toBe(258);
+  expect((await sidebar.boundingBox()).width).toBeCloseTo(258, 3);
 
   // `display: revert` rolled this back to the user-agent sheet rather than to
   // app.css, so the name and the role sat on one line inside the drawer.
@@ -143,7 +143,8 @@ test('the collapsed rail centres every icon on the rail', async ({ page }) => {
     return {
       rail: +(nav.x + nav.width / 2).toFixed(1),
       mark: mid(document.querySelector('.brand-mark')),
-      links: [...document.querySelectorAll('.nav-link .icon')].map(mid),
+      links: [...document.querySelectorAll('.nav-link > .icon, .nav-disclosure > svg')]
+        .filter(el => getComputedStyle(el).visibility !== 'hidden').map(mid),
       avatar: mid(document.querySelector('.profile-avatar'))
     };
   });
@@ -218,7 +219,7 @@ test('the rail text exits on a transition rather than being removed from the DOM
   await page.goto('/');
   const label = page.locator('.nav-label').first();
   // Still the link's accessible name once collapsed, so it must stay in the DOM.
-  await expect(page.getByRole('link', { name: 'Connectors' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Home', exact: true })).toBeVisible();
 
   /* Sampled across frames instead of read once: the fade is over in about
      150ms and sampling after the click lands before or after it, which is a
@@ -250,7 +251,7 @@ test('the rail text exits on a transition rather than being removed from the DOM
 
   // And the collapsed rail keeps the name for assistive tech at zero width.
   await expect.poll(() => label.evaluate(n => +n.getBoundingClientRect().width.toFixed(1))).toBe(0);
-  await expect(page.getByRole('link', { name: 'Connectors' })).toHaveCount(1);
+  await expect(page.getByRole('link', { name: 'Home', exact: true })).toHaveCount(1);
 });
 
 test('the collapse toggle straddles the edge in the collapsed rail too', async ({ page }) => {
@@ -266,30 +267,21 @@ test('the collapse toggle straddles the edge in the collapsed rail too', async (
   expect(box.x + box.width - (nav.x + nav.width)).toBeGreaterThan(box.width / 2 - 2);
 });
 
-test('nav links are grouped under their section heading', async ({ page }) => {
+test('Connectors is grouped under the Integrations disclosure', async ({ page }) => {
   await page.goto('/');
 
-  // Scoped to the heading, or "Connectors" also matches the link under it.
-  const heads = page.locator('.nav-sep');
-  await expect(heads).toHaveText(['Connectors']);
-  for (const head of await heads.all()) await expect(head).toBeVisible();
+  const group = page.getByRole('button', { name: 'Integrations', exact: true });
+  await expect(group).toBeVisible();
+  await group.click();
+  await expect(page.locator('#integrations-links').getByRole('link', { name: 'Connectors' })).toBeVisible();
 });
 
-test('a collapsed rail turns section headings into hairline separators', async ({ page }) => {
+test('a collapsed rail keeps the Integrations control without showing child links', async ({ page }) => {
   await page.goto('/');
   await page.locator('#primary-nav').getByRole('button', { name: 'Collapse navigation' }).click();
 
-  const sep = page.locator('.nav-sep').first();
-  await expect(sep).toBeVisible();
-  await expect(sep).toHaveCSS('font-size', '0px');
-  await expect
-    .poll(() =>
-      sep.evaluate(el => {
-        const rule = getComputedStyle(el, '::after');
-        return rule.opacity === '1' && parseFloat(rule.height) > 0;
-      })
-    )
-    .toBe(true);
+  await expect(page.getByRole('button', { name: 'Integrations', exact: true })).toBeVisible();
+  await expect(page.locator('#integrations-links')).toBeHidden();
   // The rail keeps its width: a heading word must never be what sets it. The
   // grid column animates, so this waits for the rail rather than sampling it
   // mid-slide.

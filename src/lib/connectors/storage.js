@@ -13,7 +13,11 @@ const STORAGE_KEY = 'goldfin.connectors.v1';
  *   connectionStatus: ConnectionStatus,
  *   connectionMessage: string,
  *   lastCheckedAt: string | null,
- *   updatedAt: string
+ *   updatedAt: string,
+ *   models: { id: string, enabled: boolean, source: 'sample' | 'manual' | 'discovered', verified?: boolean }[],
+ *   catalogState: 'idle' | 'loading' | 'ready' | 'unsupported' | 'failed',
+ *   catalogMessage: string,
+ *   discoveryRevision: number
  * }} ConnectorRecord
  */
 
@@ -48,6 +52,10 @@ export function createEmptyConnector(providerType) {
     connectionStatus: 'idle',
     connectionMessage: '',
     lastCheckedAt: null,
+    models: [],
+    catalogState: 'idle',
+    catalogMessage: '',
+    discoveryRevision: 0,
     updatedAt: now
   };
 }

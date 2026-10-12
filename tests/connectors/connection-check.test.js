@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   connectionFailureField,
+  finishConnectionCheck,
   validateBaseUrl,
   validateForCheck
 } from '../../src/lib/connectors/connection-check.js';
@@ -17,6 +18,28 @@ describe('validateBaseUrl', () => {
 
   it('rejects garbage', () => {
     assert.match(validateBaseUrl('not-a-url'), /valid URL/);
+  });
+});
+
+describe('finishConnectionCheck', () => {
+  const result = { status: 'ok', message: 'Reachable' };
+  const checkedAt = '2026-10-12T00:00:00Z';
+  it('applies the current reply to an unchanged connection', () => {
+    const record = { checkRequestId: 'current', connectionStatus: 'testing' };
+    assert.deepEqual(finishConnectionCheck(record, 'current', result, checkedAt), {
+      ...record, connectionStatus: 'ok', connectionMessage: 'Reachable', lastCheckedAt: checkedAt
+    });
+  });
+  it('ignores a reply after connection changes invalidate its request', () => {
+    const record = { checkRequestId: null, connectionStatus: 'idle' };
+    assert.equal(finishConnectionCheck(record, 'old', result, checkedAt), record);
+  });
+  it('ignores a superseded request', () => {
+    const record = { checkRequestId: 'new', connectionStatus: 'testing' };
+    assert.equal(finishConnectionCheck(record, 'old', result, checkedAt), record);
+  });
+  it('ignores a deleted Connector', () => {
+    assert.equal(finishConnectionCheck(undefined, 'old', result, checkedAt), undefined);
   });
 });
 

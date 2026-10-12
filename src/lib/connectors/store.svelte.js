@@ -1,6 +1,8 @@
-import { runConnectionCheck } from './connection-check.js';
+import { finishConnectionCheck, runConnectionCheck } from './connection-check.js';
 import { defaultBaseUrlFor, defaultNameFor } from './providers.js';
 import { createEmptyConnector, loadConnectors, saveConnectors } from './storage.js';
+import { applyConnectorPatch, beginDiscovery, finishDiscovery, addManualModel } from './models.js';
+import { previewModelCatalog } from './model-preview.js';
 
 /** @typedef {import('./storage.js').ConnectorRecord} ConnectorRecord */
 /** @typedef {import('./providers.js').ProviderType} ProviderType */
@@ -10,13 +12,14 @@ function persist(list) {
 }
 
 function touch(record, patch) {
-  return { ...record, ...patch, updatedAt: new Date().toISOString() };
+  return { ...applyConnectorPatch(record, patch), updatedAt: new Date().toISOString() };
 }
 
 export const connectorStore = $state({
   connectors: loadConnectors(),
   dialogOpen: false,
-  editingId: null
+  editingId: null,
+  adding: false
 });
 
 /** @returns {ConnectorRecord | null} */
@@ -31,18 +34,21 @@ export function openAddDialog() {
   draft.baseUrl = defaultBaseUrlFor('openai');
   connectorStore.connectors = [...connectorStore.connectors, draft];
   connectorStore.editingId = draft.id;
+  connectorStore.adding = true;
   connectorStore.dialogOpen = true;
 }
 
 /** @param {string} id */
 export function openEditDialog(id) {
   connectorStore.editingId = id;
+  connectorStore.adding = false;
   connectorStore.dialogOpen = true;
 }
 
 export function closeDialog() {
   connectorStore.dialogOpen = false;
   connectorStore.editingId = null;
+  connectorStore.adding = false;
 }
 
 /** @param {string} id */
@@ -92,16 +98,46 @@ export function deleteConnector(id) {
 export async function testConnectorById(id) {
   const record = connectorStore.connectors.find(c => c.id === id);
   if (!record) return;
+  const requestId = crypto.randomUUID();
 
-  patchConnector(id, { connectionStatus: 'testing', connectionMessage: 'Checking…' });
+  patchConnector(id, { connectionStatus: 'testing', connectionMessage: 'Checking…', checkRequestId: requestId });
   const result = await runConnectionCheck({
     baseUrl: record.baseUrl,
     apiKey: record.apiKey,
     providerType: record.providerType
   });
+  const current = connectorStore.connectors.find(c => c.id === id);
+  const finished = finishConnectionCheck(current, requestId, result, new Date().toISOString());
+  if (finished !== current) patchConnector(id, finished);
+}
+
+export async function previewModelsById(id) {
+  const record = connectorStore.connectors.find(c => c.id === id);
+  if (!record) return;
+  const loading = beginDiscovery(record);
+  patchConnector(id, loading);
+  let result;
+  try {
+    result = await previewModelCatalog(record.providerType);
+  } catch {
+    result = { state: 'failed', message: 'Could not load the preview. Try again.' };
+  }
+  const current = connectorStore.connectors.find(c => c.id === id);
+  if (!current) return;
+  const finished = finishDiscovery(current, loading.discoveryRevision, result);
+  if (finished !== current) patchConnector(id, finished);
+}
+
+export function setModelEnabled(id, modelId, enabled) {
+  const record = connectorStore.connectors.find(c => c.id === id);
+  if (!record || !['ready', 'unsupported'].includes(record.catalogState)) return;
   patchConnector(id, {
-    connectionStatus: result.status,
-    connectionMessage: result.message,
-    lastCheckedAt: new Date().toISOString()
+    models: (record.models ?? []).map(model => model.id === modelId ? { ...model, enabled } : model)
   });
+}
+
+export function addModelById(id, value) {
+  const record = connectorStore.connectors.find(c => c.id === id);
+  if (!record || record.catalogState === 'loading') return;
+  patchConnector(id, addManualModel(record, value));
 }

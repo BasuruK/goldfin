@@ -50,6 +50,16 @@ export function connectionFailureField(message) {
   return 'baseUrl';
 }
 
+export function finishConnectionCheck(record, requestId, result, checkedAt) {
+  if (!record || record.checkRequestId !== requestId) return record;
+  return {
+    ...record,
+    connectionStatus: result.status,
+    connectionMessage: result.message,
+    lastCheckedAt: checkedAt
+  };
+}
+
 /** @typedef {import('./providers.js').ProviderType} ProviderType */
 
 /**

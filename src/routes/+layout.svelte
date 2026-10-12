@@ -4,6 +4,7 @@
   import { Button, Icon, ThemeToggle } from '$goldfin/lib/index.js';
   import { menuFadeMs } from '#lib/motion.js';
   import RailToggleIcon from '#lib/RailToggleIcon.svelte';
+  import IntegrationsIcon from '#lib/IntegrationsIcon.svelte';
   import {
     NAV,
     closeLayers,
@@ -12,6 +13,7 @@
     shell,
     syncShell,
     toggleProfile,
+    toggleIntegrations,
     toggleSidebar,
     trackViewport
   } from '#lib/shell.svelte.js';
@@ -21,12 +23,19 @@
   let { children } = $props();
 
   const expanded = $derived(shell.sidebarMode === 'expanded');
+  const integrationsOpen = $derived(shell.integrationsOpen && (expanded || shell.mobile));
 
   const isActive = href =>
     href === '/' ? page.url.pathname === '/' : page.url.pathname.startsWith(href);
 
   $effect(() => trackViewport());
   $effect(() => syncShell());
+  $effect(() => {
+    if (page.url.pathname.startsWith('/connectors/')) {
+      shell.integrationsAnimate = false;
+      shell.integrationsOpen = true;
+    }
+  });
 
   // A closed drawer is off-screen but still focusable, so the tab order runs
   // through it. inert takes it out of both tab order and the a11y tree, and
@@ -79,8 +88,21 @@
     <div class="nav-groups">
       {#each NAV as group (group.label ?? group.items[0].href)}
         <div class="nav-group">
-          {#if group.label}<span class="nav-sep">{group.label}</span>{/if}
-          <ul class="nav-list">
+          {#if group.label}
+            <button class="nav-link nav-disclosure" type="button" title={group.label}
+                    aria-expanded={integrationsOpen}
+                    aria-controls="integrations-links" onclick={toggleIntegrations}>
+              <IntegrationsIcon /><span class="nav-label">{group.label}</span>
+              <span class="nav-chevron" data-open={integrationsOpen} data-animate={shell.integrationsAnimate} aria-hidden="true"><Icon name="chevron" size={14} /></span>
+            </button>
+          {/if}
+          <div class="nav-reveal" data-open={!group.label || integrationsOpen}
+               data-animate={!!group.label && shell.integrationsAnimate}
+               aria-hidden={!!group.label && !integrationsOpen}
+               inert={!!group.label && !integrationsOpen}>
+            <div class="nav-reveal-clip">
+          <ul class="nav-list" class:nav-sublist={!!group.label}
+              id={group.label ? 'integrations-links' : undefined}>
             {#each group.items as item (item.href)}
               <li>
                 <a class="nav-link" href={item.href} title={item.label} onclick={() => closeLayers()}
@@ -90,6 +112,8 @@
               </li>
             {/each}
           </ul>
+            </div>
+          </div>
         </div>
       {/each}
     </div>

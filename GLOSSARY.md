@@ -107,7 +107,7 @@ _Avoid_: Test, Try it, Quick run, Smoke test
 ### Talking to the outside
 
 **Connector**:
-A registered, reusable configuration for reaching an external service, in one of three **kinds**: `ocr`, `llm` and `fused`. Connectors are entities, not settings: created once and referenced by many Runs. The create form asks only for a model id, a base URL and a Credential, because that is what most Connectors are: a **preset over the shape, not a fork in it**, exactly as a Field's Comparator is a choice rather than a second Field kind. They stay **editable in place**, and it is the Run that remembers: it copies the definition it used at start (method, URL, headers, body, response path, with `{{credential}}` still a placeholder), so a fix to a response path never silently changes what an earlier Run measured. A Connector may be **fused**, serving both Stages in one call; that is a supported shape, not a degraded one, and it is not detectable from the definition, so Goldfin neither flags nor refuses it. A Connector screen holds **no relationship to a Run**: which definition a Run measured against is answered on the Run, because that is where the number was sold.
+A registered, reusable configuration for reaching an external service, in one of three **kinds**: `ocr`, `llm` and `fused`. Connectors are entities, not settings: created once and referenced by many Runs. An LLM Connector owns a base URL, a Credential and a set of model selections; a Run selects an enabled model with verified access and remembers its exact model or deployment ID. Most Connectors are still: a **preset over the shape, not a fork in it**, exactly as a Field's Comparator is a choice rather than a second Field kind. They stay **editable in place**, and it is the Run that remembers: it copies the definition it used at start (method, URL, headers, body, response path, with `{{credential}}` still a placeholder), so a fix to a response path never silently changes what an earlier Run measured. A Connector may be **fused**, serving both Stages in one call; that is a supported shape, not a degraded one, and it is not detectable from the definition, so Goldfin neither flags nor refuses it. A Connector screen holds **no relationship to a Run**: which definition a Run measured against is answered on the Run, because that is where the number was sold.
 _Avoid_: Integration, Adapter, Provider, Endpoint
 
 **REST connector**:
@@ -115,7 +115,7 @@ A Connector that calls an arbitrary endpoint: method, URL, auth, request body, a
 _Avoid_: HTTP connector, Custom endpoint, Webhook
 
 **LLM connector**:
-A Connector that calls a model by base URL and API key. Carries credentials and so is handled as a secret.
+A Connector that reaches LLM models through a base URL and a Credential, with an explicit set of enabled model IDs. Enabling an ID is a choice, not proof of provider access; a Run remembers the exact model it used.
 _Avoid_: Model, Provider, Model config
 
 **Credential**:

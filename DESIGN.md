@@ -111,7 +111,7 @@ Keep the user-approved oval slider grip, compact tables, divided dialog footers 
 
 The desktop shell has a persistent left sidebar and a header above the content. The sidebar starts expanded at **258px** (`--w-sidebar-open`) and collapses to a **64px** icon rail (`--w-sidebar-closed`); it remains a navigation landmark in both states. The brand row is **56px** high (`--h-brand`). The brand uses the Goldfin mark and wordmark; collapse hides the wordmark and retains the mark.
 
-**Navigation (shipped):** grouped links — Home, then a Connectors section with Connectors — each with a Lineicons glyph and label. A rail-collapse control straddles the sidebar edge on desktop (`aria-expanded` reflects open vs collapsed). Below **768px** the same nav is a full-width drawer opened from the top bar, with a scrim and focus moved into the drawer when open; the in-rail control closes the drawer on touch widths.
+**Navigation (shipped):** Home, then an **Integrations** disclosure with the supplied linked-square SVG and a chevron. Integrations has no route: it reveals the indented **Connectors** link at `/connectors/`. The group opens when that route becomes active. On the collapsed rail its icon opens the sidebar and reveals the child link. Use `aria-expanded` and `aria-controls`; hidden children leave the tab order. The icon inherits `currentColor` for both themes. A rail-collapse control straddles the sidebar edge on desktop (`aria-expanded` reflects open vs collapsed). Below **768px** the same nav is a full-width drawer opened from the top bar, with a scrim and focus moved into the drawer when open; the in-rail control closes the drawer on touch widths.
 
 **Sidebar foot:** a profile disclosure (avatar, name, role) opens an in-sidebar menu — theme swap (sun/moon icon) and Settings — without a modal focus trap. Expanded state is ordinary `aria-expanded` disclosure semantics.
 
@@ -281,6 +281,15 @@ Goldfin components are the application-facing API. Bits UI remains an upstream i
 - Keep clear close/cancel paths and focus restoration. Verify their browser behavior during product integration; this handoff does not certify it.
 
 ### Forms, menus and navigation
+
+- The Connector dialog reveals a Models panel beside the form after model discovery; narrow viewports stack it below inside the same focus trap and scroll area. The form moves into place and the panel enters on transform/opacity using `--duration-menu` and `--ease-out`; reduced motion shows the final layout directly.
+- New model IDs start disabled. Toggles persist per Connector. A changed provider, base URL or Credential blocks model use until discovery succeeds again; a refresh retains matching selections and never applies a stale response. Custom model/deployment IDs can be added for every provider and survive catalog refresh; they stay Unverified until checked.
+- Model discovery is currently a **simulated UI preview**, opened explicitly with **Preview models**, not proof of connection or provider access. Example IDs are marked Sample; custom IDs are marked Unverified until checked. Sample and unverified IDs cannot be used in a Run. Real discovery and checks belong to the worker.
+- The Models panel uses a compact two-column table: model name and source first, small (`sm`) toggle last. Its bounded, keyboard-accessible list scrolls independently beneath a sticky header; custom entry and footer remain outside the scroll area.
+- Both Connector panels fit their own content instead of stretching the form below API Key. Custom entry is labelled **Model ID** and saves on Enter, then clears the input; there is no Add model ID button or repeated Run-availability footer. Sample and Unverified row labels and the simulated-catalog notice remain.
+- The Connectors navigation child has a muted L-shaped branch line connecting it to Integrations. The branch is decorative, follows the disclosure reveal and stays hidden in the collapsed rail.
+- Menu links, disclosure triggers and select triggers use color feedback, never press scaling. Integrations expands and collapses on an interruptible 200ms house-easing transition; its chevron tracks the same state. Keyboard activation and reduced motion use the final layout immediately. Closing removes child links from keyboard and accessibility navigation immediately, while the visual transition completes.
+- Delete is absent during Add Connector. It appears when configuring an already added Connector; creating and editing are distinct dialog modes.
 
 - Inputs keep visible labels, adjacent useful errors, required markers and validation on blur.
 - Selection menus choose values; action menus invoke actions. Do not conflate those APIs.

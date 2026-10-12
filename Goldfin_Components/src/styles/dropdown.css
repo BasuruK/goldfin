@@ -30,12 +30,11 @@
     &:hover { border-color: var(--ufg3); }
   }
 
-  &:active:not(:disabled) { transform: scale(.98); }
+  &:active:not(:disabled) { border-color: var(--ufg3); }
 
   @media (prefers-reduced-motion: no-preference) {
     transition:
-      border-color var(--duration-ui) ease,
-      transform var(--duration-press) var(--ease-out);
+      border-color var(--duration-ui) ease;
   }
 }
 

@@ -2,6 +2,7 @@
   import { Dialog as Primitive } from 'bits-ui';
   import {
     DialogBody,
+    Button,
     LoadingButton,
     DialogHeader,
     Icon,
@@ -9,11 +10,13 @@
     Select
   } from '$goldfin/lib/index.js';
   import DeleteConnectorConfirm from './DeleteConnectorConfirm.svelte';
+  import ModelPanel from './ModelPanel.svelte';
   import {
     closeDialog,
     connectorStore,
     editingConnector,
     patchConnector,
+    previewModelsById,
     removeDraftIfEmpty,
     setProviderType,
     testConnectorById
@@ -57,6 +60,9 @@
   }
 
   const testing = $derived(record?.connectionStatus === 'testing');
+  const showModels = $derived(
+    (record?.catalogState ?? 'idle') !== 'idle' || (record?.models?.length ?? 0) > 0
+  );
 
   const failedConnectionMessage = $derived(
     record?.connectionStatus === 'failed' && record.connectionMessage ? record.connectionMessage : ''
@@ -92,7 +98,8 @@
   <Primitive.Portal>
     <Primitive.Overlay class="gf-overlay" />
     {#if record && provider}
-      <Primitive.Content class="modal gf-modal connector-dialog" aria-describedby="connector-dialog-desc">
+      <Primitive.Content class={showModels ? 'gf-modal connector-dialog with-models' : 'gf-modal connector-dialog'} aria-describedby="connector-dialog-desc">
+        <div class="modal connector-form-panel">
         <DialogHeader
           parts={Primitive}
           title={record.name.trim() ? record.name : `Connect to ${provider.label}`}
@@ -152,18 +159,46 @@
               <Icon name="play" size={16} />
               Test
             </LoadingButton>
+            <Button type="button" disabled={record.catalogState === 'loading'} onclick={() => previewModelsById(record.id)}>
+              Preview models
+            </Button>
           </div>
           <div class="modal-foot-actions connector-dialog-actions">
             <Primitive.Close class="btn primary" type="button">Done</Primitive.Close>
             <Primitive.Close class="btn" type="button">Cancel</Primitive.Close>
           </div>
         </div>
+        </div>
+        {#if showModels}<ModelPanel {record} />{/if}
       </Primitive.Content>
     {/if}
   </Primitive.Portal>
 </Primitive.Root>
 
 <style>
+  :global(.connector-dialog) {
+    --connector-width: min(816px, calc(100vw - 32px));
+    inline-size: var(--connector-width);
+    max-block-size: calc(100dvh - 32px);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    scrollbar-color: var(--ufg3) var(--uwell);
+  }
+  .connector-form-panel {
+    flex: 1 1 440px;
+    display: flex;
+    flex-direction: column;
+    min-inline-size: 0;
+    max-inline-size: 440px;
+    max-height: none;
+    transform: translateX(calc((var(--connector-width) - min(440px, calc(100vw - 32px))) / 2));
+  }
+  :global(.connector-dialog.with-models) .connector-form-panel { max-inline-size: none; transform: translateX(0); }
+  @media (prefers-reduced-motion: no-preference) {
+    .connector-form-panel { transition: transform var(--duration-menu) var(--ease-out); }
+  }
   :global(.connector-dialog .modal-icon) {
     background: var(--uprim);
     color: var(--uprimfg);
@@ -180,7 +215,7 @@
 
   .connector-dialog-foot {
     flex-direction: row;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
     gap: 12px 16px;
@@ -189,6 +224,9 @@
 
   .connector-test-wrap {
     flex: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
   .connector-test-wrap :global(.btn) {
