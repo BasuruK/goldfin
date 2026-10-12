@@ -5,6 +5,8 @@ node_modules/
 .svelte-kit/
 /build/
 
+.cursor/
+
 # local agent runtime artefacts (canvas assets etc.)
 .mavis/
 .serena/
@@ -23,3 +25,7 @@ prototypes/UI improvement discussion.zip
 .cursor/hooks/state/continual-learning.json
 
 .codacy/
+
+# Impeccable live sessions (config under .impeccable/live/config.json is committed)
+.impeccable/live/sessions/
+.impeccable/live/inject-journal.json

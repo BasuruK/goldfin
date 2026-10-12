@@ -7,16 +7,23 @@ import { defineConfig } from 'vite';
 // points at the library's src, so `$goldfin/lib/index.js` and
 // `$goldfin/goldfin.css` resolve from any depth without a relative path
 // climbing back out of src/.
+const root = fileURLToPath(new URL('.', import.meta.url));
 const goldfin = fileURLToPath(new URL('./Goldfin_Components/src', import.meta.url));
 const lib = fileURLToPath(new URL('./src/lib', import.meta.url));
 
 export default defineConfig({
   plugins: [sveltekit({ adapter: adapter() })],
+  server: {
+    fs: {
+      allow: [root, goldfin]
+    }
+  },
   resolve: {
     // `#lib` is declared here rather than left to SvelteKit: this project keeps its
     // config inline instead of in svelte.config.js, and kit does not register the
     // alias for the client bundle without one.
-    alias: { $goldfin: goldfin, '#lib': lib },
+    // `$lib` is required by Impeccable live-inject; app code prefers `#lib`.
+    alias: { $goldfin: goldfin, '#lib': lib, $lib: lib },
     // The library is consumed from source, so without this its own node_modules
     // would put a second svelte and bits-ui in the bundle. Two runtimes means
     // broken context. Dedupe forces one copy, the app's.

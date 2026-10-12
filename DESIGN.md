@@ -1,3 +1,83 @@
+---
+name: Goldfin
+description: Dark-first cool-neutral tooling for document extraction evaluation.
+colors:
+  page-bg: "oklch(18.196% 0.0044 264.46)"
+  surface-raised: "oklch(20.924% 0.0061 271.12)"
+  surface-recessed: "oklch(19.595% 0.0062 271.09)"
+  border: "oklch(29.312% 0.0095 268.35)"
+  text-strong: "oklch(96.696% 0.0029 264.54)"
+  text-default: "oklch(79.999% 0.0126 259.82)"
+  text-muted: "oklch(65.792% 0.0151 258.36)"
+  primary-fill: "oklch(96.696% 0.0029 264.54)"
+  primary-on: "oklch(18.196% 0.0044 264.46)"
+  accent-key: "oklch(71.374% 0.1434 254.62)"
+  semantic-ok: "oklch(77.294% 0.1535 163.22)"
+  semantic-bad: "oklch(71.063% 0.1661 22.22)"
+  semantic-warn: "oklch(83.686% 0.1644 84.43)"
+  pill-neutral: "oklch(25.618% 0.0098 268.29)"
+typography:
+  ui:
+    fontFamily: "Urbanist, system-ui, sans-serif"
+    fontSize: "13px"
+    fontWeight: 600
+    lineHeight: 1.5
+  page-title:
+    fontFamily: "Urbanist, system-ui, sans-serif"
+    fontSize: "22px"
+    fontWeight: 600
+    lineHeight: 1.25
+  body:
+    fontFamily: "'IBM Plex Sans', system-ui, sans-serif"
+    fontSize: "13px"
+    fontWeight: 400
+    lineHeight: 1.5
+  mono:
+    fontFamily: "'IBM Plex Mono', monospace"
+    fontSize: "11px"
+    fontWeight: 400
+    lineHeight: 1.5
+rounded:
+  button: "7px"
+  container: "8px"
+  pill: "999px"
+spacing:
+  xs: "4px"
+  sm: "8px"
+  md: "16px"
+  lg: "24px"
+  shell-gap: "32px"
+components:
+  button-neutral:
+    backgroundColor: "{colors.page-bg}"
+    textColor: "{colors.text-strong}"
+    rounded: "{rounded.button}"
+    padding: "0 11px"
+    height: "30px"
+  button-neutral-hover:
+    backgroundColor: "{colors.surface-recessed}"
+  button-primary:
+    backgroundColor: "{colors.primary-fill}"
+    textColor: "{colors.primary-on}"
+    rounded: "{rounded.button}"
+    padding: "0 11px"
+    height: "30px"
+  button-danger:
+    backgroundColor: "{colors.semantic-bad}"
+    textColor: "{colors.primary-on}"
+    rounded: "{rounded.button}"
+    padding: "0 11px"
+    height: "30px"
+  chip:
+    backgroundColor: "{colors.pill-neutral}"
+    textColor: "{colors.text-strong}"
+    rounded: "{rounded.pill}"
+    padding: "0 11px"
+    height: "28px"
+---
+
+<!-- Impeccable document pass: YAML frontmatter is normative for tools; the handoff contract below remains binding for humans and agents. Re-run `/impeccable document` after large visual changes. -->
+
 # Goldfin Design System
 
 Version: 1.0, source handoff, 2026-10-04.
@@ -31,7 +111,7 @@ Keep the user-approved oval slider grip, compact tables, divided dialog footers 
 
 The desktop shell has a persistent left sidebar and a header above the content. The sidebar starts expanded at **258px** (`--w-sidebar-open`) and collapses to a **64px** icon rail (`--w-sidebar-closed`); it remains a navigation landmark in both states. The brand row is **56px** high (`--h-brand`). The brand uses the Goldfin mark and wordmark; collapse hides the wordmark and retains the mark.
 
-**Navigation (shipped):** grouped links — Home, then a Connectors section with Connectors — each with a Lineicons glyph and label. A rail-collapse control straddles the sidebar edge on desktop (`aria-expanded` reflects open vs collapsed). Below **768px** the same nav is a full-width drawer opened from the top bar, with a scrim and focus moved into the drawer when open; the in-rail control closes the drawer on touch widths.
+**Navigation (shipped):** Home, then an **Integrations** disclosure with the supplied linked-square SVG and a chevron. Integrations has no route: it reveals the indented **Connectors** link at `/connectors/`. The group opens when that route becomes active. On the collapsed rail its icon opens the sidebar and reveals the child link. Use `aria-expanded` and `aria-controls`; hidden children leave the tab order. The icon inherits `currentColor` for both themes. A rail-collapse control straddles the sidebar edge on desktop (`aria-expanded` reflects open vs collapsed). Below **768px** the same nav is a full-width drawer opened from the top bar, with a scrim and focus moved into the drawer when open; the in-rail control closes the drawer on touch widths.
 
 **Sidebar foot:** a profile disclosure (avatar, name, role) opens an in-sidebar menu — theme swap (sun/moon icon) and Settings — without a modal focus trap. Expanded state is ordinary `aria-expanded` disclosure semantics.
 
@@ -165,6 +245,8 @@ The shared CSS currently includes global selectors, legacy reference rules and s
 
 Use `Icon.svelte` for the existing family: 24-unit viewbox, outline strokes, round caps/joins and 1.8 stroke width. Typical controls use 16–18px glyphs. Decorative glyphs are hidden from assistive technology; their parent control still needs an accessible name. Do not use emoji as functional icons.
 
+When a control shows both an icon and a text label, **icon first, label second** in markup and in reading order. Do not trail the label with a decorative arrow unless the design artefact calls for it.
+
 ## Component contract
 
 Goldfin components are the application-facing API. Bits UI remains an upstream interaction dependency, not a fork. Native HTML handles simple elements. Business operations, persistence, model requests and domain validation belong to the product application.
@@ -199,6 +281,15 @@ Goldfin components are the application-facing API. Bits UI remains an upstream i
 - Keep clear close/cancel paths and focus restoration. Verify their browser behavior during product integration; this handoff does not certify it.
 
 ### Forms, menus and navigation
+
+- The Connector dialog reveals a Models panel beside the form after model discovery; narrow viewports stack it below inside the same focus trap and scroll area. The form moves into place and the panel enters on transform/opacity using `--duration-menu` and `--ease-out`; reduced motion shows the final layout directly.
+- New model IDs start disabled. Toggles persist per Connector. A changed provider, base URL or Credential blocks model use until discovery succeeds again; a refresh retains matching selections and never applies a stale response. Custom model/deployment IDs can be added for every provider and survive catalog refresh; they stay Unverified until checked.
+- Model discovery is currently a **simulated UI preview**, opened explicitly with **Preview models**, not proof of connection or provider access. Example IDs are marked Sample; custom IDs are marked Unverified until checked. Sample and unverified IDs cannot be used in a Run. Real discovery and checks belong to the worker.
+- The Models panel uses a compact two-column table: model name and source first, small (`sm`) toggle last. Its bounded, keyboard-accessible list scrolls independently beneath a sticky header; custom entry and footer remain outside the scroll area.
+- Both Connector panels fit their own content instead of stretching the form below API Key. Custom entry is labelled **Model ID** and saves on Enter, then clears the input; there is no Add model ID button or repeated Run-availability footer. Sample and Unverified row labels and the simulated-catalog notice remain.
+- The Connectors navigation child has a muted L-shaped branch line connecting it to Integrations. The branch is decorative, follows the disclosure reveal and stays hidden in the collapsed rail.
+- Menu links, disclosure triggers and select triggers use color feedback, never press scaling. Integrations expands and collapses on an interruptible 200ms house-easing transition; its chevron tracks the same state. Keyboard activation and reduced motion use the final layout immediately. Closing removes child links from keyboard and accessibility navigation immediately, while the visual transition completes.
+- Delete is absent during Add Connector. It appears when configuring an already added Connector; creating and editing are distinct dialog modes.
 
 - Inputs keep visible labels, adjacent useful errors, required markers and validation on blur.
 - Selection menus choose values; action menus invoke actions. Do not conflate those APIs.

@@ -31,7 +31,7 @@ export const SIDES = [
    below decide that. */
 export const NAV = [
   { items: [{ href: '/', label: 'Home', icon: 'home' }] },
-  { label: 'Connectors', items: [{ href: '/connectors/', label: 'Connectors', icon: 'plug' }] }
+  { label: 'Integrations', items: [{ href: '/connectors/', label: 'Connectors', icon: 'plug' }] }
 ];
 
 export const shell = $state({
@@ -39,7 +39,9 @@ export const shell = $state({
   sidebarMode: read('goldfin.sidebar', 'expanded') === 'collapsed' ? 'collapsed' : 'expanded',
   mobile: false,
   drawerOpen: false,
-  profileOpen: false
+  profileOpen: false,
+  integrationsOpen: false,
+  integrationsAnimate: false
 });
 
 /* Svelte will not export derived state from a module, so this stays a function.
@@ -121,4 +123,14 @@ export function toggleProfile() {
   shell.profileOpen = !shell.profileOpen;
   // A 64px rail cannot legibly host the submenu, so it opens the rail first.
   if (shell.profileOpen && !isExpanded() && !shell.mobile) shell.sidebarMode = 'expanded';
+}
+
+export function toggleIntegrations(event) {
+  shell.integrationsAnimate = event.detail > 0;
+  if (!isExpanded() && !shell.mobile) {
+    shell.sidebarMode = 'expanded';
+    shell.integrationsOpen = true;
+    return;
+  }
+  shell.integrationsOpen = !shell.integrationsOpen;
 }

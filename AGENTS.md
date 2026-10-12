@@ -71,3 +71,12 @@ Default five-role vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `
 ### Domain docs
 
 Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
+### Impeccable (UI iteration)
+
+Product context lives in `PRODUCT.md`; visual contract in `DESIGN.md`. For interactive UI work on the
+Svelte app, use **Impeccable live**: run `pnpm dev`, then `/impeccable live` in the agent (helper on
+port 8400). SvelteKit injection is dev-only via `src/lib/impeccable/ImpeccableLiveRoot.svelte` and
+marked blocks in `src/routes/+layout.svelte` — do not remove those markers by hand; use
+`impeccable live-inject --remove` when tearing down. Prefer live iteration over guessing layout in
+chat when refining Connectors or other Operate-mode screens.

@@ -1,0 +1,186 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-11T16:40:00.000Z",
+  "title": "Design System: Goldfin",
+  "extensions": {
+    "colorMeta": {
+      "page-bg": {
+        "role": "neutral",
+        "displayName": "Cool Graphite Page",
+        "canonical": "oklch(18.196% 0.0044 264.46)",
+        "tonalRamp": [
+          "oklch(15% 0.004 264)",
+          "oklch(18.196% 0.0044 264.46)",
+          "oklch(22% 0.006 264)",
+          "oklch(26% 0.008 264)",
+          "oklch(35% 0.01 264)",
+          "oklch(50% 0.012 260)",
+          "oklch(70% 0.012 260)",
+          "oklch(97% 0.002 248)"
+        ]
+      },
+      "primary-fill": {
+        "role": "primary",
+        "displayName": "Inverted Primary",
+        "canonical": "oklch(96.696% 0.0029 264.54)",
+        "tonalRamp": [
+          "oklch(18% 0.004 264)",
+          "oklch(25% 0.006 268)",
+          "oklch(35% 0.008 268)",
+          "oklch(50% 0.01 264)",
+          "oklch(70% 0.008 264)",
+          "oklch(85% 0.004 264)",
+          "oklch(96.696% 0.0029 264.54)",
+          "oklch(100% 0 none)"
+        ]
+      },
+      "accent-key": {
+        "role": "primary",
+        "displayName": "Cool Accent Key",
+        "canonical": "oklch(71.374% 0.1434 254.62)",
+        "tonalRamp": [
+          "oklch(35% 0.12 255)",
+          "oklch(45% 0.15 255)",
+          "oklch(55% 0.16 255)",
+          "oklch(65% 0.15 255)",
+          "oklch(71.374% 0.1434 254.62)",
+          "oklch(78% 0.12 255)",
+          "oklch(88% 0.08 255)",
+          "oklch(95% 0.04 255)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "ui": {
+        "displayName": "UI Default",
+        "purpose": "Controls, nav, section titles, and compact app chrome at 13px."
+      },
+      "page-title": {
+        "displayName": "Page Title",
+        "purpose": "Route headings such as Connectors at 22px."
+      },
+      "mono": {
+        "displayName": "Metadata Mono",
+        "purpose": "Hosts, IDs, and table metadata at 11–12px."
+      }
+    },
+    "shadows": [
+      {
+        "name": "menu-elevated",
+        "value": "0 12px 32px oklch(0% 0 none / 0.4)",
+        "purpose": "Dialogs, menus, and portaled surfaces."
+      },
+      {
+        "name": "sidebar-edge",
+        "value": "4px 0 14px -3px oklch(0% 0 none / 0.32)",
+        "purpose": "App shell sidebar depth on the content side."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-house",
+        "value": "cubic-bezier(.22, 1, .32, 1)",
+        "purpose": "Spatial UI motion; the house curve."
+      },
+      {
+        "name": "duration-press",
+        "value": "150ms",
+        "purpose": "Press feedback and color fades."
+      },
+      {
+        "name": "duration-panel",
+        "value": "320ms",
+        "purpose": "Sidebar rail and drawer transitions."
+      }
+    ],
+    "breakpoints": [
+      { "name": "drawer", "value": "768px" },
+      { "name": "wide-measure", "value": "1440px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Main commit actions; inverted light fill on dark UI.",
+      "html": "<button type=\"button\" class=\"ds-btn-primary\">Add connector</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 11px; border: 0; border-radius: 7px; background: var(--uprim, oklch(96.696% 0.0029 264.54)); color: var(--uprimfg, oklch(18.196% 0.0044 264.46)); font: 600 13px Urbanist, system-ui, sans-serif; cursor: pointer; white-space: nowrap; transition: opacity 150ms ease; } .ds-btn-primary:hover { opacity: 0.88; } .ds-btn-primary:focus-visible { outline: 2px solid var(--ufg, oklch(96.696% 0.0029 264.54)); outline-offset: 3px; } @media (prefers-reduced-motion: no-preference) { .ds-btn-primary { transition: opacity 150ms ease, transform 150ms cubic-bezier(.22, 1, .32, 1); } .ds-btn-primary:active { transform: scale(0.97); } }"
+    },
+    {
+      "name": "Neutral Button",
+      "kind": "button",
+      "refersTo": "button-neutral",
+      "description": "Secondary actions and dialog Cancel.",
+      "html": "<button type=\"button\" class=\"ds-btn-neutral\">Cancel</button>",
+      "css": ".ds-btn-neutral { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 30px; padding: 0 11px; border: 1px solid var(--uline, oklch(29.312% 0.0095 268.35)); border-radius: 7px; background: var(--ubg, oklch(18.196% 0.0044 264.46)); color: var(--ufg, oklch(96.696% 0.0029 264.54)); font: 600 13px Urbanist, system-ui, sans-serif; cursor: pointer; transition: background-color 150ms ease; } .ds-btn-neutral:hover { background: var(--uwell, oklch(19.595% 0.0062 271.09)); } @media (prefers-reduced-motion: no-preference) { .ds-btn-neutral { transition: background-color 150ms ease, transform 150ms cubic-bezier(.22, 1, .32, 1); } .ds-btn-neutral:active { transform: scale(0.97); } }"
+    },
+    {
+      "name": "Status Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Run and connection status; tone carried by dot color.",
+      "html": "<span class=\"ds-chip\"><span class=\"ds-chip-dot\"></span>Connected</span>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; gap: 7px; height: 28px; padding: 0 11px; border-radius: 999px; background: var(--upill, oklch(25.618% 0.0098 268.29)); color: var(--ufg, oklch(96.696% 0.0029 264.54)); font: 600 13px Urbanist, system-ui, sans-serif; } .ds-chip-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok, oklch(77.294% 0.1535 163.22)); flex: none; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Labeled inputs with persistent label and 30px control height.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-label\">Base URL</span><input class=\"ds-input\" type=\"url\" placeholder=\"https://api.openai.com/v1\" /></label>",
+      "css": ".ds-field { display: grid; gap: 2px; font-family: Urbanist, system-ui, sans-serif; } .ds-label { font-size: 13px; font-weight: 600; color: var(--ufg2, oklch(79.999% 0.0126 259.82)); } .ds-input { height: 30px; padding: 0 11px; border: 1px solid var(--uline); border-radius: 7px; background: var(--ubg); color: var(--ufg); font: 400 13px Urbanist, system-ui, sans-serif; } .ds-input:focus-visible { outline: 2px solid var(--ufg); outline-offset: 3px; }"
+    },
+    {
+      "name": "Connector Card",
+      "kind": "card",
+      "refersTo": "connector-card",
+      "description": "Raised surface tile for Connector list; ~268px intrinsic width.",
+      "html": "<article class=\"ds-card\"><h3 class=\"ds-card-title\">OpenAI</h3><p class=\"ds-card-desc\">Official OpenAI API with your API key.</p></article>",
+      "css": ".ds-card { display: grid; gap: 14px; padding: 16px; max-width: 268px; border: 1px solid var(--uline, oklch(29.312% 0.0095 268.35)); border-radius: 8px; background: var(--usurf, oklch(20.924% 0.0061 271.12)); color: var(--ufg2); font-family: Urbanist, system-ui, sans-serif; } .ds-card-title { margin: 0; font-size: 15px; font-weight: 600; color: var(--ufg); } .ds-card-desc { margin: 4px 0 0; font-size: 12px; color: var(--ufg3); line-height: 1.45; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Instrument Panel",
+    "overview": "Compact, dark-first, cool neutral tooling where hierarchy comes from type, alignment, space, and subdued surfaces—not decorative chrome. Primary actions use opposing light/dark tones; semantic color always pairs with text or an icon. The system is built for long evaluation sessions: dense metadata, honest state labels, and dialogs that feel like calibrated instruments rather than marketing pages.",
+    "keyCharacteristics": [
+      "Dark-first with paired light theme via light-dark() tokens on :root",
+      "13px Urbanist UI base; boolean controls are two-tone, not accent-blue",
+      "Mosaic dialog headers and divided modal footers as approved exceptions",
+      "Intrinsic grids and container queries over breakpoint ladders",
+      "Icon before label on combined control affordances"
+    ],
+    "rules": [
+      {
+        "name": "The Two-Tone Boolean Rule",
+        "body": "Checkbox, radio, and switch selected states use --uprim / --uprimfg; do not default selection to accent blue.",
+        "section": "colors"
+      },
+      {
+        "name": "The No Transition All Rule",
+        "body": "Never transition: all. Spatial motion belongs inside prefers-reduced-motion guards.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Focus Ring Rule",
+        "body": "One library-wide focus ring: 2px solid var(--ufg) at 3px offset; never outline: none without a replacement.",
+        "section": "components"
+      },
+      {
+        "name": "The Icon-First Rule",
+        "body": "When a control shows icon and text, icon comes first in markup and reading order.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "Do use semantic CSS variables from Goldfin_Components tokens; derive tints with color-mix(in oklch, …).",
+      "Do keep application state and visible labels aligned—color alone never authorizes a processing state.",
+      "Do match dialog Cancel and primary button geometry (30px height, 0 11px padding)."
+    ],
+    "donts": [
+      "Don't introduce unregistered colors, glass, or decorative gradients outside sea/mosaic scope.",
+      "Don't use avatars in table or timeline designs supplied for this product.",
+      "Don't split token truth: frontmatter and tokens.css stay in sync on intentional changes."
+    ]
+  }
+}
