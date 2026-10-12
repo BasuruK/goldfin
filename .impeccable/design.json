@@ -105,7 +105,7 @@
       "refersTo": "button-primary",
       "description": "Main commit actions; inverted light fill on dark UI.",
       "html": "<button type=\"button\" class=\"ds-btn-primary\">Add connector</button>",
-      "css": ".ds-btn-primary { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 11px; border: 0; border-radius: 7px; background: var(--uprim, oklch(96.696% 0.0029 264.54)); color: var(--uprimfg, oklch(18.196% 0.0044 264.46)); font: 600 13px Urbanist, system-ui, sans-serif; cursor: pointer; white-space: nowrap; transition: opacity 150ms ease, transform 150ms cubic-bezier(.22, 1, .32, 1); } .ds-btn-primary:hover { opacity: 0.88; } .ds-btn-primary:active { transform: scale(0.97); } .ds-btn-primary:focus-visible { outline: 2px solid var(--ufg, oklch(96.696% 0.0029 264.54)); outline-offset: 3px; }"
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 11px; border: 0; border-radius: 7px; background: var(--uprim, oklch(96.696% 0.0029 264.54)); color: var(--uprimfg, oklch(18.196% 0.0044 264.46)); font: 600 13px Urbanist, system-ui, sans-serif; cursor: pointer; white-space: nowrap; transition: opacity 150ms ease; } .ds-btn-primary:hover { opacity: 0.88; } .ds-btn-primary:focus-visible { outline: 2px solid var(--ufg, oklch(96.696% 0.0029 264.54)); outline-offset: 3px; } @media (prefers-reduced-motion: no-preference) { .ds-btn-primary { transition: opacity 150ms ease, transform 150ms cubic-bezier(.22, 1, .32, 1); } .ds-btn-primary:active { transform: scale(0.97); } }"
     },
     {
       "name": "Neutral Button",
@@ -113,7 +113,7 @@
       "refersTo": "button-neutral",
       "description": "Secondary actions and dialog Cancel.",
       "html": "<button type=\"button\" class=\"ds-btn-neutral\">Cancel</button>",
-      "css": ".ds-btn-neutral { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 30px; padding: 0 11px; border: 1px solid var(--uline, oklch(29.312% 0.0095 268.35)); border-radius: 7px; background: var(--ubg, oklch(18.196% 0.0044 264.46)); color: var(--ufg, oklch(96.696% 0.0029 264.54)); font: 600 13px Urbanist, system-ui, sans-serif; cursor: pointer; transition: background-color 150ms ease, transform 150ms cubic-bezier(.22, 1, .32, 1); } .ds-btn-neutral:hover { background: var(--uwell, oklch(19.595% 0.0062 271.09)); } .ds-btn-neutral:active { transform: scale(0.97); }"
+      "css": ".ds-btn-neutral { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 30px; padding: 0 11px; border: 1px solid var(--uline, oklch(29.312% 0.0095 268.35)); border-radius: 7px; background: var(--ubg, oklch(18.196% 0.0044 264.46)); color: var(--ufg, oklch(96.696% 0.0029 264.54)); font: 600 13px Urbanist, system-ui, sans-serif; cursor: pointer; transition: background-color 150ms ease; } .ds-btn-neutral:hover { background: var(--uwell, oklch(19.595% 0.0062 271.09)); } @media (prefers-reduced-motion: no-preference) { .ds-btn-neutral { transition: background-color 150ms ease, transform 150ms cubic-bezier(.22, 1, .32, 1); } .ds-btn-neutral:active { transform: scale(0.97); } }"
     },
     {
       "name": "Status Chip",

@@ -7,6 +7,7 @@ import { defineConfig } from 'vite';
 // points at the library's src, so `$goldfin/lib/index.js` and
 // `$goldfin/goldfin.css` resolve from any depth without a relative path
 // climbing back out of src/.
+const root = fileURLToPath(new URL('.', import.meta.url));
 const goldfin = fileURLToPath(new URL('./Goldfin_Components/src', import.meta.url));
 const lib = fileURLToPath(new URL('./src/lib', import.meta.url));
 
@@ -14,7 +15,7 @@ export default defineConfig({
   plugins: [sveltekit({ adapter: adapter() })],
   server: {
     fs: {
-      allow: [goldfin]
+      allow: [root, goldfin]
     }
   },
   resolve: {

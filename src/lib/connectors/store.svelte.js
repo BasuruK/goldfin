@@ -55,9 +55,13 @@ export function closeDialog() {
 export function removeDraftIfEmpty(id) {
   const record = connectorStore.connectors.find(c => c.id === id);
   if (!record) return;
+  const nameDiffersFromDefault =
+    record.name.trim() !== defaultNameFor(record.providerType);
   const hasContent =
-    record.apiKey.trim() || record.baseUrl.trim() !== defaultBaseUrlFor(record.providerType);
-  if (!hasContent && !record.name.trim()) {
+    record.apiKey.trim() ||
+    record.baseUrl.trim() !== defaultBaseUrlFor(record.providerType) ||
+    nameDiffersFromDefault;
+  if (!hasContent) {
     connectorStore.connectors = connectorStore.connectors.filter(c => c.id !== id);
     persist(connectorStore.connectors);
   }

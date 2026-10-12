@@ -37,7 +37,11 @@ export function loadConnectors() {
 /** @param {ConnectorRecord[]} connectors */
 export function saveConnectors(connectors) {
   if (typeof localStorage === 'undefined') return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(connectors));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(connectors));
+  } catch (error) {
+    console.warn('Failed to persist connectors to localStorage', error);
+  }
 }
 
 /** @param {ProviderType} providerType */
