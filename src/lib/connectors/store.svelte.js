@@ -181,6 +181,8 @@ export async function discoverModelsById(id) {
         state: 'failed',
         message: 'Model discovery API is unreachable. Start the API and worker, then try again.'
       };
+    } else if (error instanceof Error && error.message) {
+      result = { state: 'failed', message: error.message };
     }
   }
   const current = connectorStore.connectors.find(c => c.id === id);
@@ -207,12 +209,16 @@ export async function setModelEnabled(id, modelId, enabled) {
 export async function verifyModelById(id, modelId) {
   const record = connectorStore.connectors.find(c => c.id === id);
   if (!record) return;
+  const revision = record.discoveryRevision;
   const validationError = validateForCheck({
     baseUrl: record.baseUrl,
     apiKey: record.apiKey,
     providerType: record.providerType
   });
-  if (validationError) return;
+  if (validationError) {
+    patchConnector(id, { catalogMessage: validationError }, { immediate: true });
+    return;
+  }
   try {
     const attempt = await runModelVerification({
       connectorId: record.id,
@@ -221,17 +227,33 @@ export async function verifyModelById(id, modelId) {
       apiKey: record.apiKey,
       modelId
     });
-    const payload = attempt.result;
-    if (!payload || payload.verified !== true) return;
     const current = connectorStore.connectors.find(c => c.id === id);
-    if (!current) return;
+    if (!current || current.discoveryRevision !== revision) return;
+    const payload = attempt.result;
+    if (!payload || payload.verified !== true) {
+      const message = payload && typeof payload.message === 'string' ? payload.message.trim() : '';
+      if (message) {
+        patchConnector(id, { catalogMessage: message }, { immediate: true });
+        return;
+      }
+      patchConnector(id, {
+        models: (current.models ?? []).map(model => (model.id === modelId ? { ...model, enabled: false } : model))
+      }, { immediate: true });
+      return;
+    }
     patchConnector(id, {
       models: (current.models ?? []).map(model =>
         model.id === modelId ? { ...model, verified: true } : model
       )
     }, { immediate: true });
-  } catch {
-    // Verification stays unverified; the operator can retry by toggling the model off and on.
+  } catch (error) {
+    const current = connectorStore.connectors.find(c => c.id === id);
+    if (!current || current.discoveryRevision !== revision) return;
+    const message = error instanceof Error ? error.message.trim() : '';
+    patchConnector(id, {
+      ...(message ? { catalogMessage: message } : {}),
+      models: (current.models ?? []).map(model => (model.id === modelId ? { ...model, enabled: false } : model))
+    }, { immediate: true });
   }
 }
 

@@ -11,22 +11,7 @@ import (
 )
 
 func TestCatalogJobRoundTrip(t *testing.T) {
-	dsn := os.Getenv("DATABASE_URL")
-	if dsn == "" {
-		t.Skip("DATABASE_URL not set")
-	}
-	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, dsn)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer pool.Close()
-
-	key := make([]byte, 32)
-	for i := range key {
-		key[i] = byte(i)
-	}
-	store := NewStore(pool, key)
+	ctx, pool, store := newTestStore(t)
 	id, err := store.CreateCatalog(ctx, CreateCatalogInput{
 		ProviderType: "openai",
 		BaseURL:      "https://api.openai.com/v1",
@@ -47,6 +32,13 @@ func TestCatalogJobRoundTrip(t *testing.T) {
 	if err := store.Finish(ctx, id, result, "ok"); err != nil {
 		t.Fatal(err)
 	}
+	var cleared bool
+	if err := pool.QueryRow(ctx, `SELECT credential_ciphertext IS NULL FROM discovery_jobs WHERE id = $1`, id).Scan(&cleared); err != nil {
+		t.Fatal(err)
+	}
+	if !cleared {
+		t.Fatal("ciphertext still stored")
+	}
 	finished, err := store.Get(ctx, id)
 	if err != nil {
 		t.Fatal(err)
@@ -54,6 +46,60 @@ func TestCatalogJobRoundTrip(t *testing.T) {
 	if finished.Status != StatusFinished {
 		t.Fatalf("status %s", finished.Status)
 	}
+}
+
+func TestClaimNextReclaimsStaleRunningJob(t *testing.T) {
+	ctx, pool, store := newTestStore(t)
+	id, err := store.CreateCatalog(ctx, CreateCatalogInput{
+		ProviderType: "openai",
+		BaseURL:      "https://api.openai.com/v1",
+		APIKey:       "sk-test",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `UPDATE discovery_jobs SET status = 'running', updated_at = now() WHERE id = $1`, id); err != nil {
+		t.Fatal(err)
+	}
+	fresh, _, err := store.ClaimNext(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fresh.ID != "" {
+		t.Fatalf("claimed a fresh running job %s", fresh.ID)
+	}
+	if _, err := pool.Exec(ctx, `UPDATE discovery_jobs SET updated_at = now() - interval '3 minutes' WHERE id = $1`, id); err != nil {
+		t.Fatal(err)
+	}
+	job, _, err := store.ClaimNext(ctx)
+	if err != nil || job.ID != id {
+		t.Fatalf("reclaim: job=%+v err=%v", job, err)
+	}
+	if job.Kind != KindCatalog {
+		t.Fatalf("kind %s", job.Kind)
+	}
+}
+
+func newTestStore(t *testing.T) (context.Context, *pgxpool.Pool, *Store) {
+	t.Helper()
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		t.Skip("DATABASE_URL not set")
+	}
+	ctx := context.Background()
+	pool, err := pgxpool.New(ctx, dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(pool.Close)
+	if _, err := pool.Exec(ctx, `DELETE FROM discovery_jobs`); err != nil {
+		t.Fatal(err)
+	}
+	key := make([]byte, 32)
+	for i := range key {
+		key[i] = byte(i)
+	}
+	return ctx, pool, NewStore(pool, key)
 }
 
 func TestKeyFromEnv(t *testing.T) {

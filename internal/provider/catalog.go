@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 )
 
 // CatalogResult is the worker-owned outcome of a model catalog discovery.
@@ -20,7 +19,7 @@ type CatalogResult struct {
 }
 
 type modelsPage struct {
-	Data    []struct {
+	Data []struct {
 		ID string `json:"id"`
 	} `json:"data"`
 	HasMore bool   `json:"has_more"`
@@ -74,8 +73,8 @@ func listOpenAIModels(ctx context.Context, client *http.Client, baseURL, apiKey 
 		if err != nil {
 			return nil, err
 		}
-		defer res.Body.Close()
 		body, err := io.ReadAll(io.LimitReader(res.Body, 4<<20))
+		res.Body.Close()
 		if err != nil {
 			return nil, err
 		}
@@ -125,9 +124,4 @@ func safeCatalogError(err error) string {
 		return "The provider did not return a recognizable model catalog."
 	}
 	return "Model discovery failed. Try again."
-}
-
-// DefaultHTTPClient is used by the worker for outbound provider calls.
-func DefaultHTTPClient() *http.Client {
-	return &http.Client{Timeout: 30 * time.Second}
 }

@@ -12,16 +12,35 @@ const DISCOVERY_TIMEOUT_MS = 60_000;
  * @param {Record<string, unknown>} body
  */
 async function postAttempt(path, body) {
-  const response = await fetch(path, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  if (!response.ok) {
+  let response;
+  try {
+    response = await fetch(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+  } catch {
     const err = new Error('API request failed');
-    // ponytail: treat any non-2xx as unreachable for the UI retry path.
     err.code = 'api_missing';
     throw err;
+  }
+  if (!response.ok) {
+    if (response.status === 404 || (response.status >= 502 && response.status <= 504)) {
+      const err = new Error('API request failed');
+      err.code = 'api_missing';
+      throw err;
+    }
+    if (response.status === 400) {
+      let message = 'API request failed';
+      try {
+        const payload = await response.json();
+        if (payload && typeof payload.message === 'string' && payload.message) message = payload.message;
+      } catch {
+        // The status is enough when the body is not JSON.
+      }
+      throw new Error(message);
+    }
+    throw new Error('API request failed');
   }
   const payload = await response.json();
   if (!payload?.id) throw new Error('Invalid attempt response');

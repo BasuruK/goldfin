@@ -56,14 +56,29 @@ func runMigrate() {
 }
 
 func runAPI() {
-	ctx := context.Background()
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 	pool := mustPool(ctx)
 	key := mustKey()
 	store := jobs.NewStore(pool, key)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	addr := envOr("API_ADDR", "127.0.0.1:8080")
 	server := api.NewServer(store, logger)
-	httpServer := &http.Server{Addr: addr, Handler: server.Handler(), ReadHeaderTimeout: 10 * time.Second}
+	httpServer := &http.Server{
+		Addr:              addr,
+		Handler:           server.Handler(),
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      15 * time.Second,
+	}
+	go func() {
+		<-ctx.Done()
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := httpServer.Shutdown(shutdownCtx); err != nil {
+			logger.Error("api shutdown", "err", err)
+		}
+	}()
 	logger.Info("api listening", "addr", addr)
 	if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		fatal(err.Error())

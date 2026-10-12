@@ -26,7 +26,9 @@ func TestDiscoverCatalogPaginatesOpenAIModels(t *testing.T) {
 			return
 		}
 		if after != "cursor-1" {
-			t.Fatalf("unexpected after=%q", after)
+			t.Errorf("unexpected after=%q", after)
+			http.Error(w, "bad cursor", http.StatusBadRequest)
+			return
 		}
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"data":     []map[string]string{{"id": "model-c"}},

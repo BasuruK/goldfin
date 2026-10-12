@@ -1,34 +1,14 @@
 import { expect, test } from '@playwright/test';
+import { mockDiscovery, mockVerification } from './mock-discovery.js';
 
 const DISCOVERY_IDS = ['sample-chat-small', 'sample-chat-large', 'sample-reasoning'];
 
 async function mockModelDiscovery(page) {
-  await page.route('**/api/v1/model-discovery/attempts', async route => {
-    if (route.request().method() === 'POST') {
-      await route.fulfill({
-        status: 202,
-        contentType: 'application/json',
-        body: JSON.stringify({ id: 'attempt-1', status: 'queued' })
-      });
-      return;
-    }
-    await route.continue();
-  });
-  await page.route('**/api/v1/model-discovery/attempts/attempt-1', async route => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        id: 'attempt-1',
-        status: 'finished',
-        result: {
-          state: 'ready',
-          ids: DISCOVERY_IDS,
-          source: 'discovered',
-          message: `${DISCOVERY_IDS.length} models discovered.`
-        }
-      })
-    });
+  await mockDiscovery(page, 'attempt-1', {
+    state: 'ready',
+    ids: DISCOVERY_IDS,
+    source: 'discovered',
+    message: `${DISCOVERY_IDS.length} models discovered.`
   });
 }
 
@@ -57,6 +37,7 @@ test('model discovery starts disabled, saves toggles, and blocks them after conn
     if (request.url().includes('api.openai.com')) outbound.push(request.url());
   });
   await mockModelDiscovery(page);
+  await mockVerification(page, { state: 'ready', verified: false, message: 'Model access was not confirmed.' });
   await page.goto('/connectors/');
   await page.getByRole('button', { name: 'Add connector', exact: true }).click();
   const dialog = page.getByRole('dialog');
@@ -81,30 +62,9 @@ test('model discovery starts disabled, saves toggles, and blocks them after conn
 });
 
 test('unsupported discovery allows explicit unverified manual IDs', async ({ page }) => {
-  await page.route('**/api/v1/model-discovery/attempts', async route => {
-    if (route.request().method() === 'POST') {
-      await route.fulfill({
-        status: 202,
-        contentType: 'application/json',
-        body: JSON.stringify({ id: 'attempt-unsupported', status: 'queued' })
-      });
-      return;
-    }
-    await route.continue();
-  });
-  await page.route('**/api/v1/model-discovery/attempts/attempt-unsupported', async route => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        id: 'attempt-unsupported',
-        status: 'finished',
-        result: {
-          state: 'unsupported',
-          message: 'Add a model ID manually.'
-        }
-      })
-    });
+  await mockDiscovery(page, 'attempt-unsupported', {
+    state: 'unsupported',
+    message: 'Add a model ID manually.'
   });
   await page.addInitScript(() => localStorage.setItem('goldfin.connectors.v1', JSON.stringify([{
     id: 'manual', providerType: 'web_request', name: 'Custom gateway', baseUrl: 'https://example.com', apiKey: '', connectionStatus: 'idle', models: []
@@ -149,6 +109,7 @@ async function dialogFillApiKey(page) {
 for (const viewport of [{ width: 1280, height: 800 }, { width: 375, height: 720 }]) {
   test(`model panel fits ${viewport.width}px with reduced motion and keyboard access`, async ({ page }) => {
     await mockModelDiscovery(page);
+    await mockVerification(page, { state: 'ready', verified: false, message: 'Model access was not confirmed.' });
     await page.setViewportSize(viewport);
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/connectors/');

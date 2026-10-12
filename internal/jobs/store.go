@@ -116,6 +116,7 @@ func (s *Store) ClaimNext(ctx context.Context) (Job, []byte, error) {
 		SELECT id, kind, provider_type, base_url, credential_ciphertext, COALESCE(model_id, '')
 		FROM discovery_jobs
 		WHERE status = 'queued'
+		   OR (status = 'running' AND updated_at < now() - interval '2 minutes')
 		ORDER BY created_at
 		LIMIT 1
 		FOR UPDATE SKIP LOCKED
@@ -144,7 +145,8 @@ func (s *Store) ClaimNext(ctx context.Context) (Job, []byte, error) {
 func (s *Store) Finish(ctx context.Context, id string, result json.RawMessage, safeMessage string) error {
 	_, err := s.pool.Exec(ctx, `
 		UPDATE discovery_jobs
-		SET status = 'finished', result_json = $2, safe_message = $3, updated_at = now()
+		SET status = 'finished', result_json = $2, safe_message = $3,
+		    credential_ciphertext = NULL, updated_at = now()
 		WHERE id = $1
 	`, id, result, safeMessage)
 	return err

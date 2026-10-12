@@ -30,7 +30,8 @@ func Run(ctx context.Context, store *jobs.Store, logger *slog.Logger) {
 		apiKey, err := store.DecryptCredential(ciphertext)
 		if err != nil {
 			logger.Error("decrypt credential", "job", job.ID)
-			_ = store.Finish(ctx, job.ID, nil, "Could not read credential for this job.")
+			message := "Could not read credential for this job."
+			_ = store.Finish(ctx, job.ID, mustJSON(map[string]string{"state": "failed", "message": message}), message)
 			continue
 		}
 		switch job.Kind {
@@ -46,13 +47,21 @@ func Run(ctx context.Context, store *jobs.Store, logger *slog.Logger) {
 			result, err := provider.VerifyModel(ctx, client, job.ProviderType, job.BaseURL, apiKey, job.ModelID)
 			if err != nil {
 				logger.Error("verify model", "job", job.ID, "err", err)
-				_ = store.Finish(ctx, job.ID, mustJSON(map[string]string{"state": "failed", "message": "Verification failed."}), "")
+				finishJob(ctx, store, logger, job.ID, mustJSON(map[string]string{"state": "failed", "message": "Verification failed."}), "")
 				continue
 			}
-			_ = store.Finish(ctx, job.ID, mustJSON(result), result.Message)
+			finishJob(ctx, store, logger, job.ID, mustJSON(result), result.Message)
 		default:
 			_ = store.Finish(ctx, job.ID, mustJSON(map[string]string{"state": "failed", "message": "Unknown job kind."}), "")
 		}
+	}
+}
+
+func finishJob(ctx context.Context, store *jobs.Store, logger *slog.Logger, id string, result json.RawMessage, message string) {
+	finishCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+	if err := store.Finish(finishCtx, id, result, message); err != nil {
+		logger.Error("finish job", "job", id, "err", err)
 	}
 }
 

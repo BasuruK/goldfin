@@ -20,7 +20,6 @@
 
 ## Ponytail review (applied / deferred)
 
-- `internal/jobs/store.go:WaitUntilFinished` — **delete candidate** (test-only helper); left for integration tests later.
 - `store.svelte.js:previewModelsById` alias — **keep** until all imports gone (one caller max).
 - **Deferred:** sqlc (raw pgx + one migration); full Connector persistence (#34); browser `Test` still client-side until save slice.
 - **Deferred:** ADR credential URL guard on discovery POST (belongs with #34 API validation).

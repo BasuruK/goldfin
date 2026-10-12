@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/BasuruK/goldfin/internal/jobs"
@@ -74,14 +75,14 @@ func (s *Server) postVerifyAttempt(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) getAttempt(w http.ResponseWriter, r *http.Request) {
-	s.writeJob(w, r, r.PathValue("id"))
+	s.writeJob(w, r, r.PathValue("id"), jobs.KindCatalog)
 }
 
 func (s *Server) getVerifyAttempt(w http.ResponseWriter, r *http.Request) {
-	s.writeJob(w, r, r.PathValue("id"))
+	s.writeJob(w, r, r.PathValue("id"), jobs.KindVerify)
 }
 
-func (s *Server) writeJob(w http.ResponseWriter, r *http.Request, id string) {
+func (s *Server) writeJob(w http.ResponseWriter, r *http.Request, id string, kind jobs.Kind) {
 	job, err := s.store.Get(r.Context(), id)
 	if errors.Is(err, jobs.ErrNotFound) {
 		writeJSON(w, http.StatusNotFound, map[string]string{"message": "Attempt not found."})
@@ -90,6 +91,10 @@ func (s *Server) writeJob(w http.ResponseWriter, r *http.Request, id string) {
 	if err != nil {
 		s.logger.Error("get job", "err", err)
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"message": "Could not load attempt."})
+		return
+	}
+	if job.Kind != kind {
+		writeJSON(w, http.StatusNotFound, map[string]string{"message": "Attempt not found."})
 		return
 	}
 	resp := attemptResponse{ID: job.ID, Status: string(job.Status)}
@@ -124,6 +129,9 @@ func decodeDiscoveryRequest(w http.ResponseWriter, r *http.Request) (discoveryRe
 	if in.ProviderType == "" || in.BaseURL == "" {
 		return discoveryRequest{}, errors.New("providerType and baseUrl are required.")
 	}
+	if err := requireHTTPS(in.BaseURL); err != nil {
+		return discoveryRequest{}, err
+	}
 	return in, nil
 }
 
@@ -138,7 +146,18 @@ func decodeVerifyRequest(w http.ResponseWriter, r *http.Request) (verifyRequest,
 	if in.ProviderType == "" || in.BaseURL == "" || in.ModelID == "" {
 		return verifyRequest{}, errors.New("providerType, baseUrl and modelId are required.")
 	}
+	if err := requireHTTPS(in.BaseURL); err != nil {
+		return verifyRequest{}, err
+	}
 	return in, nil
+}
+
+func requireHTTPS(raw string) error {
+	parsed, err := url.Parse(raw)
+	if err != nil || parsed.Scheme != "https" || parsed.Host == "" {
+		return errors.New("baseUrl must be an https URL.")
+	}
+	return nil
 }
 
 func writeJSON(w http.ResponseWriter, status int, body interface{}) {

@@ -5,7 +5,11 @@ CREATE TABLE discovery_jobs (
     status TEXT NOT NULL DEFAULT 'queued' CHECK (status IN ('queued', 'running', 'finished')),
     provider_type TEXT NOT NULL,
     base_url TEXT NOT NULL,
-    credential_ciphertext BYTEA NOT NULL,
+    credential_ciphertext BYTEA,
+    CONSTRAINT discovery_jobs_credential_chk CHECK (
+        status = 'finished'
+        OR (credential_ciphertext IS NOT NULL AND octet_length(credential_ciphertext) > 0)
+    ),
     model_id TEXT,
     result_json JSONB,
     safe_message TEXT,

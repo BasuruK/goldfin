@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -19,9 +20,9 @@ type VerifyResult struct {
 }
 
 type chatRequest struct {
-	Model    string          `json:"model"`
-	Messages []chatMessage   `json:"messages"`
-	MaxTokens int            `json:"max_tokens"`
+	Model     string        `json:"model"`
+	Messages  []chatMessage `json:"messages"`
+	MaxTokens int           `json:"max_tokens"`
 }
 
 type chatMessage struct {
@@ -44,7 +45,11 @@ func VerifyModel(ctx context.Context, client *http.Client, providerType, baseURL
 			Message:  "Web Request endpoints do not support model verification.",
 		}, nil
 	case "openai", "openai_compatible", "azure":
-		ok, msg, err := minimalChat(ctx, client, baseURL, apiKey, modelID)
+		endpoint, azure, endpointErr := chatEndpoint(providerType, baseURL, modelID)
+		if endpointErr != nil {
+			return VerifyResult{State: "failed", Verified: false, ModelID: modelID, Message: "Could not build verification request."}, nil
+		}
+		ok, msg, err := minimalChat(ctx, client, endpoint, apiKey, modelID, azure)
 		if err != nil {
 			return VerifyResult{State: "failed", Verified: false, ModelID: modelID, Message: msg}, nil
 		}
@@ -62,12 +67,37 @@ func VerifyModel(ctx context.Context, client *http.Client, providerType, baseURL
 	}
 }
 
-func minimalChat(ctx context.Context, client *http.Client, baseURL, apiKey, modelID string) (bool, string, error) {
+const azureAPIVersion = "2024-10-21"
+
+func chatEndpoint(providerType, baseURL, modelID string) (string, bool, error) {
 	root := strings.TrimRight(strings.TrimSpace(baseURL), "/")
-	endpoint := root + "/chat/completions"
+	if providerType != "azure" {
+		return root + "/chat/completions", false, nil
+	}
+	endpoint, err := azureChatURL(root, modelID)
+	return endpoint, true, err
+}
+
+func azureChatURL(root, deployment string) (string, error) {
+	base, err := url.Parse(root)
+	if err != nil {
+		return "", err
+	}
+	path := strings.TrimRight(base.Path, "/")
+	if !strings.Contains(path, "/openai/deployments/") {
+		path += "/openai/deployments/" + url.PathEscape(deployment)
+	}
+	base.Path = path + "/chat/completions"
+	query := base.Query()
+	query.Set("api-version", azureAPIVersion)
+	base.RawQuery = query.Encode()
+	return base.String(), nil
+}
+
+func minimalChat(ctx context.Context, client *http.Client, endpoint, apiKey, modelID string, azure bool) (bool, string, error) {
 	payload, err := json.Marshal(chatRequest{
-		Model: modelID,
-		Messages: []chatMessage{{Role: "user", Content: "ping"}},
+		Model:     modelID,
+		Messages:  []chatMessage{{Role: "user", Content: "ping"}},
 		MaxTokens: 1,
 	})
 	if err != nil {
@@ -79,7 +109,11 @@ func minimalChat(ctx context.Context, client *http.Client, baseURL, apiKey, mode
 	}
 	req.Header.Set("Content-Type", "application/json")
 	if apiKey != "" {
-		req.Header.Set("Authorization", "Bearer "+apiKey)
+		if azure {
+			req.Header.Set("api-key", apiKey)
+		} else {
+			req.Header.Set("Authorization", "Bearer "+apiKey)
+		}
 	}
 	res, err := client.Do(req)
 	if err != nil {
