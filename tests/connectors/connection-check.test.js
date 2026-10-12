@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
-import { describe, it } from 'node:test';
+import { describe, it, mock } from 'node:test';
 import {
   connectionFailureField,
   finishConnectionCheck,
+  runConnectionCheck,
   validateBaseUrl,
   validateForCheck
 } from '../../src/lib/connectors/connection-check.js';
@@ -14,6 +15,11 @@ describe('validateBaseUrl', () => {
 
   it('accepts https', () => {
     assert.equal(validateBaseUrl('https://api.openai.com/v1'), null);
+  });
+
+  it('accepts http on loopback only', () => {
+    assert.equal(validateBaseUrl('http://127.0.0.1:8080/v1'), null);
+    assert.match(validateBaseUrl('http://api.example.com/v1'), /https/);
   });
 
   it('rejects garbage', () => {
@@ -54,7 +60,7 @@ describe('validateForCheck', () => {
   it('maps validation messages to fields', () => {
     assert.equal(connectionFailureField('Base URL is required.'), 'baseUrl');
     assert.equal(connectionFailureField('API Key is required.'), 'apiKey');
-    assert.equal(connectionFailureField('HTTP 401 from api.openai.com.'), 'baseUrl');
+    assert.equal(connectionFailureField('HTTP 401 from api.openai.com.'), null);
   });
 
   it('allows empty key for web_request', () => {
@@ -66,5 +72,41 @@ describe('validateForCheck', () => {
       }),
       null
     );
+  });
+});
+
+describe('runConnectionCheck', () => {
+  it('returns field null for HTTP errors', async () => {
+    mock.method(globalThis, 'fetch', async () => ({ ok: false, status: 401 }));
+    const result = await runConnectionCheck({
+      baseUrl: 'https://api.openai.com/v1',
+      apiKey: 'sk-test',
+      providerType: 'openai'
+    });
+    assert.equal(result.status, 'failed');
+    assert.equal(result.field, null);
+    assert.match(result.message, /401/);
+    mock.restoreAll();
+  });
+
+  it('fails when the request times out', async () => {
+    const realTimeout = AbortSignal.timeout.bind(AbortSignal);
+    mock.method(AbortSignal, 'timeout', () => realTimeout(50));
+    mock.method(globalThis, 'fetch', async (_url, init) => {
+      const signal = init?.signal;
+      await new Promise((_resolve, reject) => {
+        if (signal) {
+          signal.addEventListener('abort', () => reject(signal.reason ?? new DOMException('Aborted', 'AbortError')));
+        }
+      });
+    });
+    const result = await runConnectionCheck({
+      baseUrl: 'https://api.openai.com/v1',
+      apiKey: 'sk-test',
+      providerType: 'openai'
+    });
+    assert.equal(result.status, 'failed');
+    assert.match(result.message, /timed out/i);
+    mock.restoreAll();
   });
 });

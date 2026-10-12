@@ -51,12 +51,7 @@
     if (!record) return;
     const target = event.currentTarget;
     if (!(target instanceof HTMLInputElement)) return;
-    const patch = { [field]: target.value };
-    if (field === 'baseUrl' || field === 'apiKey') {
-      patch.connectionStatus = 'idle';
-      patch.connectionMessage = '';
-    }
-    patchConnector(record.id, patch);
+    patchConnector(record.id, { [field]: target.value });
   }
 
   const testing = $derived(record?.connectionStatus === 'testing');
@@ -76,6 +71,12 @@
 
   const apiKeyFieldError = $derived(
     failedConnectionMessage && connectionFailureField(failedConnectionMessage) === 'apiKey'
+      ? failedConnectionMessage
+      : ''
+  );
+
+  const generalConnectionError = $derived(
+    failedConnectionMessage && connectionFailureField(failedConnectionMessage) === null
       ? failedConnectionMessage
       : ''
   );
@@ -102,7 +103,7 @@
         <div class="modal connector-form-panel">
         <DialogHeader
           parts={Primitive}
-          title={record.name.trim() ? record.name : `Connect to ${provider.label}`}
+          title={record.name?.trim() ? record.name : `Connect to ${provider.label}`}
           description="API Key and base URL are saved as you type."
           icon={provider.icon}
           close
@@ -145,6 +146,9 @@
               error={apiKeyFieldError}
               message={apiKeyFieldMessage}
             />
+            {#if generalConnectionError}
+              <p class="connector-connection-error" role="alert">{generalConnectionError}</p>
+            {/if}
           </div>
         </DialogBody>
         <div class="modal-foot connector-dialog-foot">
@@ -165,7 +169,7 @@
           </div>
           <div class="modal-foot-actions connector-dialog-actions">
             <Primitive.Close class="btn primary" type="button">Done</Primitive.Close>
-            <Primitive.Close class="btn" type="button">Cancel</Primitive.Close>
+            <Primitive.Close class="btn" type="button">Close</Primitive.Close>
           </div>
         </div>
         </div>
@@ -211,6 +215,12 @@
   .connector-form {
     display: grid;
     gap: 16px;
+  }
+
+  .connector-connection-error {
+    margin: 0;
+    font: 500 13px Urbanist, system-ui, sans-serif;
+    color: var(--bad, #e85d5d);
   }
 
   .connector-dialog-foot {

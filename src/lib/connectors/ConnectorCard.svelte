@@ -13,7 +13,7 @@
   const statusChip = $derived.by(() => {
     switch (connector.connectionStatus) {
       case 'ok':
-        return { tone: 'ok', label: 'Connected' };
+        return { tone: 'ok', label: 'Reachable' };
       case 'failed':
         return { tone: 'error', label: 'Check failed' };
       case 'testing':

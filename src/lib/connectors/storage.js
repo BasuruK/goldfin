@@ -1,8 +1,13 @@
+import { providerByType } from './providers.js';
+
 const STORAGE_KEY = 'goldfin.connectors.v1';
 
 /**
  * @typedef {import('./providers.js').ProviderType} ProviderType
  * @typedef {import('./connection-check.js').ConnectionStatus} ConnectionStatus
+ *
+ * Persisted Connector list for the v1 client-only UI. `apiKey` is stored in plaintext
+ * in `localStorage` on this device until worker-backed Credential storage ships (ADR 0005).
  *
  * @typedef {{
  *   id: string,
@@ -12,6 +17,7 @@ const STORAGE_KEY = 'goldfin.connectors.v1';
  *   apiKey: string,
  *   connectionStatus: ConnectionStatus,
  *   connectionMessage: string,
+ *   checkRequestId: string | null,
  *   lastCheckedAt: string | null,
  *   updatedAt: string,
  *   models: { id: string, enabled: boolean, source: 'sample' | 'manual' | 'discovered', verified?: boolean }[],
@@ -21,6 +27,66 @@ const STORAGE_KEY = 'goldfin.connectors.v1';
  * }} ConnectorRecord
  */
 
+/** @param {unknown} raw */
+function normalizeConnector(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const entry = /** @type {Record<string, unknown>} */ (raw);
+  if (typeof entry.id !== 'string' || !entry.id) return null;
+
+  const providerType =
+    typeof entry.providerType === 'string' && providerByType(entry.providerType).value === entry.providerType
+      ? /** @type {ProviderType} */ (entry.providerType)
+      : 'openai';
+
+  let connectionStatus =
+    entry.connectionStatus === 'ok' || entry.connectionStatus === 'failed' ? entry.connectionStatus : 'idle';
+  if (entry.connectionStatus === 'testing') connectionStatus = 'idle';
+
+  let catalogState = 'idle';
+  if (
+    entry.catalogState === 'ready' ||
+    entry.catalogState === 'unsupported' ||
+    entry.catalogState === 'failed'
+  ) {
+    catalogState = entry.catalogState;
+  }
+
+  const models = Array.isArray(entry.models)
+    ? entry.models
+        .filter(
+          model =>
+            model &&
+            typeof model === 'object' &&
+            typeof model.id === 'string' &&
+            model.id &&
+            (model.source === 'sample' || model.source === 'manual' || model.source === 'discovered')
+        )
+        .map(model => ({
+          id: model.id,
+          enabled: Boolean(model.enabled),
+          source: model.source,
+          ...(model.verified === true ? { verified: true } : {})
+        }))
+    : [];
+
+  return {
+    id: entry.id,
+    providerType,
+    name: typeof entry.name === 'string' ? entry.name : '',
+    baseUrl: typeof entry.baseUrl === 'string' ? entry.baseUrl : '',
+    apiKey: typeof entry.apiKey === 'string' ? entry.apiKey : '',
+    connectionStatus,
+    connectionMessage: typeof entry.connectionMessage === 'string' ? entry.connectionMessage : '',
+    checkRequestId: null,
+    lastCheckedAt: typeof entry.lastCheckedAt === 'string' ? entry.lastCheckedAt : null,
+    updatedAt: typeof entry.updatedAt === 'string' ? entry.updatedAt : new Date().toISOString(),
+    models,
+    catalogState,
+    catalogMessage: typeof entry.catalogMessage === 'string' ? entry.catalogMessage : '',
+    discoveryRevision: typeof entry.discoveryRevision === 'number' ? entry.discoveryRevision : 0
+  };
+}
+
 /** @returns {ConnectorRecord[]} */
 export function loadConnectors() {
   if (typeof localStorage === 'undefined') return [];
@@ -28,7 +94,8 @@ export function loadConnectors() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map(normalizeConnector).filter(record => record !== null);
   } catch {
     return [];
   }
@@ -55,6 +122,7 @@ export function createEmptyConnector(providerType) {
     apiKey: '',
     connectionStatus: 'idle',
     connectionMessage: '',
+    checkRequestId: null,
     lastCheckedAt: null,
     models: [],
     catalogState: 'idle',

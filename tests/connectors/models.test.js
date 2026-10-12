@@ -1,6 +1,19 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { applyConnectorPatch, availableModelIds, beginDiscovery, finishDiscovery, addManualModel } from '../../src/lib/connectors/models.js';
+import {
+  applyConnectorPatch,
+  availableModelIds,
+  beginDiscovery,
+  finishDiscovery,
+  addManualModel,
+  isCatalogEditable
+} from '../../src/lib/connectors/models.js';
+
+test('isCatalogEditable matches ready and unsupported only', () => {
+  assert.equal(isCatalogEditable({ catalogState: 'ready' }), true);
+  assert.equal(isCatalogEditable({ catalogState: 'unsupported' }), true);
+  assert.equal(isCatalogEditable({ catalogState: 'idle' }), false);
+});
 
 test('changing connection details blocks model use but retains selections for refresh', () => {
   const record = {

@@ -1,12 +1,13 @@
 <script>
   import { Button, Input, Switch } from '$goldfin/lib/index.js';
+  import { isCatalogEditable } from './models.js';
   import { addModelById, previewModelsById, setModelEnabled } from './store.svelte.js';
 
   let { record } = $props();
   let manualId = $state('');
   const models = $derived(record.models ?? []);
   const enabledCount = $derived(models.filter(model => model.enabled).length);
-  const editable = $derived(['ready', 'unsupported'].includes(record.catalogState));
+  const editable = $derived(isCatalogEditable(record));
 
   function addModel(event) {
     event.preventDefault();

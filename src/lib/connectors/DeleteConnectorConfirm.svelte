@@ -6,7 +6,7 @@
   /** @type {{ connector: import('./storage.js').ConnectorRecord, trigger?: string, iconTrigger?: boolean }} */
   let { connector, trigger = 'Delete', iconTrigger = false } = $props();
 
-  const label = $derived(connector.name.trim() || providerByType(connector.providerType).label);
+  const label = $derived(connector.name?.trim() || providerByType(connector.providerType).label);
 </script>
 
 {#if !connectorStore.adding || connectorStore.editingId !== connector.id}

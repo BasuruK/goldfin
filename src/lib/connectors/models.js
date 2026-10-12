@@ -1,3 +1,8 @@
+/** @param {{ catalogState: string }} record */
+export function isCatalogEditable(record) {
+  return ['ready', 'unsupported'].includes(record.catalogState);
+}
+
 export function applyConnectorPatch(record, patch) {
   const changed = ['providerType', 'baseUrl', 'apiKey'].some(
     field => field in patch && patch[field] !== record[field]
@@ -13,7 +18,7 @@ export function applyConnectorPatch(record, patch) {
 }
 
 export function availableModelIds(record) {
-  if (!['ready', 'unsupported'].includes(record.catalogState)) return [];
+  if (!isCatalogEditable(record)) return [];
   return (record.models ?? [])
     .filter(model => model.enabled && ['discovered', 'manual'].includes(model.source) && model.verified === true)
     .map(model => model.id);

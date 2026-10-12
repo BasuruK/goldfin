@@ -1,6 +1,6 @@
 /** @typedef {'openai' | 'azure' | 'openai_compatible' | 'web_request'} ProviderType */
 
-/** @typedef {{ value: ProviderType, label: string, description: string, defaultBaseUrl: string, icon: string }} ProviderOption */
+/** @typedef {{ value: ProviderType, label: string, description: string, defaultBaseUrl: string, icon: string, modelProbePath?: string }} ProviderOption */
 
 /** @type {readonly ProviderOption[]} */
 export const PROVIDERS = [
@@ -9,7 +9,8 @@ export const PROVIDERS = [
     label: 'OpenAI',
     description: 'Official OpenAI API with your API key.',
     defaultBaseUrl: 'https://api.openai.com/v1',
-    icon: 'plug'
+    icon: 'plug',
+    modelProbePath: '/models'
   },
   {
     value: 'azure',
@@ -23,7 +24,8 @@ export const PROVIDERS = [
     label: 'OpenAI Compatible',
     description: 'Any service that speaks the OpenAI chat/completions API.',
     defaultBaseUrl: 'https://api.example.com/v1',
-    icon: 'link'
+    icon: 'link',
+    modelProbePath: '/models'
   },
   {
     value: 'web_request',
