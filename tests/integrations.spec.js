@@ -37,7 +37,7 @@ test('model discovery starts disabled, saves toggles, and blocks them after conn
     if (request.url().includes('api.openai.com')) outbound.push(request.url());
   });
   await mockModelDiscovery(page);
-  await mockVerification(page, { state: 'ready', verified: false, message: 'Model access was not confirmed.' });
+  await mockVerification(page, { state: 'ready', verified: true });
   await page.goto('/connectors/');
   await page.getByRole('button', { name: 'Add connector', exact: true }).click();
   const dialog = page.getByRole('dialog');
@@ -59,6 +59,24 @@ test('model discovery starts disabled, saves toggles, and blocks them after conn
   await expect(model).toBeEnabled();
   await expect(model).toHaveAttribute('aria-checked', 'true');
   expect(outbound).toEqual([]);
+});
+
+test('failed verification with a message turns the model back off', async ({ page }) => {
+  await mockModelDiscovery(page);
+  await mockVerification(page, {
+    state: 'ready',
+    verified: false,
+    message: 'Authentication failed during verification.'
+  });
+  await page.goto('/connectors/');
+  await page.getByRole('button', { name: 'Add connector', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('API Key', { exact: true }).fill('sk-test');
+  await dialog.getByRole('button', { name: 'Discover models', exact: true }).click();
+  const model = dialog.getByRole('switch', { name: 'sample-chat-small', exact: true });
+  await model.click();
+  await expect(dialog.getByText('Authentication failed during verification.', { exact: true })).toBeVisible();
+  await expect(model).toHaveAttribute('aria-checked', 'false');
 });
 
 test('unsupported discovery allows explicit unverified manual IDs', async ({ page }) => {
@@ -109,7 +127,7 @@ async function dialogFillApiKey(page) {
 for (const viewport of [{ width: 1280, height: 800 }, { width: 375, height: 720 }]) {
   test(`model panel fits ${viewport.width}px with reduced motion and keyboard access`, async ({ page }) => {
     await mockModelDiscovery(page);
-    await mockVerification(page, { state: 'ready', verified: false, message: 'Model access was not confirmed.' });
+    await mockVerification(page, { state: 'ready', verified: true });
     await page.setViewportSize(viewport);
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/connectors/');

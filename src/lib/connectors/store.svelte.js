@@ -1,7 +1,7 @@
 import { finishConnectionCheck, runConnectionCheck } from './connection-check.js';
 import { defaultBaseUrlFor, defaultNameFor } from './providers.js';
 import { createEmptyConnector, loadConnectors, saveConnectors } from './storage.js';
-import { applyConnectorPatch, beginDiscovery, finishDiscovery, addManualModel, isCatalogEditable } from './models.js';
+import { applyConnectorPatch, beginDiscovery, finishDiscovery, addManualModel, failedVerificationPatch, isCatalogEditable } from './models.js';
 import { discoveryAttemptToResult } from './discovery-result.js';
 import { runModelDiscovery, runModelVerification } from './discovery-client.js';
 import { validateForCheck } from './connection-check.js';
@@ -232,13 +232,7 @@ export async function verifyModelById(id, modelId) {
     const payload = attempt.result;
     if (!payload || payload.verified !== true) {
       const message = payload && typeof payload.message === 'string' ? payload.message.trim() : '';
-      if (message) {
-        patchConnector(id, { catalogMessage: message }, { immediate: true });
-        return;
-      }
-      patchConnector(id, {
-        models: (current.models ?? []).map(model => (model.id === modelId ? { ...model, enabled: false } : model))
-      }, { immediate: true });
+      patchConnector(id, failedVerificationPatch(current.models, modelId, message), { immediate: true });
       return;
     }
     patchConnector(id, {
@@ -250,10 +244,7 @@ export async function verifyModelById(id, modelId) {
     const current = connectorStore.connectors.find(c => c.id === id);
     if (!current || current.discoveryRevision !== revision) return;
     const message = error instanceof Error ? error.message.trim() : '';
-    patchConnector(id, {
-      ...(message ? { catalogMessage: message } : {}),
-      models: (current.models ?? []).map(model => (model.id === modelId ? { ...model, enabled: false } : model))
-    }, { immediate: true });
+    patchConnector(id, failedVerificationPatch(current.models, modelId, message), { immediate: true });
   }
 }
 

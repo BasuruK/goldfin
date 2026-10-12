@@ -58,7 +58,7 @@ test('Delete is hidden in Add and appears when configuring an added Connector', 
 for (const providerType of ['openai', 'azure', 'openai_compatible', 'web_request']) {
   test(`custom models are available for ${providerType} and survive refresh`, async ({ page }) => {
     await mockDiscovery(page, 'attempt-unsupported', { state: 'unsupported', message: 'Add a model ID manually.' });
-    await mockVerification(page, { state: 'ready', verified: false, message: 'Model access was not confirmed.' });
+    await mockVerification(page, { state: 'ready', verified: true });
     await page.addInitScript(type => localStorage.setItem('goldfin.connectors.v1', JSON.stringify([{
       id: 'custom', providerType: type, name: 'Custom connection', baseUrl: 'https://example.com/v1',
       apiKey: type === 'web_request' ? '' : 'sk-test', connectionStatus: 'idle', models: []

@@ -25,7 +25,7 @@ export async function mockDiscovery(page, attemptId, result) {
 }
 
 /**
- * Keeps an enabled model from flipping off when verification is not the subject of the test.
+ * Confirms the model when verification is not the subject of the test.
  * @param {import('@playwright/test').Page} page
  * @param {Record<string, unknown>} result
  */

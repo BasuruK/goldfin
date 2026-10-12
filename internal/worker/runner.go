@@ -31,7 +31,7 @@ func Run(ctx context.Context, store *jobs.Store, logger *slog.Logger) {
 		if err != nil {
 			logger.Error("decrypt credential", "job", job.ID)
 			message := "Could not read credential for this job."
-			_ = store.Finish(ctx, job.ID, mustJSON(map[string]string{"state": "failed", "message": message}), message)
+			finishJob(ctx, store, logger, job.ID, mustJSON(map[string]string{"state": "failed", "message": message}), message)
 			continue
 		}
 		switch job.Kind {
@@ -39,10 +39,10 @@ func Run(ctx context.Context, store *jobs.Store, logger *slog.Logger) {
 			result, err := provider.DiscoverCatalog(ctx, client, job.ProviderType, job.BaseURL, apiKey)
 			if err != nil {
 				logger.Error("catalog discovery", "job", job.ID, "err", err)
-				_ = store.Finish(ctx, job.ID, mustJSON(map[string]string{"state": "failed", "message": "Model discovery failed."}), "")
+				finishJob(ctx, store, logger, job.ID, mustJSON(map[string]string{"state": "failed", "message": "Model discovery failed."}), "")
 				continue
 			}
-			_ = store.Finish(ctx, job.ID, mustJSON(result), result.Message)
+			finishJob(ctx, store, logger, job.ID, mustJSON(result), result.Message)
 		case jobs.KindVerify:
 			result, err := provider.VerifyModel(ctx, client, job.ProviderType, job.BaseURL, apiKey, job.ModelID)
 			if err != nil {
@@ -52,7 +52,7 @@ func Run(ctx context.Context, store *jobs.Store, logger *slog.Logger) {
 			}
 			finishJob(ctx, store, logger, job.ID, mustJSON(result), result.Message)
 		default:
-			_ = store.Finish(ctx, job.ID, mustJSON(map[string]string{"state": "failed", "message": "Unknown job kind."}), "")
+			finishJob(ctx, store, logger, job.ID, mustJSON(map[string]string{"state": "failed", "message": "Unknown job kind."}), "")
 		}
 	}
 }

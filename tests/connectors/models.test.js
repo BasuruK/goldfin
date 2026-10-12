@@ -7,6 +7,7 @@ import {
   finishDiscovery,
   addManualModel,
   connectorDefinitionForRun,
+  failedVerificationPatch,
   isCatalogEditable
 } from '../../src/lib/connectors/models.js';
 
@@ -121,6 +122,20 @@ test('run snapshot keeps the selected model id on the connector definition', () 
     baseUrl: 'https://api.openai.com/v1',
     modelId: 'gpt-4'
   });
+});
+
+test('failed verification turns the model off and keeps a provider message', () => {
+  const models = [
+    { id: 'gpt-4', enabled: true, source: 'discovered' },
+    { id: 'other', enabled: true, source: 'discovered' }
+  ];
+  const patch = failedVerificationPatch(models, 'gpt-4', 'Authentication failed during verification.');
+  assert.equal(patch.catalogMessage, 'Authentication failed during verification.');
+  assert.equal(patch.models[0].enabled, false);
+  assert.equal(patch.models[1].enabled, true);
+  const silent = failedVerificationPatch(models, 'gpt-4', '');
+  assert.equal('catalogMessage' in silent, false);
+  assert.equal(silent.models[0].enabled, false);
 });
 
 test('custom model entry works for every provider and survives catalog refresh', () => {

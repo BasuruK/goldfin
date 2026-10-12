@@ -27,13 +27,11 @@
 ## Local dev
 
 ```sh
-docker compose up -d
 cp .env.example .env
 # set APP_KEY in .env: openssl rand -base64 32
-go run ./cmd/goldfin migrate
-go run ./cmd/goldfin api &
-go run ./cmd/goldfin worker &
-pnpm dev
+make migrate          # db-up + migrations
+make run              # api + worker + pnpm dev (one terminal)
+# or separately: make run-api | make run-worker | make run-web
 ```
 
 Change `API_ADDR` in `.env` if port 8080 is taken; Vite reads the same key for the `/api` proxy.

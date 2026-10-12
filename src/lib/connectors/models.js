@@ -69,6 +69,14 @@ export function connectorDefinitionForRun(record, modelId) {
   };
 }
 
+export function failedVerificationPatch(models, modelId, message) {
+  const patch = {
+    models: (models ?? []).map(model => (model.id === modelId ? { ...model, enabled: false } : model))
+  };
+  if (message) patch.catalogMessage = message;
+  return patch;
+}
+
 export function addManualModel(record, value) {
   const id = value.trim();
   if (!id || (record.models ?? []).some(model => model.id === id)) return record;
