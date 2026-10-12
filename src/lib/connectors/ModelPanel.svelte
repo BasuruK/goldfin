@@ -1,7 +1,7 @@
 <script>
   import { Button, Input, Switch } from '$goldfin/lib/index.js';
   import { isCatalogEditable } from './models.js';
-  import { addModelById, previewModelsById, setModelEnabled } from './store.svelte.js';
+  import { addModelById, discoverModelsById, setModelEnabled } from './store.svelte.js';
 
   let { record } = $props();
   let manualId = $state('');
@@ -19,10 +19,10 @@
 <section class="model-panel modal" aria-labelledby="model-panel-title" aria-busy={record.catalogState === 'loading'}>
   <header class="model-panel-head">
     <h2 id="model-panel-title">Models</h2>
-    <span class="model-panel-count">{enabledCount} enabled · preview only</span>
+    <span class="model-panel-count">{enabledCount} enabled</span>
   </header>
   <p class="model-panel-notice" role="status">
-    {record.catalogMessage || 'Connection changed. Refresh the preview before enabling models.'}
+    {record.catalogMessage || 'Connection changed. Discover models again before enabling them.'}
   </p>
   <!-- svelte-ignore a11y_no_noninteractive_tabindex (The scroll region needs keyboard access.) -->
   <div class="model-list" role="region" aria-label="Model list" tabindex="0">
@@ -50,7 +50,7 @@
     <Input label="Model ID" bind:value={manualId} placeholder="Type an ID, then press Enter" disabled={record.catalogState === 'loading'} />
   </form>
   <footer class="model-panel-foot">
-    <Button type="button" disabled={record.catalogState === 'loading'} onclick={() => previewModelsById(record.id)}>Refresh preview</Button>
+    <Button type="button" disabled={record.catalogState === 'loading'} onclick={() => discoverModelsById(record.id)}>Refresh catalog</Button>
   </footer>
 </section>
 

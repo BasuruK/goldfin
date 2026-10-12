@@ -1,7 +1,7 @@
 import { fileURLToPath } from 'node:url';
 import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 
 // The component library is referenced from its source, never copied. `$goldfin`
 // points at the library's src, so `$goldfin/lib/index.js` and
@@ -11,11 +11,28 @@ const root = fileURLToPath(new URL('.', import.meta.url));
 const goldfin = fileURLToPath(new URL('./Goldfin_Components/src', import.meta.url));
 const lib = fileURLToPath(new URL('./src/lib', import.meta.url));
 
-export default defineConfig({
+/** @param {string} apiAddr */
+function apiProxyTarget(apiAddr) {
+  if (apiAddr.startsWith('http://') || apiAddr.startsWith('https://')) return apiAddr;
+  return `http://${apiAddr}`;
+}
+
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, root, '');
+  const apiTarget = apiProxyTarget(env.API_ADDR || '127.0.0.1:8080');
+
+  return {
   plugins: [sveltekit({ adapter: adapter() })],
   server: {
+    host: '127.0.0.1',
     fs: {
       allow: [root, goldfin]
+    },
+    proxy: {
+      '/api': {
+        target: apiTarget,
+        changeOrigin: true
+      }
     }
   },
   resolve: {
@@ -29,4 +46,5 @@ export default defineConfig({
     // broken context. Dedupe forces one copy, the app's.
     dedupe: ['svelte', 'bits-ui', 'lineicons']
   }
+};
 });

@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: goldfin
+      POSTGRES_PASSWORD: goldfin
+      POSTGRES_DB: goldfin
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U goldfin -d goldfin"]
+      interval: 2s
+      timeout: 5s
+      retries: 10

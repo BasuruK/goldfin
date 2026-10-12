@@ -1,5 +1,55 @@
 import { expect, test } from '@playwright/test';
 
+async function mockUnsupportedDiscovery(page) {
+  await page.route('**/api/v1/model-discovery/attempts', async route => {
+    if (route.request().method() === 'POST') {
+      await route.fulfill({
+        status: 202,
+        contentType: 'application/json',
+        body: JSON.stringify({ id: 'attempt-unsupported', status: 'queued' })
+      });
+      return;
+    }
+    await route.continue();
+  });
+  await page.route('**/api/v1/model-discovery/attempts/attempt-unsupported', async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'attempt-unsupported',
+        status: 'finished',
+        result: { state: 'unsupported', message: 'Add a model ID manually.' }
+      })
+    });
+  });
+}
+
+async function mockReadyDiscovery(page) {
+  await page.route('**/api/v1/model-discovery/attempts', async route => {
+    if (route.request().method() === 'POST') {
+      await route.fulfill({
+        status: 202,
+        contentType: 'application/json',
+        body: JSON.stringify({ id: 'attempt-ready', status: 'queued' })
+      });
+      return;
+    }
+    await route.continue();
+  });
+  await page.route('**/api/v1/model-discovery/attempts/attempt-ready', async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'attempt-ready',
+        status: 'finished',
+        result: { state: 'ready', ids: ['catalog-model'], source: 'discovered', message: '1 model discovered.' }
+      })
+    });
+  });
+}
+
 test('Integrations opens and closes through intermediate sizes and keyboard activation is instant', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto('/');
@@ -48,6 +98,7 @@ test('Delete is hidden in Add and appears when configuring an added Connector', 
   await page.getByRole('button', { name: 'Add connector', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByRole('button', { name: 'Delete connector', exact: true })).toHaveCount(0);
+  await dialog.getByLabel('API Key', { exact: true }).fill('sk-test');
   await dialog.getByRole('button', { name: 'Done', exact: true }).click();
   await page.getByRole('button', { name: 'Configure', exact: true }).click();
   await expect(dialog.getByRole('button', { name: 'Delete connector', exact: true })).toBeVisible();
@@ -55,13 +106,15 @@ test('Delete is hidden in Add and appears when configuring an added Connector', 
 
 for (const providerType of ['openai', 'azure', 'openai_compatible', 'web_request']) {
   test(`custom models are available for ${providerType} and survive refresh`, async ({ page }) => {
+    await mockUnsupportedDiscovery(page);
     await page.addInitScript(type => localStorage.setItem('goldfin.connectors.v1', JSON.stringify([{
-      id: 'custom', providerType: type, name: 'Custom connection', baseUrl: 'https://example.com/v1', apiKey: '', connectionStatus: 'idle', models: []
+      id: 'custom', providerType: type, name: 'Custom connection', baseUrl: 'https://example.com/v1',
+      apiKey: type === 'web_request' ? '' : 'sk-test', connectionStatus: 'idle', models: []
     }])), providerType);
     await page.goto('/connectors/');
     await page.getByRole('button', { name: 'Configure', exact: true }).click();
     const dialog = page.getByRole('dialog');
-    await dialog.getByRole('button', { name: 'Preview models', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Discover models', exact: true }).click();
     const entry = dialog.getByLabel('Model ID', { exact: true });
     await entry.fill('custom-model');
     await entry.press('Enter');
@@ -69,7 +122,8 @@ for (const providerType of ['openai', 'azure', 'openai_compatible', 'web_request
     const toggle = dialog.getByRole('switch', { name: 'custom-model', exact: true });
     await expect(toggle).toHaveAttribute('aria-checked', 'false');
     await toggle.click();
-    await dialog.getByRole('button', { name: 'Refresh preview', exact: true }).click();
+    await mockReadyDiscovery(page);
+    await dialog.getByRole('button', { name: 'Refresh catalog', exact: true }).click();
     await expect(toggle).toHaveAttribute('aria-checked', 'true');
     await expect(dialog.getByRole('row', { name: /custom-model/ })).toContainText('Unverified');
   });
@@ -128,10 +182,12 @@ for (const theme of ['light', 'dark']) {
       expect(stem.opacity).toBe('0.8');
       await page.locator('#primary-nav').screenshot({ path: `test-results/nav-${theme}-${viewport.width}.png` });
       if (viewport.width < 768) await page.getByRole('link', { name: 'Connectors', exact: true }).click();
+      await mockUnsupportedDiscovery(page);
       await page.getByRole('button', { name: 'Add connector', exact: true }).click();
       const dialog = page.getByRole('dialog');
+      await dialog.getByLabel('API Key', { exact: true }).fill('sk-test');
       await dialog.getByRole('button', { name: 'Test', exact: true }).click();
-      await dialog.getByRole('button', { name: 'Preview models', exact: true }).click();
+      await dialog.getByRole('button', { name: 'Discover models', exact: true }).click();
       await expect(dialog.getByRole('button', { name: 'Add model ID', exact: true })).toHaveCount(0);
       await expect(dialog.getByText('Sample and unverified IDs cannot be used in a Run.', { exact: true })).toHaveCount(0);
       const entry = dialog.getByLabel('Model ID', { exact: true });

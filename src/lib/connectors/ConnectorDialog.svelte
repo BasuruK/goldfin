@@ -16,7 +16,7 @@
     connectorStore,
     editingConnector,
     patchConnector,
-    previewModelsById,
+    discoverModelsById,
     removeDraftIfEmpty,
     setProviderType,
     testConnectorById
@@ -163,8 +163,8 @@
               <Icon name="play" size={16} />
               Test
             </LoadingButton>
-            <Button type="button" disabled={record.catalogState === 'loading'} onclick={() => previewModelsById(record.id)}>
-              Preview models
+            <Button type="button" disabled={record.catalogState === 'loading'} onclick={() => discoverModelsById(record.id)}>
+              Discover models
             </Button>
           </div>
           <div class="modal-foot-actions connector-dialog-actions">

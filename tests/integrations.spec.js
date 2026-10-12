@@ -1,5 +1,37 @@
 import { expect, test } from '@playwright/test';
 
+const DISCOVERY_IDS = ['sample-chat-small', 'sample-chat-large', 'sample-reasoning'];
+
+async function mockModelDiscovery(page) {
+  await page.route('**/api/v1/model-discovery/attempts', async route => {
+    if (route.request().method() === 'POST') {
+      await route.fulfill({
+        status: 202,
+        contentType: 'application/json',
+        body: JSON.stringify({ id: 'attempt-1', status: 'queued' })
+      });
+      return;
+    }
+    await route.continue();
+  });
+  await page.route('**/api/v1/model-discovery/attempts/attempt-1', async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'attempt-1',
+        status: 'finished',
+        result: {
+          state: 'ready',
+          ids: DISCOVERY_IDS,
+          source: 'discovered',
+          message: `${DISCOVERY_IDS.length} models discovered.`
+        }
+      })
+    });
+  });
+}
+
 test('Integrations expands without navigation and opens Connectors from the rail', async ({ page }) => {
   await page.goto('/');
   const group = page.getByRole('button', { name: 'Integrations', exact: true });
@@ -19,17 +51,19 @@ test('Integrations expands without navigation and opens Connectors from the rail
   await expect(group).toHaveAttribute('aria-expanded', 'true');
 });
 
-test('model preview starts disabled, saves toggles, and blocks them after connection changes', async ({ page }) => {
+test('model discovery starts disabled, saves toggles, and blocks them after connection changes', async ({ page }) => {
   const outbound = [];
   page.on('request', request => {
     if (request.url().includes('api.openai.com')) outbound.push(request.url());
   });
+  await mockModelDiscovery(page);
   await page.goto('/connectors/');
   await page.getByRole('button', { name: 'Add connector', exact: true }).click();
   const dialog = page.getByRole('dialog');
-  await dialog.getByRole('button', { name: 'Preview models', exact: true }).click();
+  await dialog.getByLabel('API Key', { exact: true }).fill('sk-test');
+  await dialog.getByRole('button', { name: 'Discover models', exact: true }).click();
   await expect(dialog.getByRole('heading', { name: 'Models', exact: true })).toBeVisible();
-  await expect(dialog.getByText(/Simulated catalog/)).toBeVisible();
+  await expect(dialog.getByText(/models discovered/i)).toBeVisible();
   const model = dialog.getByRole('switch', { name: 'sample-chat-small', exact: true });
   await expect(model).toHaveAttribute('aria-checked', 'false');
   await model.click();
@@ -40,20 +74,45 @@ test('model preview starts disabled, saves toggles, and blocks them after connec
   await expect(model).toHaveAttribute('aria-checked', 'true');
   await dialog.getByLabel('Base URL', { exact: true }).fill('https://changed.example/v1');
   await expect(model).toBeDisabled();
-  await dialog.getByRole('button', { name: 'Refresh preview', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Refresh catalog', exact: true }).click();
   await expect(model).toBeEnabled();
   await expect(model).toHaveAttribute('aria-checked', 'true');
   expect(outbound).toEqual([]);
 });
 
 test('unsupported discovery allows explicit unverified manual IDs', async ({ page }) => {
+  await page.route('**/api/v1/model-discovery/attempts', async route => {
+    if (route.request().method() === 'POST') {
+      await route.fulfill({
+        status: 202,
+        contentType: 'application/json',
+        body: JSON.stringify({ id: 'attempt-unsupported', status: 'queued' })
+      });
+      return;
+    }
+    await route.continue();
+  });
+  await page.route('**/api/v1/model-discovery/attempts/attempt-unsupported', async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'attempt-unsupported',
+        status: 'finished',
+        result: {
+          state: 'unsupported',
+          message: 'Add a model ID manually.'
+        }
+      })
+    });
+  });
   await page.addInitScript(() => localStorage.setItem('goldfin.connectors.v1', JSON.stringify([{
     id: 'manual', providerType: 'web_request', name: 'Custom gateway', baseUrl: 'https://example.com', apiKey: '', connectionStatus: 'idle', models: []
   }])));
   await page.goto('/connectors/');
   await page.getByRole('button', { name: 'Configure', exact: true }).click();
   const dialog = page.getByRole('dialog');
-  await dialog.getByRole('button', { name: 'Preview models', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Discover models', exact: true }).click();
   await dialog.getByLabel('Model ID', { exact: true }).fill('custom-model');
   await dialog.getByLabel('Model ID', { exact: true }).press('Enter');
   await expect(dialog.getByRole('switch', { name: 'custom-model', exact: true })).toHaveAttribute('aria-checked', 'false');
@@ -61,12 +120,14 @@ test('unsupported discovery allows explicit unverified manual IDs', async ({ pag
 });
 
 test('model panel reveals through intermediate frames when motion is allowed', async ({ page }) => {
+  await mockModelDiscovery(page);
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto('/connectors/');
   await page.getByRole('button', { name: 'Add connector', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Preview models', exact: true })).toBeVisible();
+  await dialogFillApiKey(page);
+  await expect(page.getByRole('button', { name: 'Discover models', exact: true })).toBeVisible();
   const frames = await page.evaluate(async () => {
-    [...document.querySelectorAll('button')].find(button => button.textContent.trim() === 'Preview models').click();
+    [...document.querySelectorAll('button')].find(button => button.textContent.trim() === 'Discover models').click();
     const seen = [];
     for (let frame = 0; frame < 20; frame++) {
       await new Promise(resolve => requestAnimationFrame(resolve));
@@ -79,14 +140,22 @@ test('model panel reveals through intermediate frames when motion is allowed', a
   expect(frames.at(-1)).toBe(1);
 });
 
+/** @param {import('@playwright/test').Page} page */
+async function dialogFillApiKey(page) {
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('API Key', { exact: true }).fill('sk-test');
+}
+
 for (const viewport of [{ width: 1280, height: 800 }, { width: 375, height: 720 }]) {
   test(`model panel fits ${viewport.width}px with reduced motion and keyboard access`, async ({ page }) => {
+    await mockModelDiscovery(page);
     await page.setViewportSize(viewport);
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/connectors/');
     await page.getByRole('button', { name: 'Add connector', exact: true }).click();
+    await dialogFillApiKey(page);
     const dialog = page.getByRole('dialog');
-    await dialog.getByRole('button', { name: 'Preview models', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Discover models', exact: true }).click();
     const panel = dialog.locator('.model-panel');
     await expect(panel).toHaveCSS('transform', 'none');
     const formBox = await dialog.locator('.connector-form-panel').boundingBox();

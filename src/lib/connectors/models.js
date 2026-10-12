@@ -37,16 +37,36 @@ export function finishDiscovery(record, revision, result) {
   if (state !== 'ready') {
     return { ...record, catalogState: state, catalogMessage: result.message ?? '' };
   }
-  const previous = new Map((record.models ?? []).map(model => [model.id, model.enabled]));
-  const models = [...new Set(result.ids)].map(id => ({
-    id, enabled: previous.get(id) ?? false, source: result.source
-  }));
+  const previous = new Map((record.models ?? []).map(model => [model.id, model]));
+  const verifiedSet = new Set(result.verifiedIds ?? []);
+  const models = [...new Set(result.ids)].map(id => {
+    const prior = previous.get(id);
+    const source = result.source ?? 'discovered';
+    // Catalog listing does not prove access; only explicit verification or a retained flag counts.
+    const verified = verifiedSet.has(id) || (prior?.verified === true && prior.source === source);
+    return {
+      id,
+      enabled: prior?.enabled ?? false,
+      source,
+      ...(verified ? { verified: true } : {})
+    };
+  });
   const discoveredIds = new Set(result.ids);
   const customModels = (record.models ?? []).filter(
     model => model.source === 'manual' && !discoveredIds.has(model.id)
   );
   models.push(...customModels);
   return { ...record, models, catalogState: 'ready', catalogMessage: result.message ?? '' };
+}
+
+/** ADR 0008: a Run copies the selected model into its resolved Connector definition. */
+export function connectorDefinitionForRun(record, modelId) {
+  return {
+    connectorId: record.id,
+    providerType: record.providerType,
+    baseUrl: record.baseUrl,
+    modelId
+  };
 }
 
 export function addManualModel(record, value) {

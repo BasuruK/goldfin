@@ -6,6 +6,7 @@ import {
   beginDiscovery,
   finishDiscovery,
   addManualModel,
+  connectorDefinitionForRun,
   isCatalogEditable
 } from '../../src/lib/connectors/models.js';
 
@@ -42,6 +43,18 @@ test('refresh keeps matching selections and starts new models disabled', () => {
     { id: 'model-b', enabled: false, source: 'discovered' }
   ]);
   assert.deepEqual(availableModelIds(refreshed), []);
+});
+
+test('refresh retains verified flag for ids still in the catalog', () => {
+  const record = beginDiscovery({
+    models: [{ id: 'model-a', enabled: true, source: 'discovered', verified: true }]
+  });
+  const refreshed = finishDiscovery(record, record.discoveryRevision, {
+    ids: ['model-a', 'model-b'],
+    source: 'discovered'
+  });
+  assert.equal(refreshed.models[0].verified, true);
+  assert.equal(refreshed.models[1].verified, undefined);
 });
 
 test('late discovery cannot replace a changed connection or a newer refresh', () => {
@@ -93,6 +106,21 @@ test('manual IDs become available only after verification and lose access on con
   const loading = beginDiscovery(changed);
   const refreshed = finishDiscovery(loading, loading.discoveryRevision, { state: 'unsupported' });
   assert.deepEqual(availableModelIds(refreshed), []);
+});
+
+test('run snapshot keeps the selected model id on the connector definition', () => {
+  const record = {
+    id: 'conn-1',
+    providerType: 'openai',
+    baseUrl: 'https://api.openai.com/v1',
+    models: [{ id: 'gpt-4', enabled: true, source: 'discovered', verified: true }]
+  };
+  assert.deepEqual(connectorDefinitionForRun(record, 'gpt-4'), {
+    connectorId: 'conn-1',
+    providerType: 'openai',
+    baseUrl: 'https://api.openai.com/v1',
+    modelId: 'gpt-4'
+  });
 });
 
 test('custom model entry works for every provider and survives catalog refresh', () => {

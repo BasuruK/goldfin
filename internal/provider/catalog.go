@@ -1,0 +1,133 @@
+package provider
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
+)
+
+// CatalogResult is the worker-owned outcome of a model catalog discovery.
+type CatalogResult struct {
+	State   string   `json:"state"`
+	IDs     []string `json:"ids,omitempty"`
+	Source  string   `json:"source,omitempty"`
+	Message string   `json:"message,omitempty"`
+}
+
+type modelsPage struct {
+	Data    []struct {
+		ID string `json:"id"`
+	} `json:"data"`
+	HasMore bool   `json:"has_more"`
+	After   string `json:"after"`
+}
+
+// DiscoverCatalog lists model IDs for providers that expose an OpenAI-style /models route.
+func DiscoverCatalog(ctx context.Context, client *http.Client, providerType, baseURL, apiKey string) (CatalogResult, error) {
+	switch providerType {
+	case "azure", "web_request":
+		return CatalogResult{
+			State:   "unsupported",
+			Message: "Model catalog discovery is not available for this provider. Add a model or deployment ID manually.",
+		}, nil
+	case "openai", "openai_compatible":
+		ids, err := listOpenAIModels(ctx, client, baseURL, apiKey)
+		if err != nil {
+			return CatalogResult{State: "failed", Message: safeCatalogError(err)}, nil
+		}
+		if len(ids) == 0 {
+			return CatalogResult{State: "ready", IDs: ids, Source: "discovered", Message: "No models returned."}, nil
+		}
+		return CatalogResult{
+			State:   "ready",
+			IDs:     ids,
+			Source:  "discovered",
+			Message: fmt.Sprintf("%d models discovered. Enable a model, then verify access before a Run.", len(ids)),
+		}, nil
+	default:
+		return CatalogResult{State: "failed", Message: "Unsupported provider."}, nil
+	}
+}
+
+func listOpenAIModels(ctx context.Context, client *http.Client, baseURL, apiKey string) ([]string, error) {
+	root := strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	var ids []string
+	after := ""
+	for page := 0; page < 50; page++ {
+		pageURL, err := modelsListURL(root, after)
+		if err != nil {
+			return nil, err
+		}
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, pageURL, nil)
+		if err != nil {
+			return nil, err
+		}
+		if apiKey != "" {
+			req.Header.Set("Authorization", "Bearer "+apiKey)
+		}
+		res, err := client.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		defer res.Body.Close()
+		body, err := io.ReadAll(io.LimitReader(res.Body, 4<<20))
+		if err != nil {
+			return nil, err
+		}
+		if res.StatusCode == http.StatusUnauthorized || res.StatusCode == http.StatusForbidden {
+			return nil, fmt.Errorf("authentication failed (HTTP %d)", res.StatusCode)
+		}
+		if res.StatusCode < 200 || res.StatusCode >= 300 {
+			return nil, fmt.Errorf("provider returned HTTP %d", res.StatusCode)
+		}
+		var parsed modelsPage
+		if err := json.Unmarshal(body, &parsed); err != nil {
+			return nil, fmt.Errorf("invalid models response")
+		}
+		for _, item := range parsed.Data {
+			if item.ID != "" {
+				ids = append(ids, item.ID)
+			}
+		}
+		if !parsed.HasMore || parsed.After == "" {
+			break
+		}
+		after = parsed.After
+	}
+	return ids, nil
+}
+
+func modelsListURL(root, after string) (string, error) {
+	u, err := url.Parse(root + "/models")
+	if err != nil {
+		return "", err
+	}
+	q := u.Query()
+	q.Set("limit", "100")
+	if after != "" {
+		q.Set("after", after)
+	}
+	u.RawQuery = q.Encode()
+	return u.String(), nil
+}
+
+func safeCatalogError(err error) string {
+	msg := err.Error()
+	if strings.Contains(msg, "authentication failed") {
+		return "Authentication failed. Check the API key and base URL."
+	}
+	if strings.Contains(msg, "invalid models response") {
+		return "The provider did not return a recognizable model catalog."
+	}
+	return "Model discovery failed. Try again."
+}
+
+// DefaultHTTPClient is used by the worker for outbound provider calls.
+func DefaultHTTPClient() *http.Client {
+	return &http.Client{Timeout: 30 * time.Second}
+}

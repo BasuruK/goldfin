@@ -2,7 +2,9 @@ import { finishConnectionCheck, runConnectionCheck } from './connection-check.js
 import { defaultBaseUrlFor, defaultNameFor } from './providers.js';
 import { createEmptyConnector, loadConnectors, saveConnectors } from './storage.js';
 import { applyConnectorPatch, beginDiscovery, finishDiscovery, addManualModel, isCatalogEditable } from './models.js';
-import { previewModelCatalog } from './model-preview.js';
+import { discoveryAttemptToResult } from './discovery-result.js';
+import { runModelDiscovery, runModelVerification } from './discovery-client.js';
+import { validateForCheck } from './connection-check.js';
 
 /** @typedef {import('./storage.js').ConnectorRecord} ConnectorRecord */
 /** @typedef {import('./providers.js').ProviderType} ProviderType */
@@ -148,16 +150,38 @@ export async function testConnectorById(id) {
   if (finished !== current) patchConnector(id, finished, { immediate: true });
 }
 
-export async function previewModelsById(id) {
+export async function discoverModelsById(id) {
   const record = connectorStore.connectors.find(c => c.id === id);
   if (!record) return;
+  const validationError = validateForCheck({
+    baseUrl: record.baseUrl,
+    apiKey: record.apiKey,
+    providerType: record.providerType
+  });
+  if (validationError) {
+    patchConnector(id, { catalogState: 'failed', catalogMessage: validationError }, { immediate: true });
+    return;
+  }
   const loading = beginDiscovery(record);
   patchConnector(id, loading, { immediate: true });
-  let result;
+  let result = { state: 'failed', message: 'Could not load models. Try again.' };
   try {
-    result = await previewModelCatalog(record.providerType);
-  } catch {
-    result = { state: 'failed', message: 'Could not load the preview. Try again.' };
+    const attempt = await runModelDiscovery({
+      connectorId: record.id,
+      providerType: record.providerType,
+      baseUrl: record.baseUrl,
+      apiKey: record.apiKey
+    });
+    const mapped = discoveryAttemptToResult(attempt);
+    if (mapped) result = mapped;
+  } catch (error) {
+    const code = error && typeof error === 'object' && 'code' in error ? error.code : '';
+    if (code === 'api_missing') {
+      result = {
+        state: 'failed',
+        message: 'Model discovery API is unreachable. Start the API and worker, then try again.'
+      };
+    }
   }
   const current = connectorStore.connectors.find(c => c.id === id);
   if (!current) return;
@@ -165,12 +189,50 @@ export async function previewModelsById(id) {
   if (finished !== current) patchConnector(id, finished, { immediate: true });
 }
 
-export function setModelEnabled(id, modelId, enabled) {
+/** @deprecated Use discoverModelsById; kept for transitional imports. */
+export const previewModelsById = discoverModelsById;
+
+export async function setModelEnabled(id, modelId, enabled) {
   const record = connectorStore.connectors.find(c => c.id === id);
   if (!record || !isCatalogEditable(record)) return;
+  const target = (record.models ?? []).find(model => model.id === modelId);
+  if (!target) return;
   patchConnector(id, {
-    models: (record.models ?? []).map(model => model.id === modelId ? { ...model, enabled } : model)
+    models: (record.models ?? []).map(model => (model.id === modelId ? { ...model, enabled } : model))
   });
+  if (!enabled || target.verified) return;
+  await verifyModelById(id, modelId);
+}
+
+export async function verifyModelById(id, modelId) {
+  const record = connectorStore.connectors.find(c => c.id === id);
+  if (!record) return;
+  const validationError = validateForCheck({
+    baseUrl: record.baseUrl,
+    apiKey: record.apiKey,
+    providerType: record.providerType
+  });
+  if (validationError) return;
+  try {
+    const attempt = await runModelVerification({
+      connectorId: record.id,
+      providerType: record.providerType,
+      baseUrl: record.baseUrl,
+      apiKey: record.apiKey,
+      modelId
+    });
+    const payload = attempt.result;
+    if (!payload || payload.verified !== true) return;
+    const current = connectorStore.connectors.find(c => c.id === id);
+    if (!current) return;
+    patchConnector(id, {
+      models: (current.models ?? []).map(model =>
+        model.id === modelId ? { ...model, verified: true } : model
+      )
+    }, { immediate: true });
+  } catch {
+    // Verification stays unverified; the operator can retry by toggling the model off and on.
+  }
 }
 
 export function addModelById(id, value) {
