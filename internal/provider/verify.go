@@ -54,7 +54,7 @@ func VerifyModel(ctx context.Context, client *http.Client, providerType, baseURL
 			return VerifyResult{State: "failed", Verified: false, ModelID: modelID, Message: msg}, nil
 		}
 		if !ok {
-			return VerifyResult{State: "ready", Verified: false, ModelID: modelID, Message: msg}, nil
+			return VerifyResult{State: "failed", Verified: false, ModelID: modelID, Message: msg}, nil
 		}
 		return VerifyResult{
 			State:    "ready",
@@ -84,8 +84,15 @@ func azureChatURL(root, deployment string) (string, error) {
 		return "", err
 	}
 	path := strings.TrimRight(base.Path, "/")
-	if !strings.Contains(path, "/openai/deployments/") {
-		path += "/openai/deployments/" + url.PathEscape(deployment)
+	const marker = "/openai/deployments/"
+	if idx := strings.Index(path, marker); idx >= 0 {
+		rest := path[idx+len(marker):]
+		existing, _, _ := strings.Cut(rest, "/")
+		if existing != "" && existing != deployment {
+			return "", fmt.Errorf("deployment in base URL does not match model ID")
+		}
+	} else {
+		path += marker + url.PathEscape(deployment)
 	}
 	base.Path = path + "/chat/completions"
 	query := base.Query()

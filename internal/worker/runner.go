@@ -27,40 +27,52 @@ func Run(ctx context.Context, store *jobs.Store, logger *slog.Logger) {
 			sleep(ctx, 200*time.Millisecond)
 			continue
 		}
+		if job.ClaimAttempts > jobs.MaxClaimAttempts() {
+			finishJob(ctx, store, logger, job.ID, job.ClaimToken,
+				mustJSON(map[string]string{"state": "failed", "message": "This job exceeded the retry limit."}),
+				"This job exceeded the retry limit.")
+			continue
+		}
 		apiKey, err := store.DecryptCredential(ciphertext)
 		if err != nil {
 			logger.Error("decrypt credential", "job", job.ID)
 			message := "Could not read credential for this job."
-			finishJob(ctx, store, logger, job.ID, mustJSON(map[string]string{"state": "failed", "message": message}), message)
+			finishJob(ctx, store, logger, job.ID, job.ClaimToken, mustJSON(map[string]string{"state": "failed", "message": message}), message)
 			continue
 		}
 		switch job.Kind {
 		case jobs.KindCatalog:
 			result, err := provider.DiscoverCatalog(ctx, client, job.ProviderType, job.BaseURL, apiKey)
+			if ctx.Err() != nil {
+				return
+			}
 			if err != nil {
 				logger.Error("catalog discovery", "job", job.ID, "err", err)
-				finishJob(ctx, store, logger, job.ID, mustJSON(map[string]string{"state": "failed", "message": "Model discovery failed."}), "")
+				finishJob(ctx, store, logger, job.ID, job.ClaimToken, mustJSON(map[string]string{"state": "failed", "message": "Model discovery failed."}), "")
 				continue
 			}
-			finishJob(ctx, store, logger, job.ID, mustJSON(result), result.Message)
+			finishJob(ctx, store, logger, job.ID, job.ClaimToken, mustJSON(result), result.Message)
 		case jobs.KindVerify:
 			result, err := provider.VerifyModel(ctx, client, job.ProviderType, job.BaseURL, apiKey, job.ModelID)
+			if ctx.Err() != nil {
+				return
+			}
 			if err != nil {
 				logger.Error("verify model", "job", job.ID, "err", err)
-				finishJob(ctx, store, logger, job.ID, mustJSON(map[string]string{"state": "failed", "message": "Verification failed."}), "")
+				finishJob(ctx, store, logger, job.ID, job.ClaimToken, mustJSON(map[string]string{"state": "failed", "message": "Verification failed."}), "")
 				continue
 			}
-			finishJob(ctx, store, logger, job.ID, mustJSON(result), result.Message)
+			finishJob(ctx, store, logger, job.ID, job.ClaimToken, mustJSON(result), result.Message)
 		default:
-			finishJob(ctx, store, logger, job.ID, mustJSON(map[string]string{"state": "failed", "message": "Unknown job kind."}), "")
+			finishJob(ctx, store, logger, job.ID, job.ClaimToken, mustJSON(map[string]string{"state": "failed", "message": "Unknown job kind."}), "")
 		}
 	}
 }
 
-func finishJob(ctx context.Context, store *jobs.Store, logger *slog.Logger, id string, result json.RawMessage, message string) {
+func finishJob(ctx context.Context, store *jobs.Store, logger *slog.Logger, id, claimToken string, result json.RawMessage, message string) {
 	finishCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()
-	if err := store.Finish(finishCtx, id, result, message); err != nil {
+	if err := store.Finish(finishCtx, id, claimToken, result, message); err != nil {
 		logger.Error("finish job", "job", id, "err", err)
 	}
 }

@@ -3,7 +3,7 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: goldfin
-      POSTGRES_PASSWORD: goldfin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-goldfin}
       POSTGRES_DB: goldfin
     ports:
       - "127.0.0.1:5432:5432"

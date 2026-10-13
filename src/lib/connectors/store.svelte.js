@@ -1,10 +1,17 @@
-import { finishConnectionCheck, runConnectionCheck } from './connection-check.js';
+import { finishConnectionCheck, runConnectionCheck, validateForCheck } from './connection-check.js';
 import { defaultBaseUrlFor, defaultNameFor } from './providers.js';
 import { createEmptyConnector, loadConnectors, saveConnectors } from './storage.js';
 import { applyConnectorPatch, beginDiscovery, finishDiscovery, addManualModel, failedVerificationPatch, isCatalogEditable } from './models.js';
 import { discoveryAttemptToResult } from './discovery-result.js';
 import { runModelDiscovery, runModelVerification } from './discovery-client.js';
-import { validateForCheck } from './connection-check.js';
+
+/** @type {Map<string, number>} */
+const verifyGeneration = new Map();
+
+/** @param {string} connectorId @param {string} modelId */
+export function isModelVerifying(connectorId, modelId) {
+  return verifyGeneration.has(`${connectorId}\0${modelId}`);
+}
 
 /** @typedef {import('./storage.js').ConnectorRecord} ConnectorRecord */
 /** @typedef {import('./providers.js').ProviderType} ProviderType */
@@ -191,9 +198,6 @@ export async function discoverModelsById(id) {
   if (finished !== current) patchConnector(id, finished, { immediate: true });
 }
 
-/** @deprecated Use discoverModelsById; kept for transitional imports. */
-export const previewModelsById = discoverModelsById;
-
 export async function setModelEnabled(id, modelId, enabled) {
   const record = connectorStore.connectors.find(c => c.id === id);
   if (!record || !isCatalogEditable(record)) return;
@@ -203,6 +207,7 @@ export async function setModelEnabled(id, modelId, enabled) {
     models: (record.models ?? []).map(model => (model.id === modelId ? { ...model, enabled } : model))
   });
   if (!enabled || target.verified) return;
+  if (isModelVerifying(id, modelId)) return;
   await verifyModelById(id, modelId);
 }
 
@@ -216,9 +221,12 @@ export async function verifyModelById(id, modelId) {
     providerType: record.providerType
   });
   if (validationError) {
-    patchConnector(id, { catalogMessage: validationError }, { immediate: true });
+    patchConnector(id, failedVerificationPatch(record.models, modelId, validationError), { immediate: true });
     return;
   }
+  const genKey = `${id}\0${modelId}`;
+  const generation = (verifyGeneration.get(genKey) ?? 0) + 1;
+  verifyGeneration.set(genKey, generation);
   try {
     const attempt = await runModelVerification({
       connectorId: record.id,
@@ -228,23 +236,34 @@ export async function verifyModelById(id, modelId) {
       modelId
     });
     const current = connectorStore.connectors.find(c => c.id === id);
-    if (!current || current.discoveryRevision !== revision) return;
+    if (!current || current.discoveryRevision !== revision || verifyGeneration.get(genKey) !== generation) return;
+    const targetModel = (current.models ?? []).find(model => model.id === modelId);
+    if (!targetModel?.enabled) return;
     const payload = attempt.result;
     if (!payload || payload.verified !== true) {
       const message = payload && typeof payload.message === 'string' ? payload.message.trim() : '';
       patchConnector(id, failedVerificationPatch(current.models, modelId, message), { immediate: true });
       return;
     }
+    const successMessage =
+      payload && typeof payload.message === 'string' && payload.message.trim()
+        ? payload.message.trim()
+        : '';
     patchConnector(id, {
+      catalogMessage: successMessage,
       models: (current.models ?? []).map(model =>
         model.id === modelId ? { ...model, verified: true } : model
       )
     }, { immediate: true });
   } catch (error) {
     const current = connectorStore.connectors.find(c => c.id === id);
-    if (!current || current.discoveryRevision !== revision) return;
+    if (!current || current.discoveryRevision !== revision || verifyGeneration.get(genKey) !== generation) return;
     const message = error instanceof Error ? error.message.trim() : '';
     patchConnector(id, failedVerificationPatch(current.models, modelId, message), { immediate: true });
+  } finally {
+    if (verifyGeneration.get(genKey) === generation) {
+      verifyGeneration.delete(genKey);
+    }
   }
 }
 

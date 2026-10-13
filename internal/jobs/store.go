@@ -26,6 +26,11 @@ const (
 	StatusFinished Status = "finished"
 )
 
+const maxClaimAttempts = 5
+
+// MaxClaimAttempts is the number of times a job may be claimed before it is failed.
+func MaxClaimAttempts() int { return maxClaimAttempts }
+
 type Job struct {
 	ID           string
 	Kind         Kind
@@ -35,6 +40,8 @@ type Job struct {
 	ModelID      string
 	Result       json.RawMessage
 	SafeMessage  string
+	ClaimToken   string
+	ClaimAttempts int
 }
 
 var ErrNotFound = errors.New("job not found")
@@ -83,6 +90,9 @@ func (s *Store) insert(ctx context.Context, kind Kind, providerType, baseURL, ap
 }
 
 func (s *Store) Get(ctx context.Context, id string) (Job, error) {
+	if _, err := uuid.Parse(id); err != nil {
+		return Job{}, ErrNotFound
+	}
 	row := s.pool.QueryRow(ctx, `
 		SELECT id, kind, status, provider_type, base_url, COALESCE(model_id, ''), result_json, COALESCE(safe_message, '')
 		FROM discovery_jobs WHERE id = $1
@@ -113,7 +123,7 @@ func (s *Store) ClaimNext(ctx context.Context) (Job, []byte, error) {
 	defer tx.Rollback(ctx)
 
 	row := tx.QueryRow(ctx, `
-		SELECT id, kind, provider_type, base_url, credential_ciphertext, COALESCE(model_id, '')
+		SELECT id, kind, provider_type, base_url, credential_ciphertext, COALESCE(model_id, ''), claim_attempts
 		FROM discovery_jobs
 		WHERE status = 'queued'
 		   OR (status = 'running' AND updated_at < now() - interval '2 minutes')
@@ -124,7 +134,7 @@ func (s *Store) ClaimNext(ctx context.Context) (Job, []byte, error) {
 	var job Job
 	var kind string
 	var ciphertext []byte
-	err = row.Scan(&job.ID, &kind, &job.ProviderType, &job.BaseURL, &ciphertext, &job.ModelID)
+	err = row.Scan(&job.ID, &kind, &job.ProviderType, &job.BaseURL, &ciphertext, &job.ModelID, &job.ClaimAttempts)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Job{}, nil, nil
 	}
@@ -132,7 +142,14 @@ func (s *Store) ClaimNext(ctx context.Context) (Job, []byte, error) {
 		return Job{}, nil, err
 	}
 	job.Kind = Kind(kind)
-	_, err = tx.Exec(ctx, `UPDATE discovery_jobs SET status = 'running', updated_at = now() WHERE id = $1`, job.ID)
+	claimToken := uuid.NewString()
+	nextAttempts := job.ClaimAttempts + 1
+	err = tx.QueryRow(ctx, `
+		UPDATE discovery_jobs
+		SET status = 'running', claim_token = $2, claim_attempts = $3, updated_at = now()
+		WHERE id = $1
+		RETURNING claim_token::text, claim_attempts
+	`, job.ID, claimToken, nextAttempts).Scan(&job.ClaimToken, &job.ClaimAttempts)
 	if err != nil {
 		return Job{}, nil, err
 	}
@@ -142,13 +159,13 @@ func (s *Store) ClaimNext(ctx context.Context) (Job, []byte, error) {
 	return job, ciphertext, nil
 }
 
-func (s *Store) Finish(ctx context.Context, id string, result json.RawMessage, safeMessage string) error {
+func (s *Store) Finish(ctx context.Context, id, claimToken string, result json.RawMessage, safeMessage string) error {
 	_, err := s.pool.Exec(ctx, `
 		UPDATE discovery_jobs
-		SET status = 'finished', result_json = $2, safe_message = $3,
+		SET status = 'finished', result_json = $3, safe_message = $4,
 		    credential_ciphertext = NULL, updated_at = now()
-		WHERE id = $1
-	`, id, result, safeMessage)
+		WHERE id = $1 AND claim_token = $2::uuid AND status = 'running'
+	`, id, claimToken, result, safeMessage)
 	return err
 }
 

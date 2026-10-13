@@ -105,6 +105,7 @@ func (s *Server) writeJob(w http.ResponseWriter, r *http.Request, id string, kin
 }
 
 type discoveryRequest struct {
+	// ConnectorID is accepted for forward compatibility but is not persisted yet.
 	ConnectorID  string `json:"connectorId"`
 	ProviderType string `json:"providerType"`
 	BaseURL      string `json:"baseUrl"`
@@ -112,6 +113,7 @@ type discoveryRequest struct {
 }
 
 type verifyRequest struct {
+	// ConnectorID is accepted for forward compatibility but is not persisted yet.
 	ConnectorID  string `json:"connectorId"`
 	ProviderType string `json:"providerType"`
 	BaseURL      string `json:"baseUrl"`

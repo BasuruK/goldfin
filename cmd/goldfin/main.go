@@ -71,7 +71,9 @@ func runAPI() {
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      15 * time.Second,
 	}
+	shutdownDone := make(chan struct{})
 	go func() {
+		defer close(shutdownDone)
 		<-ctx.Done()
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
@@ -83,6 +85,7 @@ func runAPI() {
 	if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		fatal(err.Error())
 	}
+	<-shutdownDone
 }
 
 func runWorker() {

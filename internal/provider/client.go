@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"net/netip"
 	"time"
 )
 
@@ -51,12 +52,55 @@ func dialPublic(ctx context.Context, dialer *net.Dialer, network, addr string) (
 			return nil, errors.New("blocked destination")
 		}
 	}
-	return dialer.DialContext(ctx, network, net.JoinHostPort(ips[0].IP.String(), port))
+	var lastErr error
+	for _, ip := range ips {
+		conn, err := dialer.DialContext(ctx, network, net.JoinHostPort(ip.IP.String(), port))
+		if err == nil {
+			return conn, nil
+		}
+		lastErr = err
+	}
+	return nil, lastErr
+}
+
+var extraBlockedPrefixes = mustPrefixes(
+	"100.64.0.0/10",
+	"192.0.0.0/24",
+	"198.18.0.0/15",
+	"240.0.0.0/4",
+	"64:ff9b::/96",
+	"2001:db8::/32",
+)
+
+func mustPrefixes(cidrs ...string) []netip.Prefix {
+	out := make([]netip.Prefix, 0, len(cidrs))
+	for _, cidr := range cidrs {
+		p, err := netip.ParsePrefix(cidr)
+		if err != nil {
+			panic(err)
+		}
+		out = append(out, p)
+	}
+	return out
 }
 
 func blockedIP(ip net.IP) bool {
 	if ip == nil {
 		return true
 	}
-	return ip.IsUnspecified() || ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast()
+	if ip.IsUnspecified() || ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
+		ip.IsLinkLocalMulticast() || ip.IsMulticast() {
+		return true
+	}
+	addr, ok := netip.AddrFromSlice(ip)
+	if !ok {
+		return true
+	}
+	addr = addr.Unmap()
+	for _, p := range extraBlockedPrefixes {
+		if p.Contains(addr) {
+			return true
+		}
+	}
+	return false
 }

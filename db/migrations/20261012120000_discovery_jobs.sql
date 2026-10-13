@@ -13,6 +13,8 @@ CREATE TABLE discovery_jobs (
     model_id TEXT,
     result_json JSONB,
     safe_message TEXT,
+    claim_token UUID,
+    claim_attempts INT NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

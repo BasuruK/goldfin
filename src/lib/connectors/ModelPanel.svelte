@@ -1,13 +1,22 @@
 <script>
   import { Button, Input, Switch } from '$goldfin/lib/index.js';
   import { isCatalogEditable } from './models.js';
-  import { addModelById, discoverModelsById, setModelEnabled } from './store.svelte.js';
+  import { addModelById, discoverModelsById, isModelVerifying, setModelEnabled } from './store.svelte.js';
 
   let { record } = $props();
   let manualId = $state('');
   const models = $derived(record.models ?? []);
   const enabledCount = $derived(models.filter(model => model.enabled).length);
   const editable = $derived(isCatalogEditable(record));
+  const catalogBusy = $derived(record.catalogState === 'loading');
+
+  /** @param {{ source?: string, verified?: boolean }} model */
+  function sourceLabel(model) {
+    if (model.source === 'sample') return 'Sample';
+    if (model.source === 'manual' && !model.verified) return 'Unverified';
+    if (model.source === 'manual') return 'Manual';
+    return 'Discovered';
+  }
 
   function addModel(event) {
     event.preventDefault();
@@ -16,7 +25,7 @@
   }
 </script>
 
-<section class="model-panel modal" aria-labelledby="model-panel-title" aria-busy={record.catalogState === 'loading'}>
+<section class="model-panel modal" aria-labelledby="model-panel-title" aria-busy={catalogBusy}>
   <header class="model-panel-head">
     <h2 id="model-panel-title">Models</h2>
     <span class="model-panel-count">{enabledCount} enabled</span>
@@ -33,10 +42,11 @@
         <tr>
           <th scope="row">
             <span class="model-name">{model.id}</span>
-            <span class="model-source">{model.source === 'sample' ? 'Sample' : model.source === 'manual' ? 'Unverified' : 'Discovered'}</span>
+            <span class="model-source">{sourceLabel(model)}{isModelVerifying(record.id, model.id) ? ' · Verifying…' : ''}</span>
           </th>
           <td class="model-toggle-cell">
-            <Switch size="sm" label={model.id} checked={model.enabled} disabled={!editable}
+            <Switch size="sm" label={model.id} checked={model.enabled}
+                    disabled={!editable || catalogBusy || isModelVerifying(record.id, model.id)}
                     onCheckedChange={checked => setModelEnabled(record.id, model.id, checked)} />
           </td>
         </tr>

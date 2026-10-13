@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { after, test } from 'node:test';
 import { runModelDiscovery } from '../../src/lib/connectors/discovery-client.js';
+
+const originalFetch = global.fetch;
+after(() => {
+  global.fetch = originalFetch;
+});
 
 const config = {
   connectorId: 'c1',

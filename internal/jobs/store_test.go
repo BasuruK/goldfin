@@ -29,7 +29,7 @@ func TestCatalogJobRoundTrip(t *testing.T) {
 		t.Fatalf("decrypt: %q err=%v", plain, err)
 	}
 	result := json.RawMessage(`{"state":"ready","ids":["gpt-4"]}`)
-	if err := store.Finish(ctx, id, result, "ok"); err != nil {
+	if err := store.Finish(ctx, id, job.ClaimToken, result, "ok"); err != nil {
 		t.Fatal(err)
 	}
 	var cleared bool
@@ -82,9 +82,9 @@ func TestClaimNextReclaimsStaleRunningJob(t *testing.T) {
 
 func newTestStore(t *testing.T) (context.Context, *pgxpool.Pool, *Store) {
 	t.Helper()
-	dsn := os.Getenv("DATABASE_URL")
+	dsn := os.Getenv("TEST_DATABASE_URL")
 	if dsn == "" {
-		t.Skip("DATABASE_URL not set")
+		t.Skip("TEST_DATABASE_URL not set")
 	}
 	ctx := context.Background()
 	pool, err := pgxpool.New(ctx, dsn)

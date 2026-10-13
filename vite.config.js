@@ -22,29 +22,29 @@ export default defineConfig(({ mode }) => {
   const apiTarget = apiProxyTarget(env.API_ADDR || '127.0.0.1:8080');
 
   return {
-  plugins: [sveltekit({ adapter: adapter() })],
-  server: {
-    host: '127.0.0.1',
-    fs: {
-      allow: [root, goldfin]
-    },
-    proxy: {
-      '/api': {
-        target: apiTarget,
-        changeOrigin: true
+    plugins: [sveltekit({ adapter: adapter() })],
+    server: {
+      host: '127.0.0.1',
+      fs: {
+        allow: [root, goldfin]
+      },
+      proxy: {
+        '/api': {
+          target: apiTarget,
+          changeOrigin: true
+        }
       }
+    },
+    resolve: {
+      // `#lib` is declared here rather than left to SvelteKit: this project keeps its
+      // config inline instead of in svelte.config.js, and kit does not register the
+      // alias for the client bundle without one.
+      // `$lib` is required by Impeccable live-inject; app code prefers `#lib`.
+      alias: { $goldfin: goldfin, '#lib': lib, $lib: lib },
+      // The library is consumed from source, so without this its own node_modules
+      // would put a second svelte and bits-ui in the bundle. Two runtimes means
+      // broken context. Dedupe forces one copy, the app's.
+      dedupe: ['svelte', 'bits-ui', 'lineicons']
     }
-  },
-  resolve: {
-    // `#lib` is declared here rather than left to SvelteKit: this project keeps its
-    // config inline instead of in svelte.config.js, and kit does not register the
-    // alias for the client bundle without one.
-    // `$lib` is required by Impeccable live-inject; app code prefers `#lib`.
-    alias: { $goldfin: goldfin, '#lib': lib, $lib: lib },
-    // The library is consumed from source, so without this its own node_modules
-    // would put a second svelte and bits-ui in the bundle. Two runtimes means
-    // broken context. Dedupe forces one copy, the app's.
-    dedupe: ['svelte', 'bits-ui', 'lineicons']
-  }
-};
+  };
 });

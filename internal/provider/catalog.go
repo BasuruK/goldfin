@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 // CatalogResult is the worker-owned outcome of a model catalog discovery.
@@ -17,6 +18,12 @@ type CatalogResult struct {
 	Source  string   `json:"source,omitempty"`
 	Message string   `json:"message,omitempty"`
 }
+
+const (
+	maxCatalogPages = 50
+	maxCatalogIDs   = 5000
+	catalogBudget   = 90 * time.Second
+)
 
 type modelsPage struct {
 	Data []struct {
@@ -37,6 +44,14 @@ func DiscoverCatalog(ctx context.Context, client *http.Client, providerType, bas
 	case "openai", "openai_compatible":
 		ids, err := listOpenAIModels(ctx, client, baseURL, apiKey)
 		if err != nil {
+			if len(ids) > 0 && strings.Contains(err.Error(), "catalog truncated") {
+				return CatalogResult{
+					State:   "ready",
+					IDs:     ids,
+					Source:  "discovered",
+					Message: fmt.Sprintf("%d models discovered (catalog list was truncated). Enable a model, then verify access before a Run.", len(ids)),
+				}, nil
+			}
 			return CatalogResult{State: "failed", Message: safeCatalogError(err)}, nil
 		}
 		if len(ids) == 0 {
@@ -55,9 +70,13 @@ func DiscoverCatalog(ctx context.Context, client *http.Client, providerType, bas
 
 func listOpenAIModels(ctx context.Context, client *http.Client, baseURL, apiKey string) ([]string, error) {
 	root := strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	ctx, cancel := context.WithTimeout(ctx, catalogBudget)
+	defer cancel()
 	var ids []string
 	after := ""
-	for page := 0; page < 50; page++ {
+	truncated := false
+	hitPageCap := false
+	for page := 0; page < maxCatalogPages && len(ids) < maxCatalogIDs; page++ {
 		pageURL, err := modelsListURL(root, after)
 		if err != nil {
 			return nil, err
@@ -91,12 +110,26 @@ func listOpenAIModels(ctx context.Context, client *http.Client, baseURL, apiKey 
 		for _, item := range parsed.Data {
 			if item.ID != "" {
 				ids = append(ids, item.ID)
+				if len(ids) >= maxCatalogIDs {
+					truncated = true
+					break
+				}
 			}
+		}
+		if truncated {
+			break
 		}
 		if !parsed.HasMore || parsed.After == "" {
 			break
 		}
+		if page == maxCatalogPages-1 {
+			hitPageCap = true
+			break
+		}
 		after = parsed.After
+	}
+	if hitPageCap || truncated {
+		return ids, fmt.Errorf("catalog truncated")
 	}
 	return ids, nil
 }

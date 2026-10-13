@@ -31,9 +31,9 @@ func TestDiscoveryRejectsNonHTTPS(t *testing.T) {
 }
 
 func TestGetAttemptRejectsOtherKind(t *testing.T) {
-	dsn := os.Getenv("DATABASE_URL")
+	dsn := os.Getenv("TEST_DATABASE_URL")
 	if dsn == "" {
-		t.Skip("DATABASE_URL not set")
+		t.Skip("TEST_DATABASE_URL not set")
 	}
 	ctx := context.Background()
 	pool, err := pgxpool.New(ctx, dsn)
