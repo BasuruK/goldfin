@@ -26,7 +26,7 @@ func TestSubcommand(t *testing.T) {
 func TestHealthz(t *testing.T) {
 	mux := http.NewServeMux()
 	registerAPIRoutes(mux)
-	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/healthz", nil)
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 

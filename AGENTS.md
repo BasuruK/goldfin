@@ -36,11 +36,30 @@ one he is looking at. Ask for the design file; do not offer to design it.
 ticket. `/implement` drives `/tdd` and closes with `/code-review`. Wayfinder is done; its decisions
 live in `GLOSSARY.md` and `docs/adr/`, and they are binding.
 
+- `/to-spec` ends with a **Failure modes** section: for each outbound call, job or claim, and async UI
+  path, name what happens on a crash, a timeout, shutdown, two writers, and a stale result.
+  [`CODING_STANDARDS.md`](CODING_STANDARDS.md) lists the cases.
+- `/to-tickets` cuts one layer per ticket: provider client, job queue and migrations, frontend store.
+  Each layer carries its own defect class and its own failure table.
+- `/code-review` reads `CODING_STANDARDS.md` for its Standards axis.
+
 **A test for new logic.** New domain logic needs a test. Trivial glue is exempt. Say why in the PR
 description rather than silently skipping it.
 
-**Ask about what is left.** When a turn changes code and leaves something undone, end with one
-question that names it: "Fix X too?" Silent omission is how a scope creeps.
+**Ask about what is left.** Valid review findings and fixes inside the current feature need no
+permission: do them. When a turn leaves work *outside* the feature undone, end with one question that
+names it: "Fix X too?" Silent omission is how a scope creeps.
+
+## Done means
+
+- `make check` is green. A red check is yours to fix before you report done.
+- Review your own diff against [`CODING_STANDARDS.md`](CODING_STANDARDS.md) first.
+- **Sweep the class.** After fixing a bug, grep for its siblings: same function shape, same package,
+  the Go and JS sides of the same contract.
+- **Delete what you replace.** Migrating callers deletes the old function in the same change. Nothing
+  ships without a caller or a test that needs it.
+- UI changes get a Playwright screenshot at 375px and 1280px. Compare spacing against neighbouring
+  elements and the `DESIGN.md` tokens.
 
 ## Before you touch something
 

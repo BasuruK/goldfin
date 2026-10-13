@@ -9,12 +9,14 @@ GOLDFIN := .cache/goldfin
 GOLDFIN_SRC := $(shell find . \( -path ./.cache -o -path ./node_modules -o -path ./build -o -path ./.svelte-kit -o -path ./.pnpm-store -o -path ./.git \) -prune -o \( -name '*.go' -o -name '*.sql' \) -print 2>/dev/null)
 PNPM := pnpm
 PG_WAIT_SECONDS ?= 60
+GOLANGCI_LINT := go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0
 
-.PHONY: help check-env build-goldfin db-up db-down db-wait migrate run run-api run-worker run-web
+.PHONY: help check check-env build-goldfin db-up db-down db-wait migrate run run-api run-worker run-web
 
 help:
 	@echo "Goldfin local dev"
 	@echo ""
+	@echo "  make check       vet, lint, Go tests, unit tests, svelte-check (CI runs this)"
 	@echo "  make db-up       Start Postgres (docker compose)"
 	@echo "  make db-down     Stop Postgres"
 	@echo "  make migrate     Run goose migrations (needs .env with DATABASE_URL)"
@@ -22,6 +24,13 @@ help:
 	@echo "  make run-api     Go API only"
 	@echo "  make run-worker  Go worker only"
 	@echo "  make run-web     Vite dev server only"
+
+check:
+	go vet ./...
+	$(GOLANGCI_LINT) run
+	go test ./...
+	$(PNPM) test:unit
+	$(PNPM) check
 
 check-env:
 	@test -f .env || (echo "Missing .env — run: cp .env.example .env" && exit 1)

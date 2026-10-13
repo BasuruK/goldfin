@@ -66,8 +66,8 @@ func runMigrate() error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
-	if err := db.Ping(); err != nil {
+	defer func() { _ = db.Close() }()
+	if err := db.PingContext(context.Background()); err != nil {
 		return err
 	}
 	if err := goose.SetDialect("postgres"); err != nil {
@@ -136,6 +136,6 @@ func envOr(name, fallback string) string {
 }
 
 func fatal(msg string) {
-	slog.Error(msg)
+	slog.Error("fatal", "error", msg)
 	os.Exit(1)
 }
