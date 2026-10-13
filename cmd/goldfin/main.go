@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/BasuruK/goldfin/db/migrations"
 	"github.com/BasuruK/goldfin/internal/api"
 	"github.com/BasuruK/goldfin/internal/jobs"
 	"github.com/BasuruK/goldfin/internal/secretbox"
@@ -50,7 +51,8 @@ func runMigrate() {
 	if err := goose.SetDialect("postgres"); err != nil {
 		fatal(err.Error())
 	}
-	if err := goose.Up(db, "db/migrations"); err != nil {
+	goose.SetBaseFS(migrations.FS)
+	if err := goose.Up(db, "."); err != nil {
 		fatal(err.Error())
 	}
 }
@@ -59,6 +61,7 @@ func runAPI() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 	pool := mustPool(ctx)
+	defer pool.Close()
 	key := mustKey()
 	store := jobs.NewStore(pool, key)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
@@ -92,6 +95,7 @@ func runWorker() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 	pool := mustPool(ctx)
+	defer pool.Close()
 	key := mustKey()
 	store := jobs.NewStore(pool, key)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))

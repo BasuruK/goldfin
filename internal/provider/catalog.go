@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,6 +11,8 @@ import (
 	"strings"
 	"time"
 )
+
+var errCatalogTruncated = errors.New("catalog truncated")
 
 // CatalogResult is the worker-owned outcome of a model catalog discovery.
 type CatalogResult struct {
@@ -44,7 +47,7 @@ func DiscoverCatalog(ctx context.Context, client *http.Client, providerType, bas
 	case "openai", "openai_compatible":
 		ids, err := listOpenAIModels(ctx, client, baseURL, apiKey)
 		if err != nil {
-			if len(ids) > 0 && strings.Contains(err.Error(), "catalog truncated") {
+			if len(ids) > 0 && errors.Is(err, errCatalogTruncated) {
 				return CatalogResult{
 					State:   "ready",
 					IDs:     ids,
@@ -103,6 +106,13 @@ func listOpenAIModels(ctx context.Context, client *http.Client, baseURL, apiKey 
 		if res.StatusCode < 200 || res.StatusCode >= 300 {
 			return nil, fmt.Errorf("provider returned HTTP %d", res.StatusCode)
 		}
+		var raw map[string]json.RawMessage
+		if err := json.Unmarshal(body, &raw); err != nil {
+			return nil, fmt.Errorf("invalid models response")
+		}
+		if _, ok := raw["data"]; !ok {
+			return nil, fmt.Errorf("invalid models response")
+		}
 		var parsed modelsPage
 		if err := json.Unmarshal(body, &parsed); err != nil {
 			return nil, fmt.Errorf("invalid models response")
@@ -129,16 +139,17 @@ func listOpenAIModels(ctx context.Context, client *http.Client, baseURL, apiKey 
 		after = parsed.After
 	}
 	if hitPageCap || truncated {
-		return ids, fmt.Errorf("catalog truncated")
+		return ids, errCatalogTruncated
 	}
 	return ids, nil
 }
 
 func modelsListURL(root, after string) (string, error) {
-	u, err := url.Parse(root + "/models")
+	u, err := url.Parse(root)
 	if err != nil {
 		return "", err
 	}
+	u.Path = strings.TrimRight(u.Path, "/") + "/models"
 	q := u.Query()
 	q.Set("limit", "100")
 	if after != "" {

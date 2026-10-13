@@ -42,25 +42,15 @@ func Run(ctx context.Context, store *jobs.Store, logger *slog.Logger) {
 		}
 		switch job.Kind {
 		case jobs.KindCatalog:
-			result, err := provider.DiscoverCatalog(ctx, client, job.ProviderType, job.BaseURL, apiKey)
+			result, _ := provider.DiscoverCatalog(ctx, client, job.ProviderType, job.BaseURL, apiKey)
 			if ctx.Err() != nil {
 				return
-			}
-			if err != nil {
-				logger.Error("catalog discovery", "job", job.ID, "err", err)
-				finishJob(ctx, store, logger, job.ID, job.ClaimToken, mustJSON(map[string]string{"state": "failed", "message": "Model discovery failed."}), "")
-				continue
 			}
 			finishJob(ctx, store, logger, job.ID, job.ClaimToken, mustJSON(result), result.Message)
 		case jobs.KindVerify:
-			result, err := provider.VerifyModel(ctx, client, job.ProviderType, job.BaseURL, apiKey, job.ModelID)
+			result, _ := provider.VerifyModel(ctx, client, job.ProviderType, job.BaseURL, apiKey, job.ModelID)
 			if ctx.Err() != nil {
 				return
-			}
-			if err != nil {
-				logger.Error("verify model", "job", job.ID, "err", err)
-				finishJob(ctx, store, logger, job.ID, job.ClaimToken, mustJSON(map[string]string{"state": "failed", "message": "Verification failed."}), "")
-				continue
 			}
 			finishJob(ctx, store, logger, job.ID, job.ClaimToken, mustJSON(result), result.Message)
 		default:

@@ -122,6 +122,9 @@ type verifyRequest struct {
 }
 
 func decodeDiscoveryRequest(w http.ResponseWriter, r *http.Request) (discoveryRequest, error) {
+	if err := requireJSONContentType(r); err != nil {
+		return discoveryRequest{}, err
+	}
 	var in discoveryRequest
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&in); err != nil {
 		return discoveryRequest{}, errors.New("Invalid request body.")
@@ -138,6 +141,9 @@ func decodeDiscoveryRequest(w http.ResponseWriter, r *http.Request) (discoveryRe
 }
 
 func decodeVerifyRequest(w http.ResponseWriter, r *http.Request) (verifyRequest, error) {
+	if err := requireJSONContentType(r); err != nil {
+		return verifyRequest{}, err
+	}
 	var in verifyRequest
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&in); err != nil {
 		return verifyRequest{}, errors.New("Invalid request body.")
@@ -152,6 +158,14 @@ func decodeVerifyRequest(w http.ResponseWriter, r *http.Request) (verifyRequest,
 		return verifyRequest{}, err
 	}
 	return in, nil
+}
+
+func requireJSONContentType(r *http.Request) error {
+	ct := r.Header.Get("Content-Type")
+	if ct == "" || !strings.HasPrefix(strings.ToLower(strings.TrimSpace(ct)), "application/json") {
+		return errors.New("Content-Type must be application/json.")
+	}
+	return nil
 }
 
 func requireHTTPS(raw string) error {

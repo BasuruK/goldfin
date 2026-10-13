@@ -159,14 +159,22 @@ func (s *Store) ClaimNext(ctx context.Context) (Job, []byte, error) {
 	return job, ciphertext, nil
 }
 
+var ErrFinishNotHeld = errors.New("finish job: claim no longer held for this job")
+
 func (s *Store) Finish(ctx context.Context, id, claimToken string, result json.RawMessage, safeMessage string) error {
-	_, err := s.pool.Exec(ctx, `
+	tag, err := s.pool.Exec(ctx, `
 		UPDATE discovery_jobs
 		SET status = 'finished', result_json = $3, safe_message = $4,
 		    credential_ciphertext = NULL, updated_at = now()
 		WHERE id = $1 AND claim_token = $2::uuid AND status = 'running'
 	`, id, claimToken, result, safeMessage)
-	return err
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrFinishNotHeld
+	}
+	return nil
 }
 
 func (s *Store) DecryptCredential(ciphertext []byte) (string, error) {

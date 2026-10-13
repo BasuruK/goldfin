@@ -92,7 +92,7 @@ func azureChatURL(root, deployment string) (string, error) {
 			return "", fmt.Errorf("deployment in base URL does not match model ID")
 		}
 	} else {
-		path += marker + url.PathEscape(deployment)
+		path += marker + deployment
 	}
 	base.Path = path + "/chat/completions"
 	query := base.Query()
@@ -127,7 +127,7 @@ func minimalChat(ctx context.Context, client *http.Client, endpoint, apiKey, mod
 		return false, "Verification request failed.", err
 	}
 	defer res.Body.Close()
-	_, _ = io.Copy(io.Discard, io.LimitReader(res.Body, 4096))
+	raw, _ := io.ReadAll(io.LimitReader(res.Body, 4096))
 	if res.StatusCode == http.StatusUnauthorized || res.StatusCode == http.StatusForbidden {
 		return false, "Authentication failed during verification.", nil
 	}
@@ -136,6 +136,14 @@ func minimalChat(ctx context.Context, client *http.Client, endpoint, apiKey, mod
 	}
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
 		return false, fmt.Sprintf("Verification failed (HTTP %d).", res.StatusCode), nil
+	}
+	var envelope struct {
+		Error *struct {
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if err := json.Unmarshal(raw, &envelope); err == nil && envelope.Error != nil {
+		return false, "The provider rejected the verification request.", nil
 	}
 	return true, "", nil
 }

@@ -14,11 +14,29 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+func TestDiscoveryRejectsNonJSONContentType(t *testing.T) {
+	server := NewServer(nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	body := `{"providerType":"openai","baseUrl":"https://api.example.com/v1","apiKey":"sk"}`
+	for _, path := range []string{"/api/v1/model-discovery/attempts", "/api/v1/model-verification/attempts"} {
+		req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(body))
+		req.Header.Set("Content-Type", "text/plain")
+		rec := httptest.NewRecorder()
+		server.Handler().ServeHTTP(rec, req)
+		if rec.Code != http.StatusBadRequest {
+			t.Fatalf("%s: status %d body %s", path, rec.Code, rec.Body.String())
+		}
+		if !strings.Contains(rec.Body.String(), "application/json") {
+			t.Fatalf("%s: %s", path, rec.Body.String())
+		}
+	}
+}
+
 func TestDiscoveryRejectsNonHTTPS(t *testing.T) {
 	server := NewServer(nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	body := `{"providerType":"openai","baseUrl":"http://127.0.0.1/v1","apiKey":"sk","modelId":"gpt"}`
 	for _, path := range []string{"/api/v1/model-discovery/attempts", "/api/v1/model-verification/attempts"} {
 		req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
 		rec := httptest.NewRecorder()
 		server.Handler().ServeHTTP(rec, req)
 		if rec.Code != http.StatusBadRequest {

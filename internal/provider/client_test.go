@@ -3,6 +3,7 @@ package provider
 import (
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -25,6 +26,27 @@ func TestBlockedIP(t *testing.T) {
 			t.Errorf("%s should be allowed", raw)
 		}
 	}
+}
+
+func TestBlockCrossHostRedirect(t *testing.T) {
+	client := DefaultHTTPClient()
+	prev := []*http.Request{{URL: mustURL("https://api.example.com/v1")}}
+	req := &http.Request{URL: mustURL("https://evil.example/")}
+	if err := client.CheckRedirect(req, prev); err == nil {
+		t.Fatal("expected cross-host redirect to be blocked")
+	}
+	same := &http.Request{URL: mustURL("https://api.example.com/v2")}
+	if err := client.CheckRedirect(same, prev); err != nil {
+		t.Fatalf("same host redirect should be allowed: %v", err)
+	}
+}
+
+func mustURL(raw string) *url.URL {
+	u, err := url.Parse(raw)
+	if err != nil {
+		panic(err)
+	}
+	return u
 }
 
 func TestDefaultHTTPClientRejectsInsecureAndLocalDestinations(t *testing.T) {

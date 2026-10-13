@@ -9,6 +9,44 @@ const FETCH_TIMEOUT_MS = 30_000;
 /** @typedef {{ status: 'queued' | 'running' | 'finished', result?: Record<string, unknown> }} Attempt */
 
 /**
+ * @param {string} message
+ */
+function apiMissingError(message) {
+  const err = new Error(message);
+  err.code = 'api_missing';
+  return err;
+}
+
+/**
+ * @param {number} status
+ */
+function isApiMissingStatus(status) {
+  return status === 404 || (status >= 502 && status <= 504);
+}
+
+/**
+ * @param {number} ms
+ * @param {AbortSignal} [signal]
+ */
+function sleep(ms, signal) {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(signal.reason ?? new DOMException('Aborted', 'AbortError'));
+      return;
+    }
+    const id = setTimeout(resolve, ms);
+    signal?.addEventListener(
+      'abort',
+      () => {
+        clearTimeout(id);
+        reject(signal.reason ?? new DOMException('Aborted', 'AbortError'));
+      },
+      { once: true }
+    );
+  });
+}
+
+/**
  * @param {Response} response
  */
 async function readJSON(response) {
@@ -35,15 +73,11 @@ async function postAttempt(path, body, signal) {
     });
   } catch (error) {
     if (signal?.aborted) throw error;
-    const err = new Error('API request failed');
-    err.code = 'api_missing';
-    throw err;
+    throw apiMissingError('API request failed');
   }
   if (!response.ok) {
-    if (response.status === 404 || (response.status >= 502 && response.status <= 504)) {
-      const err = new Error('API request failed');
-      err.code = 'api_missing';
-      throw err;
+    if (isApiMissingStatus(response.status)) {
+      throw apiMissingError('API request failed');
     }
     if (response.status === 400) {
       let message = 'API request failed';
@@ -78,31 +112,33 @@ function requestSignal(parent) {
  */
 async function pollAttempt(path, attemptId, options = {}) {
   const operation = options.operation ?? 'Discovery';
-  const started = performance.now();
-  while (performance.now() - started < DISCOVERY_TIMEOUT_MS) {
-    if (options.signal?.aborted) {
-      throw new DOMException('Aborted', 'AbortError');
-    }
+  const deadline = AbortSignal.timeout(DISCOVERY_TIMEOUT_MS);
+  const signal = options.signal ? AbortSignal.any([options.signal, deadline]) : deadline;
+  while (!signal.aborted) {
     let response;
     try {
-      response = await fetch(`${path}/${attemptId}`, { signal: requestSignal(options.signal) });
+      response = await fetch(`${path}/${attemptId}`, { signal: requestSignal(signal) });
     } catch (error) {
       if (options.signal?.aborted) throw error;
-      const err = new Error(`Could not load ${operation.toLowerCase()} status`);
-      err.code = 'api_missing';
-      throw err;
+      throw apiMissingError(`Could not load ${operation.toLowerCase()} status`);
     }
     if (!response.ok) {
-      if (response.status === 404 || (response.status >= 502 && response.status <= 504)) {
-        const err = new Error(`Could not load ${operation.toLowerCase()} status`);
-        err.code = 'api_missing';
-        throw err;
+      if (isApiMissingStatus(response.status)) {
+        throw apiMissingError(`Could not load ${operation.toLowerCase()} status`);
       }
       throw new Error(`Could not load ${operation.toLowerCase()} status`);
     }
     const attempt = await readJSON(response);
     if (attempt.status === 'finished') return attempt;
-    await new Promise(resolve => setTimeout(resolve, POLL_MS));
+    try {
+      await sleep(POLL_MS, signal);
+    } catch (error) {
+      if (options.signal?.aborted) throw error;
+      break;
+    }
+  }
+  if (options.signal?.aborted) {
+    throw options.signal.reason ?? new DOMException('Aborted', 'AbortError');
   }
   throw new Error(`${operation} timed out`);
 }

@@ -31,6 +31,22 @@ func TestVerifyModelAcceptsMinimalCompletion(t *testing.T) {
 	}
 }
 
+func TestVerifyModelRejectsErrorEnvelopeOnSuccessStatus(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"error":{"message":"bad key"}}`))
+	}))
+	defer srv.Close()
+
+	result, err := VerifyModel(context.Background(), srv.Client(), "openai", srv.URL+"/v1", "sk-test", "gpt-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Verified || result.State == "ready" {
+		t.Fatalf("expected rejection, got %+v", result)
+	}
+}
+
 func TestVerifyModelAzureUsesDeploymentEndpointAndAPIKey(t *testing.T) {
 	t.Run("appends deployment", func(t *testing.T) {
 		tc := struct {

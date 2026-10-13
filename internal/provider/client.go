@@ -6,6 +6,8 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
+	"net/url"
+	"strings"
 	"time"
 )
 
@@ -14,7 +16,8 @@ import (
 func DefaultHTTPClient() *http.Client {
 	dialer := &net.Dialer{Timeout: 10 * time.Second}
 	return &http.Client{
-		Timeout: 30 * time.Second,
+		Timeout:       30 * time.Second,
+		CheckRedirect: blockCrossHostRedirect,
 		Transport: schemeGuard{&http.Transport{
 			Proxy: nil,
 			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
@@ -26,6 +29,24 @@ func DefaultHTTPClient() *http.Client {
 
 type schemeGuard struct {
 	base http.RoundTripper
+}
+
+func blockCrossHostRedirect(req *http.Request, via []*http.Request) error {
+	if len(via) == 0 {
+		return nil
+	}
+	prev := via[len(via)-1].URL
+	if sameHost(prev, req.URL) {
+		return nil
+	}
+	return errors.New("redirect to different host blocked")
+}
+
+func sameHost(a, b *url.URL) bool {
+	if a == nil || b == nil {
+		return false
+	}
+	return strings.EqualFold(a.Scheme, b.Scheme) && strings.EqualFold(a.Host, b.Host)
 }
 
 func (g schemeGuard) RoundTrip(req *http.Request) (*http.Response, error) {

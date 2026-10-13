@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -46,6 +47,31 @@ func TestDiscoverCatalogPaginatesOpenAIModels(t *testing.T) {
 	}
 	if calls != 2 {
 		t.Fatalf("expected 2 pages, got %d calls", calls)
+	}
+}
+
+func TestModelsListURLPreservesQueryOnRoot(t *testing.T) {
+	got, err := modelsListURL("https://host/v1?key=x", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(got, "/v1/models") || strings.Contains(got, "?key=x/models") {
+		t.Fatalf("unexpected url: %s", got)
+	}
+}
+
+func TestDiscoverCatalogRejectsMissingDataField(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "nope"})
+	}))
+	defer srv.Close()
+
+	result, err := DiscoverCatalog(context.Background(), srv.Client(), "openai", srv.URL+"/v1", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.State != "failed" {
+		t.Fatalf("unexpected result: %+v", result)
 	}
 }
 
