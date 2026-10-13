@@ -14,7 +14,7 @@
     "test": "playwright test",
     "test:unit": "node --test tests/**/*.test.js",
     "check": "svelte-check --threshold warning",
-    "typecheck": "tsc -p jsconfig.json",
+    "typecheck": "tsc -p tsconfig.check.json",
     "knip": "knip"
   },
   "repository": {
