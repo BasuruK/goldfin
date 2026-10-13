@@ -1,6 +1,6 @@
 module github.com/BasuruK/goldfin
 
-go 1.24.0
+go 1.27.2
 
 require (
 	github.com/google/uuid v1.6.0
