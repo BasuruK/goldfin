@@ -11,6 +11,9 @@ CREATE TABLE discovery_jobs (
         OR (credential_ciphertext IS NOT NULL AND octet_length(credential_ciphertext) > 0)
     ),
     model_id TEXT,
+    CONSTRAINT discovery_jobs_kind_model_chk CHECK (
+        kind <> 'verify' OR (model_id IS NOT NULL AND model_id <> '')
+    ),
     result_json JSONB,
     safe_message TEXT,
     claim_token UUID,
@@ -20,6 +23,7 @@ CREATE TABLE discovery_jobs (
 );
 
 CREATE INDEX discovery_jobs_status_created_idx ON discovery_jobs (status, created_at);
+CREATE INDEX discovery_jobs_stale_running_idx ON discovery_jobs (updated_at) WHERE status = 'running';
 
 -- +goose Down
 DROP TABLE discovery_jobs;
