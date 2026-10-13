@@ -6,7 +6,7 @@ SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
 GOLDFIN := .cache/goldfin
-GOLDFIN_SRC := $(shell find cmd db/migrations -name '*.go' 2>/dev/null)
+GOLDFIN_SRC := $(shell find . \( -path ./.cache -o -path ./node_modules -o -path ./build -o -path ./.svelte-kit -o -path ./.pnpm-store -o -path ./.git \) -prune -o \( -name '*.go' -o -name '*.sql' \) -print 2>/dev/null)
 PNPM := pnpm
 PG_WAIT_SECONDS ?= 60
 
@@ -60,14 +60,14 @@ run-web:
 
 # ponytail: one shell, three processes; trap kills api/worker when vite exits or on Ctrl+C.
 run: check-env db-wait $(GOLDFIN)
-	@trap 'kill $$API_PID $$WORKER_PID 2>/dev/null' INT TERM EXIT; \
-		$(GOLDFIN) api & API_PID=$$!; \
+	@$(GOLDFIN) api & API_PID=$$!; \
 		$(GOLDFIN) worker & WORKER_PID=$$!; \
 		sleep 0.5; \
 		if ! kill -0 $$API_PID 2>/dev/null || ! kill -0 $$WORKER_PID 2>/dev/null; then \
 			echo "api or worker failed to start"; exit 1; \
 		fi; \
 		$(PNPM) dev & VITE_PID=$$!; \
+		trap 'kill $$API_PID $$WORKER_PID $$VITE_PID 2>/dev/null' INT TERM EXIT; \
 		while kill -0 $$VITE_PID 2>/dev/null; do \
 			if ! kill -0 $$API_PID 2>/dev/null || ! kill -0 $$WORKER_PID 2>/dev/null; then \
 				echo "api or worker exited unexpectedly"; kill $$VITE_PID 2>/dev/null; wait $$VITE_PID 2>/dev/null; exit 1; \
