@@ -3,7 +3,7 @@
 /** @typedef {{ value: ProviderType, label: string, description: string, defaultBaseUrl: string, icon: string, modelProbePath?: string }} ProviderOption */
 
 /** @type {readonly ProviderOption[]} */
-export const PROVIDERS = [
+const PROVIDERS = [
   {
     value: 'openai',
     label: 'OpenAI',

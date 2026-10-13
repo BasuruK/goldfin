@@ -39,7 +39,8 @@ mid-flight, a stale reclaim, a rollback after data exists. Review checks the cod
 - An optimistic update has a rollback, and the success path clears the previous failure message.
 - Users see mapped messages. Raw `TypeError` or `SyntaxError` text is a finding.
 - Credentials follow [ADR 0005](docs/adr/0005-credential-handling.md): plaintext exists only in the
-  creating request and in worker memory. A credential in `localStorage` is a violation, not a trade-off.
+  creating request and in worker memory. The `localStorage` copy in `storage.js` is interim and
+  dies with the worker-backed slice; new code never persists a credential on the client.
 
 ## Contracts across layers
 

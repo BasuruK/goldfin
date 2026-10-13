@@ -34,14 +34,16 @@ function normalizeConnector(raw) {
   if (typeof entry.id !== 'string' || !entry.id) return null;
 
   const providerType =
-    typeof entry.providerType === 'string' && providerByType(entry.providerType).value === entry.providerType
+    typeof entry.providerType === 'string' && providerByType(/** @type {ProviderType} */ (entry.providerType)).value === entry.providerType
       ? /** @type {ProviderType} */ (entry.providerType)
       : 'openai';
 
+  /** @type {ConnectionStatus} */
   let connectionStatus =
     entry.connectionStatus === 'ok' || entry.connectionStatus === 'failed' ? entry.connectionStatus : 'idle';
   if (entry.connectionStatus === 'testing') connectionStatus = 'idle';
 
+  /** @type {ConnectorRecord['catalogState']} */
   let catalogState = 'idle';
   if (
     entry.catalogState === 'ready' ||
@@ -111,7 +113,10 @@ export function saveConnectors(connectors) {
   }
 }
 
-/** @param {ProviderType} providerType */
+/**
+ * @param {ProviderType} providerType
+ * @returns {ConnectorRecord}
+ */
 export function createEmptyConnector(providerType) {
   const now = new Date().toISOString();
   return {

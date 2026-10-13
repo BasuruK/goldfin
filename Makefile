@@ -16,7 +16,7 @@ GOLANGCI_LINT := go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v
 help:
 	@echo "Goldfin local dev"
 	@echo ""
-	@echo "  make check       vet, lint, Go tests, unit tests, svelte-check (CI runs this)"
+	@echo "  make check       vet, lint, Go tests, unit tests, svelte-check, tsc, knip (CI runs this)"
 	@echo "  make db-up       Start Postgres (docker compose)"
 	@echo "  make db-down     Stop Postgres"
 	@echo "  make migrate     Run goose migrations (needs .env with DATABASE_URL)"
@@ -31,6 +31,8 @@ check:
 	go test ./...
 	$(PNPM) test:unit
 	$(PNPM) check
+	$(PNPM) typecheck
+	$(PNPM) knip
 
 check-env:
 	@test -f .env || (echo "Missing .env — run: cp .env.example .env" && exit 1)
