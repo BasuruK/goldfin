@@ -13,13 +13,16 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/BasuruK/goldfin/db/migrations"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/joho/godotenv"
 	"github.com/pressly/goose/v3"
 )
 
 func main() {
-	_ = godotenv.Load()
+	if err := loadDotenv(); err != nil {
+		fatal(err.Error())
+	}
 
 	sub, err := subcommand(os.Args)
 	if err != nil {
@@ -31,10 +34,18 @@ func main() {
 	case "worker":
 		runWorker()
 	case "migrate":
-		runMigrate()
-	default:
-		fatal("unknown subcommand: " + sub)
+		if err := runMigrate(); err != nil {
+			fatal(err.Error())
+		}
 	}
+}
+
+func loadDotenv() error {
+	err := godotenv.Load()
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	return nil
 }
 
 func subcommand(args []string) (string, error) {
@@ -49,22 +60,24 @@ func subcommand(args []string) (string, error) {
 	}
 }
 
-func runMigrate() {
+func runMigrate() error {
 	dsn := mustEnv("DATABASE_URL")
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
-		fatal(err.Error())
+		return err
 	}
 	defer db.Close()
 	if err := db.Ping(); err != nil {
-		fatal(err.Error())
+		return err
 	}
 	if err := goose.SetDialect("postgres"); err != nil {
-		fatal(err.Error())
+		return err
 	}
-	if err := goose.Up(db, "db/migrations"); err != nil {
-		fatal(err.Error())
+	goose.SetBaseFS(migrations.FS)
+	if err := goose.Up(db, "."); err != nil {
+		return err
 	}
+	return nil
 }
 
 func runAPI() {
@@ -80,7 +93,9 @@ func runAPI() {
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
+	shutdownDone := make(chan struct{})
 	go func() {
+		defer close(shutdownDone)
 		<-ctx.Done()
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
@@ -92,6 +107,7 @@ func runAPI() {
 	if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		fatal(err.Error())
 	}
+	<-shutdownDone
 }
 
 func runWorker() {

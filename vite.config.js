@@ -13,20 +13,24 @@ const lib = fileURLToPath(new URL('./src/lib', import.meta.url));
 
 function apiProxyTarget(raw) {
 	const addr = raw?.trim() || '127.0.0.1:8080';
-	if (addr.startsWith('http://') || addr.startsWith('https://')) {
+	if (/^https?:\/\//i.test(addr)) {
 		return addr;
+	}
+	if (addr.startsWith('0.0.0.0:')) {
+		return `http://127.0.0.1:${addr.slice('0.0.0.0:'.length)}`;
 	}
 	return `http://${addr}`;
 }
 
 export default defineConfig(({ mode }) => {
-	const env = loadEnv(mode, root, '');
+	const apiAddr = loadEnv(mode, root, 'API_ADDR').API_ADDR;
+	const apiOrigin = loadEnv(mode, root, 'API_ORIGIN').API_ORIGIN;
 	return {
 		plugins: [sveltekit({ adapter: adapter() })],
 		server: {
 			proxy: {
 				'/api': {
-					target: apiProxyTarget(env.API_ADDR),
+					target: apiProxyTarget(apiOrigin ?? apiAddr),
 					changeOrigin: true
 				}
 			},
