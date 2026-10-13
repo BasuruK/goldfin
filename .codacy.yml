@@ -1,0 +1,4 @@
+---
+# Postgres goose migrations are not T-SQL; Codacy's TSQLint rules are noise here.
+exclude_paths:
+  - 'db/migrations/**'

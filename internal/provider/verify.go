@@ -95,9 +95,9 @@ func azureChatURL(root, deployment string) (string, error) {
 		path += marker + deployment
 	}
 	base.Path = path + "/chat/completions"
-	query := base.Query()
-	query.Set("api-version", azureAPIVersion)
-	base.RawQuery = query.Encode()
+	urlValues := base.Query()
+	urlValues.Set("api-version", azureAPIVersion)
+	base.RawQuery = urlValues.Encode()
 	return base.String(), nil
 }
 

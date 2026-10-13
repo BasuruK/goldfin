@@ -4,6 +4,18 @@
 
 const DISCOVERY_ATTEMPTS_PATH = '/api/v1/model-discovery/attempts';
 const VERIFICATION_ATTEMPTS_PATH = '/api/v1/model-verification/attempts';
+const API_PREFIX = '/api/v1/';
+
+/**
+ * @param {string} path
+ * @param {RequestInit} [init]
+ */
+function fetchAPI(path, init) {
+  if (!path.startsWith(API_PREFIX)) {
+    throw new Error('invalid API path');
+  }
+  return fetch(path, init);
+}
 const POLL_MS = 400;
 const DISCOVERY_TIMEOUT_MS = 60_000;
 const FETCH_TIMEOUT_MS = 30_000;
@@ -94,7 +106,7 @@ async function readJSON(response) {
 async function postAttempt(path, body, signal) {
   let response;
   try {
-    response = await fetch(path, {
+    response = await fetchAPI(path, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -143,9 +155,12 @@ async function pollAttempt(path, attemptId, options = {}) {
   while (!signal.aborted) {
     let response;
     try {
-      response = await fetch(`${path}/${attemptId}`, { signal: requestSignal(signal) });
+      response = await fetchAPI(`${path}/${attemptId}`, { signal: requestSignal(signal) });
     } catch (error) {
       if (options.signal?.aborted) throw error;
+      if (deadline.aborted) {
+        throw new Error(`${operation} timed out`);
+      }
       throw apiMissingError(`Could not load ${operation.toLowerCase()} status`);
     }
     if (!response.ok) {

@@ -39,6 +39,13 @@ func TestBlockCrossHostRedirect(t *testing.T) {
 	if err := client.CheckRedirect(same, prev); err != nil {
 		t.Fatalf("same host redirect should be allowed: %v", err)
 	}
+	via := make([]*http.Request, maxRedirectHops)
+	for i := range via {
+		via[i] = &http.Request{URL: mustURL("https://api.example.com/step")}
+	}
+	if err := client.CheckRedirect(&http.Request{URL: mustURL("https://api.example.com/next")}, via); err == nil {
+		t.Fatal("expected redirect hop limit")
+	}
 }
 
 func mustURL(raw string) *url.URL {

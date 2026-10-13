@@ -31,7 +31,12 @@ type schemeGuard struct {
 	base http.RoundTripper
 }
 
+const maxRedirectHops = 10
+
 func blockCrossHostRedirect(req *http.Request, via []*http.Request) error {
+	if len(via) >= maxRedirectHops {
+		return errors.New("too many redirects")
+	}
 	if len(via) == 0 {
 		return nil
 	}
