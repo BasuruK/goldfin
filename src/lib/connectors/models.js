@@ -58,12 +58,30 @@ export function finishDiscovery(record, revision, result) {
   return { ...record, models, catalogState: 'ready', catalogMessage: result.message ?? '' };
 }
 
+/** Worker verification is not defined for arbitrary HTTP gateways (ADR 0011 manual IDs). */
+export function providerRequiresWorkerVerification(providerType) {
+  return providerType !== 'web_request';
+}
+
 export function failedVerificationPatch(models, modelId, message) {
   const patch = {
-    models: (models ?? []).map(model => (model.id === modelId ? { ...model, enabled: false } : model))
+    models: (models ?? []).map(model =>
+      model.id === modelId ? { ...model, enabled: false, verified: false } : model
+    )
   };
   if (message) patch.catalogMessage = message;
   return patch;
+}
+
+/** Drop an optimistic enable when a verification attempt is abandoned. */
+export function abandonVerificationEnable(models, modelId) {
+  return {
+    models: (models ?? []).map(model =>
+      model.id === modelId && model.enabled && model.verified !== true
+        ? { ...model, enabled: false }
+        : model
+    )
+  };
 }
 
 export function addManualModel(record, value) {

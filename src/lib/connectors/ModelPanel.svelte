@@ -47,7 +47,7 @@
           </th>
           <td class="model-toggle-cell">
             <Switch size="sm" label={model.id} checked={model.enabled}
-                    disabled={!editable || catalogBusy || isModelVerifying(record.id, model.id)}
+                    disabled={!editable || panelBusy || isModelVerifying(record.id, model.id)}
                     onCheckedChange={checked => setModelEnabled(record.id, model.id, checked)} />
           </td>
         </tr>

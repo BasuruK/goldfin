@@ -35,6 +35,17 @@ test('discovery post reserves api_missing for network errors, 404, and 502-504',
   }
 });
 
+test('discovery post maps fetch timeouts without api_missing', async () => {
+  global.fetch = async () => {
+    throw Object.assign(new Error('timeout'), { name: 'TimeoutError' });
+  };
+  await assert.rejects(runModelDiscovery(config), error => {
+    assert.equal(error.code, undefined);
+    assert.match(error.message, /timed out/i);
+    return true;
+  });
+});
+
 test('discovery post uses the 400 body message', async () => {
   global.fetch = async () => new Response(JSON.stringify({ message: 'baseUrl must be an https URL.' }), {
     status: 400,

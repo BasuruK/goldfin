@@ -20,7 +20,7 @@ type VerifyResult struct {
 }
 
 type chatRequest struct {
-	Model     string        `json:"model"`
+	Model     string        `json:"model,omitempty"`
 	Messages  []chatMessage `json:"messages"`
 	MaxTokens int           `json:"max_tokens"`
 }
@@ -102,8 +102,13 @@ func azureChatURL(root, deployment string) (string, error) {
 }
 
 func minimalChat(ctx context.Context, client *http.Client, endpoint, apiKey, modelID string, azure bool) (bool, string, error) {
+	reqModel := modelID
+	if azure {
+		// Azure identifies the deployment in the URL; sending model breaks current API versions.
+		reqModel = ""
+	}
 	payload, err := json.Marshal(chatRequest{
-		Model:     modelID,
+		Model:     reqModel,
 		Messages:  []chatMessage{{Role: "user", Content: "ping"}},
 		MaxTokens: 1,
 	})

@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -63,6 +64,13 @@ func TestVerifyModelAzureUsesDeploymentEndpointAndAPIKey(t *testing.T) {
 					t.Errorf("api-key=%q authorization=%q", r.Header.Get("api-key"), r.Header.Get("Authorization"))
 					http.Error(w, "bad auth", http.StatusBadRequest)
 					return
+				}
+				var body map[string]interface{}
+				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+					t.Fatal(err)
+				}
+				if _, hasModel := body["model"]; hasModel {
+					t.Fatalf("azure body must not include model: %#v", body)
 				}
 				w.WriteHeader(http.StatusOK)
 		}))

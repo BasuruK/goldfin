@@ -17,6 +17,7 @@
     editingConnector,
     patchConnector,
     discoverModelsById,
+    isConnectorVerifying,
     removeDraftIfEmpty,
     setProviderType,
     testConnectorById
@@ -55,6 +56,9 @@
   }
 
   const testing = $derived(record?.connectionStatus === 'testing');
+  const discoverBusy = $derived(
+    record?.catalogState === 'loading' || (record ? isConnectorVerifying(record.id) : false)
+  );
   const showModels = $derived(
     (record?.catalogState ?? 'idle') !== 'idle' || (record?.models?.length ?? 0) > 0
   );
@@ -163,7 +167,7 @@
               <Icon name="play" size={16} />
               Test
             </LoadingButton>
-            <Button type="button" disabled={record.catalogState === 'loading'} onclick={() => discoverModelsById(record.id)}>
+            <Button type="button" disabled={discoverBusy} onclick={() => discoverModelsById(record.id)}>
               Discover models
             </Button>
           </div>

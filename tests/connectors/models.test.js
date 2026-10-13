@@ -6,8 +6,10 @@ import {
   beginDiscovery,
   finishDiscovery,
   addManualModel,
+  abandonVerificationEnable,
   failedVerificationPatch,
-  isCatalogEditable
+  isCatalogEditable,
+  providerRequiresWorkerVerification
 } from '../../src/lib/connectors/models.js';
 
 test('isCatalogEditable matches ready and unsupported only', () => {
@@ -110,16 +112,32 @@ test('manual IDs become available only after verification and lose access on con
 
 test('failed verification turns the model off and keeps a provider message', () => {
   const models = [
-    { id: 'gpt-4', enabled: true, source: 'discovered' },
+    { id: 'gpt-4', enabled: true, verified: true, source: 'discovered' },
     { id: 'other', enabled: true, source: 'discovered' }
   ];
   const patch = failedVerificationPatch(models, 'gpt-4', 'Authentication failed during verification.');
   assert.equal(patch.catalogMessage, 'Authentication failed during verification.');
   assert.equal(patch.models[0].enabled, false);
+  assert.equal(patch.models[0].verified, false);
   assert.equal(patch.models[1].enabled, true);
   const silent = failedVerificationPatch(models, 'gpt-4', '');
   assert.equal('catalogMessage' in silent, false);
   assert.equal(silent.models[0].enabled, false);
+});
+
+test('abandonVerificationEnable drops an unverified optimistic enable', () => {
+  const models = [
+    { id: 'm1', enabled: true, source: 'manual' },
+    { id: 'm2', enabled: true, verified: true, source: 'discovered' }
+  ];
+  const patch = abandonVerificationEnable(models, 'm1');
+  assert.equal(patch.models[0].enabled, false);
+  assert.equal(patch.models[1].enabled, true);
+});
+
+test('web_request skips worker verification', () => {
+  assert.equal(providerRequiresWorkerVerification('web_request'), false);
+  assert.equal(providerRequiresWorkerVerification('openai'), true);
 });
 
 test('custom model entry works for every provider and survives catalog refresh', () => {

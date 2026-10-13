@@ -1,12 +1,22 @@
 import { finishConnectionCheck, runConnectionCheck, validateForCheck } from './connection-check.js';
 import { defaultBaseUrlFor, defaultNameFor } from './providers.js';
 import { createEmptyConnector, loadConnectors, saveConnectors } from './storage.js';
-import { applyConnectorPatch, beginDiscovery, finishDiscovery, addManualModel, failedVerificationPatch, isCatalogEditable } from './models.js';
+import {
+  abandonVerificationEnable,
+  applyConnectorPatch,
+  beginDiscovery,
+  finishDiscovery,
+  addManualModel,
+  failedVerificationPatch,
+  isCatalogEditable,
+  providerRequiresWorkerVerification
+} from './models.js';
 import { discoveryAttemptToResult } from './discovery-result.js';
 import { runModelDiscovery, runModelVerification } from './discovery-client.js';
+import { SvelteMap } from 'svelte/reactivity';
 
-/** @type {Map<string, number>} */
-const verifyGeneration = $state(new Map());
+/** @type {SvelteMap<string, number>} */
+const verifyGeneration = new SvelteMap();
 
 /** @param {string} connectorId @param {string} modelId */
 export function isModelVerifying(connectorId, modelId) {
@@ -216,6 +226,7 @@ export async function setModelEnabled(id, modelId, enabled) {
     models: (record.models ?? []).map(model => (model.id === modelId ? { ...model, enabled } : model))
   });
   if (!enabled || target.verified) return;
+  if (!providerRequiresWorkerVerification(record.providerType)) return;
   if (isModelVerifying(id, modelId)) return;
   await verifyModelById(id, modelId);
 }
@@ -245,7 +256,10 @@ export async function verifyModelById(id, modelId) {
       modelId
     });
     const current = connectorStore.connectors.find(c => c.id === id);
-    if (!current || current.discoveryRevision !== revision || verifyGeneration.get(genKey) !== generation) return;
+    if (!current || current.discoveryRevision !== revision || verifyGeneration.get(genKey) !== generation) {
+      if (current) patchConnector(id, abandonVerificationEnable(current.models, modelId), { immediate: true });
+      return;
+    }
     const targetModel = (current.models ?? []).find(model => model.id === modelId);
     if (!targetModel?.enabled) return;
     const payload = attempt.result;
@@ -274,9 +288,20 @@ export async function verifyModelById(id, modelId) {
     }, { immediate: true });
   } catch (error) {
     const current = connectorStore.connectors.find(c => c.id === id);
-    if (!current || current.discoveryRevision !== revision || verifyGeneration.get(genKey) !== generation) return;
+    if (!current || current.discoveryRevision !== revision || verifyGeneration.get(genKey) !== generation) {
+      if (current) patchConnector(id, abandonVerificationEnable(current.models, modelId), { immediate: true });
+      return;
+    }
     const message = error instanceof Error ? error.message.trim() : '';
-    patchConnector(id, failedVerificationPatch(current.models, modelId, message), { immediate: true });
+    patchConnector(
+      id,
+      failedVerificationPatch(
+        current.models,
+        modelId,
+        message || 'Verification failed. The model was turned off.'
+      ),
+      { immediate: true }
+    );
   } finally {
     if (verifyGeneration.get(genKey) === generation) {
       verifyGeneration.delete(genKey);

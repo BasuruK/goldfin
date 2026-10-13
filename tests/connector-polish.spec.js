@@ -58,7 +58,6 @@ test('Delete is hidden in Add and appears when configuring an added Connector', 
 for (const providerType of ['openai', 'azure', 'openai_compatible', 'web_request']) {
   test(`custom models are available for ${providerType} and survive refresh`, async ({ page }) => {
     await mockDiscovery(page, 'attempt-unsupported', { state: 'unsupported', message: 'Add a model ID manually.' });
-    await mockVerification(page, { state: 'ready', verified: true });
     await page.addInitScript(type => localStorage.setItem('goldfin.connectors.v1', JSON.stringify([{
       id: 'custom', providerType: type, name: 'Custom connection', baseUrl: 'https://example.com/v1',
       apiKey: type === 'web_request' ? '' : 'sk-test', connectionStatus: 'idle', models: []
@@ -73,11 +72,18 @@ for (const providerType of ['openai', 'azure', 'openai_compatible', 'web_request
     await expect(entry).toHaveValue('');
     const toggle = dialog.getByRole('switch', { name: 'custom-model', exact: true });
     await expect(toggle).toHaveAttribute('aria-checked', 'false');
+    if (providerType !== 'web_request') {
+      await mockVerification(page, { state: 'ready', verified: true });
+    }
     await toggle.click();
+    if (providerType !== 'web_request') {
+      await expect(dialog.getByRole('row', { name: /custom-model/ })).toContainText('Manual');
+    }
     await mockDiscovery(page, 'attempt-ready', { state: 'ready', ids: ['catalog-model'], source: 'discovered', message: '1 model discovered.' });
     await dialog.getByRole('button', { name: 'Refresh catalog', exact: true }).click();
     await expect(toggle).toHaveAttribute('aria-checked', 'true');
-    await expect(dialog.getByRole('row', { name: /custom-model/ })).toContainText('Unverified');
+    const label = providerType === 'web_request' ? 'Unverified' : 'Manual';
+    await expect(dialog.getByRole('row', { name: /custom-model/ })).toContainText(label);
   });
 }
 
@@ -138,7 +144,6 @@ for (const theme of ['light', 'dark']) {
       await page.getByRole('button', { name: 'Add connector', exact: true }).click();
       const dialog = page.getByRole('dialog');
       await dialog.getByLabel('API Key', { exact: true }).fill('sk-test');
-      await dialog.getByRole('button', { name: 'Test', exact: true }).click();
       await dialog.getByRole('button', { name: 'Discover models', exact: true }).click();
       await expect(dialog.getByRole('button', { name: 'Add model ID', exact: true })).toHaveCount(0);
       await expect(dialog.getByText('Sample and unverified IDs cannot be used in a Run.', { exact: true })).toHaveCount(0);

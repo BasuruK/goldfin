@@ -14,8 +14,17 @@ const DEFAULT_API_ADDR = '127.0.0.1:8080';
 
 /** @param {string} apiAddr */
 function apiProxyTarget(apiAddr) {
-  const host = (apiAddr || DEFAULT_API_ADDR).trim().replace(/^https?:\/\//, '');
-  return `http://${host}`;
+  const trimmed = (apiAddr || DEFAULT_API_ADDR).trim();
+  if (!trimmed) {
+    throw new Error('API_ADDR must not be empty.');
+  }
+  if (/^https?:\/\//i.test(trimmed)) {
+    throw new Error('API_ADDR must be host:port without a scheme (the Go API listens over plain HTTP).');
+  }
+  if (!/^[\w.-]+:\d+$/.test(trimmed) && !/^\[[\da-f:]+\]:\d+$/i.test(trimmed)) {
+    throw new Error('API_ADDR must look like 127.0.0.1:8080');
+  }
+  return `http://${trimmed}`;
 }
 
 /** @param {string} apiTarget */
