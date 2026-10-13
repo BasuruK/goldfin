@@ -1,9 +1,11 @@
 .DS_Store
 .env
 .env.*
+!.env.example
 node_modules/
 .svelte-kit/
 /build/
+.cache/
 
 .cursor/
 
