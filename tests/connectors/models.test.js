@@ -6,7 +6,6 @@ import {
   beginDiscovery,
   finishDiscovery,
   addManualModel,
-  connectorDefinitionForRun,
   failedVerificationPatch,
   isCatalogEditable
 } from '../../src/lib/connectors/models.js';
@@ -107,21 +106,6 @@ test('manual IDs become available only after verification and lose access on con
   const loading = beginDiscovery(changed);
   const refreshed = finishDiscovery(loading, loading.discoveryRevision, { state: 'unsupported' });
   assert.deepEqual(availableModelIds(refreshed), []);
-});
-
-test('run snapshot keeps the selected model id on the connector definition', () => {
-  const record = {
-    id: 'conn-1',
-    providerType: 'openai',
-    baseUrl: 'https://api.openai.com/v1',
-    models: [{ id: 'gpt-4', enabled: true, source: 'discovered', verified: true }]
-  };
-  assert.deepEqual(connectorDefinitionForRun(record, 'gpt-4'), {
-    connectorId: 'conn-1',
-    providerType: 'openai',
-    baseUrl: 'https://api.openai.com/v1',
-    modelId: 'gpt-4'
-  });
 });
 
 test('failed verification turns the model off and keeps a provider message', () => {

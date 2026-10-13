@@ -93,6 +93,9 @@ func listOpenAIModels(ctx context.Context, client *http.Client, baseURL, apiKey 
 		}
 		res, err := client.Do(req)
 		if err != nil {
+			if res != nil {
+				res.Body.Close()
+			}
 			return nil, err
 		}
 		body, err := io.ReadAll(io.LimitReader(res.Body, 4<<20))

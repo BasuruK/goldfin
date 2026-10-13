@@ -2,6 +2,8 @@
  * Polls worker-backed model discovery and verification attempts through the API.
  */
 
+const DISCOVERY_ATTEMPTS_PATH = '/api/v1/model-discovery/attempts';
+const VERIFICATION_ATTEMPTS_PATH = '/api/v1/model-verification/attempts';
 const POLL_MS = 400;
 const DISCOVERY_TIMEOUT_MS = 60_000;
 const FETCH_TIMEOUT_MS = 30_000;
@@ -22,6 +24,33 @@ function apiMissingError(message) {
  */
 function isApiMissingStatus(status) {
   return status === 404 || (status >= 502 && status <= 504);
+}
+
+/**
+ * @param {Response} response
+ * @param {string} fallbackMessage
+ */
+function throwHttpError(response, fallbackMessage) {
+  if (isApiMissingStatus(response.status)) {
+    throw apiMissingError(fallbackMessage);
+  }
+  throw new Error(fallbackMessage);
+}
+
+/**
+ * @param {unknown} attempt
+ * @param {string} operation
+ * @returns {Attempt}
+ */
+function parseAttemptPayload(attempt, operation) {
+  const label = operation.toLowerCase();
+  if (!attempt || typeof attempt !== 'object' || Array.isArray(attempt)) {
+    throw new Error(`Could not load ${label} status`);
+  }
+  const status = attempt.status;
+  if (status === 'finished') return attempt;
+  if (status === 'queued' || status === 'running') return attempt;
+  throw new Error(`Could not load ${label} status`);
 }
 
 /**
@@ -76,9 +105,6 @@ async function postAttempt(path, body, signal) {
     throw apiMissingError('API request failed');
   }
   if (!response.ok) {
-    if (isApiMissingStatus(response.status)) {
-      throw apiMissingError('API request failed');
-    }
     if (response.status === 400) {
       let message = 'API request failed';
       try {
@@ -89,7 +115,7 @@ async function postAttempt(path, body, signal) {
       }
       throw new Error(message);
     }
-    throw new Error('API request failed');
+    throwHttpError(response, 'API request failed');
   }
   const payload = await readJSON(response);
   if (!payload?.id) throw new Error('Invalid attempt response');
@@ -123,12 +149,9 @@ async function pollAttempt(path, attemptId, options = {}) {
       throw apiMissingError(`Could not load ${operation.toLowerCase()} status`);
     }
     if (!response.ok) {
-      if (isApiMissingStatus(response.status)) {
-        throw apiMissingError(`Could not load ${operation.toLowerCase()} status`);
-      }
-      throw new Error(`Could not load ${operation.toLowerCase()} status`);
+      throwHttpError(response, `Could not load ${operation.toLowerCase()} status`);
     }
-    const attempt = await readJSON(response);
+    const attempt = parseAttemptPayload(await readJSON(response), operation);
     if (attempt.status === 'finished') return attempt;
     try {
       await sleep(POLL_MS, signal);
@@ -147,13 +170,13 @@ async function pollAttempt(path, attemptId, options = {}) {
  * @param {{ connectorId: string, providerType: string, baseUrl: string, apiKey: string, signal?: AbortSignal }} config
  */
 export async function runModelDiscovery(config) {
-  const attemptId = await postAttempt('/api/v1/model-discovery/attempts', {
+  const attemptId = await postAttempt(DISCOVERY_ATTEMPTS_PATH, {
     connectorId: config.connectorId,
     providerType: config.providerType,
     baseUrl: config.baseUrl,
     apiKey: config.apiKey
   }, config.signal);
-  return pollAttempt('/api/v1/model-discovery/attempts', attemptId, {
+  return pollAttempt(DISCOVERY_ATTEMPTS_PATH, attemptId, {
     operation: 'Discovery',
     signal: config.signal
   });
@@ -163,14 +186,14 @@ export async function runModelDiscovery(config) {
  * @param {{ connectorId: string, providerType: string, baseUrl: string, apiKey: string, modelId: string, signal?: AbortSignal }} config
  */
 export async function runModelVerification(config) {
-  const attemptId = await postAttempt('/api/v1/model-verification/attempts', {
+  const attemptId = await postAttempt(VERIFICATION_ATTEMPTS_PATH, {
     connectorId: config.connectorId,
     providerType: config.providerType,
     baseUrl: config.baseUrl,
     apiKey: config.apiKey,
     modelId: config.modelId
   }, config.signal);
-  return pollAttempt('/api/v1/model-verification/attempts', attemptId, {
+  return pollAttempt(VERIFICATION_ATTEMPTS_PATH, attemptId, {
     operation: 'Verification',
     signal: config.signal
   });

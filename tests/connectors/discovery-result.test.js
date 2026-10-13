@@ -9,16 +9,21 @@ test('discoveryAttemptToResult maps finished ready payloads', () => {
       state: 'ready',
       ids: ['gpt-4', 'gpt-4'],
       source: 'discovered',
-      message: '3 models',
-      verifiedIds: ['gpt-4']
+      message: '3 models'
     }
   });
   assert.deepEqual(mapped, {
     state: 'ready',
     ids: ['gpt-4', 'gpt-4'],
     source: 'discovered',
-    message: '3 models',
-    verifiedIds: ['gpt-4']
+    message: '3 models'
+  });
+});
+
+test('discoveryAttemptToResult maps finished jobs without result to failed', () => {
+  assert.deepEqual(discoveryAttemptToResult({ status: 'finished' }), {
+    state: 'failed',
+    message: 'Discovery finished without a result.'
   });
 });
 

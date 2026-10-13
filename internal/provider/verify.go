@@ -124,6 +124,9 @@ func minimalChat(ctx context.Context, client *http.Client, endpoint, apiKey, mod
 	}
 	res, err := client.Do(req)
 	if err != nil {
+		if res != nil {
+			res.Body.Close()
+		}
 		return false, "Verification request failed.", err
 	}
 	defer res.Body.Close()

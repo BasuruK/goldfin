@@ -6,11 +6,20 @@ import { discoveryAttemptToResult } from './discovery-result.js';
 import { runModelDiscovery, runModelVerification } from './discovery-client.js';
 
 /** @type {Map<string, number>} */
-const verifyGeneration = new Map();
+const verifyGeneration = $state(new Map());
 
 /** @param {string} connectorId @param {string} modelId */
 export function isModelVerifying(connectorId, modelId) {
   return verifyGeneration.has(`${connectorId}\0${modelId}`);
+}
+
+/** @param {string} connectorId */
+export function isConnectorVerifying(connectorId) {
+  const prefix = `${connectorId}\0`;
+  for (const key of verifyGeneration.keys()) {
+    if (key.startsWith(prefix)) return true;
+  }
+  return false;
 }
 
 /** @typedef {import('./storage.js').ConnectorRecord} ConnectorRecord */
@@ -242,7 +251,15 @@ export async function verifyModelById(id, modelId) {
     const payload = attempt.result;
     if (!payload || payload.verified !== true) {
       const message = payload && typeof payload.message === 'string' ? payload.message.trim() : '';
-      patchConnector(id, failedVerificationPatch(current.models, modelId, message), { immediate: true });
+      patchConnector(
+        id,
+        failedVerificationPatch(
+          current.models,
+          modelId,
+          message || 'Verification failed. The model was turned off.'
+        ),
+        { immediate: true }
+      );
       return;
     }
     const successMessage =

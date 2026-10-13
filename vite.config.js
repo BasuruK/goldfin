@@ -10,16 +10,27 @@ import { defineConfig, loadEnv } from 'vite';
 const root = fileURLToPath(new URL('.', import.meta.url));
 const goldfin = fileURLToPath(new URL('./Goldfin_Components/src', import.meta.url));
 const lib = fileURLToPath(new URL('./src/lib', import.meta.url));
+const DEFAULT_API_ADDR = '127.0.0.1:8080';
 
 /** @param {string} apiAddr */
 function apiProxyTarget(apiAddr) {
-  if (apiAddr.startsWith('http://') || apiAddr.startsWith('https://')) return apiAddr;
-  return `http://${apiAddr}`;
+  const host = (apiAddr || DEFAULT_API_ADDR).trim().replace(/^https?:\/\//, '');
+  return `http://${host}`;
+}
+
+/** @param {string} apiTarget */
+function apiProxy(apiTarget) {
+  return {
+    '/api': {
+      target: apiTarget,
+      changeOrigin: true
+    }
+  };
 }
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, root, '');
-  const apiTarget = apiProxyTarget(env.API_ADDR || '127.0.0.1:8080');
+  const env = loadEnv(mode, root, 'API_');
+  const apiTarget = apiProxyTarget(env.API_ADDR);
 
   return {
     plugins: [sveltekit({ adapter: adapter() })],
@@ -28,12 +39,10 @@ export default defineConfig(({ mode }) => {
       fs: {
         allow: [root, goldfin]
       },
-      proxy: {
-        '/api': {
-          target: apiTarget,
-          changeOrigin: true
-        }
-      }
+      proxy: apiProxy(apiTarget)
+    },
+    preview: {
+      proxy: apiProxy(apiTarget)
     },
     resolve: {
       // `#lib` is declared here rather than left to SvelteKit: this project keeps its

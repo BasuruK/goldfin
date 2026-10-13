@@ -1,7 +1,7 @@
 <script>
   import { Button, Input, Switch } from '$goldfin/lib/index.js';
   import { isCatalogEditable } from './models.js';
-  import { addModelById, discoverModelsById, isModelVerifying, setModelEnabled } from './store.svelte.js';
+  import { addModelById, discoverModelsById, isConnectorVerifying, isModelVerifying, setModelEnabled } from './store.svelte.js';
 
   let { record } = $props();
   let manualId = $state('');
@@ -9,6 +9,7 @@
   const enabledCount = $derived(models.filter(model => model.enabled).length);
   const editable = $derived(isCatalogEditable(record));
   const catalogBusy = $derived(record.catalogState === 'loading');
+  const panelBusy = $derived(catalogBusy || isConnectorVerifying(record.id));
 
   /** @param {{ source?: string, verified?: boolean }} model */
   function sourceLabel(model) {
@@ -25,7 +26,7 @@
   }
 </script>
 
-<section class="model-panel modal" aria-labelledby="model-panel-title" aria-busy={catalogBusy}>
+<section class="model-panel modal" aria-labelledby="model-panel-title" aria-busy={panelBusy}>
   <header class="model-panel-head">
     <h2 id="model-panel-title">Models</h2>
     <span class="model-panel-count">{enabledCount} enabled</span>
@@ -57,10 +58,10 @@
     </table>
   </div>
   <form class="model-manual" onsubmit={addModel}>
-    <Input label="Model ID" bind:value={manualId} placeholder="Type an ID, then press Enter" disabled={record.catalogState === 'loading'} />
+    <Input label="Model ID" bind:value={manualId} placeholder="Type an ID, then press Enter" disabled={panelBusy} />
   </form>
   <footer class="model-panel-foot">
-    <Button type="button" disabled={record.catalogState === 'loading'} onclick={() => discoverModelsById(record.id)}>Refresh catalog</Button>
+    <Button type="button" disabled={panelBusy} onclick={() => discoverModelsById(record.id)}>Refresh catalog</Button>
   </footer>
 </section>
 
