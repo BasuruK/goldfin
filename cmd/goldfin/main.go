@@ -65,7 +65,10 @@ func subcommand(args []string) (string, error) {
 const migrateTimeout = 2 * time.Minute
 
 func runMigrate() error {
-	dsn := mustEnv("DATABASE_URL")
+	dsn, err := requireEnv("DATABASE_URL")
+	if err != nil {
+		return err
+	}
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return err
@@ -126,12 +129,12 @@ func runWorker() {
 	logger.Info("worker stopped")
 }
 
-func mustEnv(name string) string {
+func requireEnv(name string) (string, error) {
 	value := os.Getenv(name)
 	if value == "" {
-		fatal(name + " is not set")
+		return "", fmt.Errorf("%s is not set", name)
 	}
-	return value
+	return value, nil
 }
 
 func envOr(name, fallback string) string {

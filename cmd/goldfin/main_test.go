@@ -37,3 +37,16 @@ func TestHealthz(t *testing.T) {
 		t.Fatalf("body: got %q", rec.Body.String())
 	}
 }
+
+func TestRequireEnv(t *testing.T) {
+	t.Setenv("DATABASE_URL", "")
+	if _, err := requireEnv("DATABASE_URL"); err == nil {
+		t.Fatal("expected error for unset DATABASE_URL")
+	}
+
+	t.Setenv("DATABASE_URL", "postgres://127.0.0.1:5432/goldfin")
+	got, err := requireEnv("DATABASE_URL")
+	if err != nil || got != "postgres://127.0.0.1:5432/goldfin" {
+		t.Fatalf("got %q, %v", got, err)
+	}
+}
