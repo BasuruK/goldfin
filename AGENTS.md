@@ -33,7 +33,7 @@ prototype** when a design artefact exists. Two sources of truth will drift, and 
 one he is looking at. Ask for the design file; do not offer to design it.
 
 **The flow.** Per feature: `/to-spec` (scope: this feature only) → `/to-tickets` → `/implement` per
-ticket. `/implement` drives `/tdd` and closes with `/code-review`. Wayfinder is done; its decisions
+ticket. `/implement` drives `/tdd` and closes with `/code-review`, then `/open-code-review-delegate`. Wayfinder is done; its decisions
 live in `GLOSSARY.md` and `docs/adr/`, and they are binding.
 
 - `/to-spec` ends with a **Failure modes** section: for each outbound call, job or claim, and async UI
@@ -42,6 +42,9 @@ live in `GLOSSARY.md` and `docs/adr/`, and they are binding.
 - `/to-tickets` cuts one layer per ticket: provider client, job queue and migrations, frontend store.
   Each layer carries its own defect class and its own failure table.
 - `/code-review` reads `CODING_STANDARDS.md` for its Standards axis.
+- `/open-code-review-delegate` runs after `/code-review`, as the last step of every `/implement`. The
+  OCR agent runs locally, and OCR only selects files and resolves rules: you perform the review.
+  Fix its valid findings inside the feature, and name any you reject and why.
 
 **A test for new logic.** New domain logic needs a test. Trivial glue is exempt. Say why in the PR
 description rather than silently skipping it.
