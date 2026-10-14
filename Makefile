@@ -75,7 +75,8 @@ run: migrate
 		trap 'exit 130' INT TERM; \
 		$(GOLDFIN) api & API_PID=$$!; \
 		$(GOLDFIN) worker & WORKER_PID=$$!; \
-		HEALTH_URL="$$(node -e 'import("vite").then(async ({ loadEnv }) => { const { resolveApiProxyTarget } = await import("./api-proxy-target.js"); const e = loadEnv("development", ".", ["API_ADDR", "API_ORIGIN"]); console.log(new URL("healthz", resolveApiProxyTarget(e.API_ORIGIN, e.API_ADDR).replace(/\/*$$/, "/")).href); })')"; \
+		HEALTH_URL="$$(node -e 'import("vite").then(async ({ loadEnv }) => { const { resolveApiProxyTarget } = await import("./api-proxy-target.js"); const e = loadEnv("development", ".", ["API_ADDR", "API_ORIGIN"]); console.log(new URL("healthz", resolveApiProxyTarget(e.API_ORIGIN, e.API_ADDR).replace(/\/*$$/, "/")).href); })')" || exit 1; \
+		if [ -z "$$HEALTH_URL" ]; then echo "failed to resolve API health URL" >&2; exit 1; fi; \
 		ready=0; \
 		for i in $$(seq 1 30); do \
 			if ! kill -0 $$API_PID 2>/dev/null || ! kill -0 $$WORKER_PID 2>/dev/null; then \

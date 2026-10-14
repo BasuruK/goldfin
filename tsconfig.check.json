@@ -8,10 +8,7 @@
     "moduleResolution": "bundler",
     "target": "esnext",
     "skipLibCheck": true,
-    "types": ["node", "@sveltejs/kit"],
-    "paths": {
-      "$app/environment": ["./node_modules/@sveltejs/kit/src/runtime/app/env/client.js"]
-    }
+    "types": ["node", "@sveltejs/kit"]
   },
-  "include": ["src/**/*.js", "tests/**/*.js", "vite.config.js", "api-proxy-target.js"]
+  "include": ["src/**/*.js", "src/**/*.d.ts", "tests/**/*.js", "vite.config.js", "api-proxy-target.js"]
 }

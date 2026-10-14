@@ -26,6 +26,13 @@ describe('apiProxyTarget', () => {
     assert.equal(apiProxyTarget('0.0.0.0:8080'), 'http://127.0.0.1:8080');
     assert.equal(apiProxyTarget('[::]:8080'), 'http://127.0.0.1:8080');
     assert.equal(apiProxyTarget(':8080'), 'http://127.0.0.1:8080');
+    assert.equal(apiProxyTarget('0.0.0.0'), `http://${DEFAULT_API_HOST}`);
+    assert.equal(apiProxyTarget('[::]'), `http://${DEFAULT_API_HOST}`);
+  });
+
+  it('rejects unsupported or malformed URL schemes', () => {
+    assert.throws(() => apiProxyTarget('ftp://api.example.com'), /Unsupported API address/);
+    assert.throws(() => apiProxyTarget('https//api.example.com'), /Unsupported API address/);
   });
 });
 

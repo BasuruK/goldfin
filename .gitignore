@@ -5,7 +5,7 @@
 node_modules/
 .svelte-kit/
 /build/
-.cache/
+/.cache/
 
 .cursor/
 

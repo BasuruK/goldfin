@@ -7,9 +7,15 @@ export function apiProxyTarget(raw) {
     return addr;
   }
   // Go binds all interfaces for `:8080`, `0.0.0.0:8080` and `[::]:8080`; none is a usable proxy target.
+  if (addr === '0.0.0.0' || addr === '[::]') {
+    return `http://${DEFAULT_API_HOST}`;
+  }
   const wildcardPort = addr.match(/^(?:0\.0\.0\.0|\[::\])?(:\d+)$/)?.[1];
   if (wildcardPort) {
     return `http://127.0.0.1${wildcardPort}`;
+  }
+  if (/^[a-z][a-z\d+.-]*:\/\//i.test(addr) || /^[a-z][a-z\d+.-]*\/\//i.test(addr)) {
+    throw new Error(`Unsupported API address "${addr}": use "host:port" or an http(s):// URL`);
   }
   return `http://${addr}`;
 }
