@@ -6,11 +6,12 @@ SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
 GOLDFIN := .cache/goldfin
+GOLDFIN_SRC = $(wildcard cmd/goldfin/*.go db/migrations/*.go db/migrations/*.sql internal/*/*.go)
 PNPM := pnpm
 PG_WAIT_SECONDS ?= 60
 GOLANGCI_LINT := go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0
 
-.PHONY: help check check-env build-goldfin $(GOLDFIN) db-up db-down db-wait migrate run run-api run-worker run-web
+.PHONY: help check check-env build-goldfin db-up db-down db-wait migrate run run-api run-worker run-web
 
 help:
 	@echo "Goldfin local dev"
@@ -37,7 +38,7 @@ check-env:
 	@test -f .env || (echo "Missing .env — run: cp .env.example .env" && exit 1)
 	@grep -q '^DATABASE_URL=.' .env || (echo "Missing DATABASE_URL in .env — see .env.example" && exit 1)
 
-$(GOLDFIN):
+$(GOLDFIN): $(GOLDFIN_SRC) go.mod go.sum
 	@mkdir -p .cache
 	go build -o $(GOLDFIN) ./cmd/goldfin
 

@@ -1,4 +1,4 @@
-import { browser } from '$app/env';
+import { browser } from '$app/environment';
 
 /** Matches `--duration-menu` in tokens.css. */
 const MENU_MS = 200;

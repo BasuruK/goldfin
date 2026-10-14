@@ -1,4 +1,4 @@
-import { browser } from '$app/env';
+import { browser } from '$app/environment';
 
 /* Everything the shell owns above the content: the sidebar's state, the two
    settings more than one screen reads, and the keyboard and focus rules for the

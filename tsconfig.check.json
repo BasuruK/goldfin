@@ -1,4 +1,5 @@
 {
+  "extends": "$app/tsconfig",
   "compilerOptions": {
     "checkJs": true,
     "allowJs": true,
@@ -8,7 +9,10 @@
     "moduleResolution": "bundler",
     "target": "esnext",
     "skipLibCheck": true,
-    "types": ["node", "@sveltejs/kit"]
+    "types": ["node", "@sveltejs/kit", "$app/types"],
+    "paths": {
+      "$app/environment": ["./node_modules/@sveltejs/kit/src/runtime/app/env/client.js"]
+    }
   },
   "include": ["src/**/*.js", "tests/**/*.js", "vite.config.js", "api-proxy-target.js"]
 }
