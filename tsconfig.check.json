@@ -10,5 +10,5 @@
     "skipLibCheck": true,
     "types": ["node", "@sveltejs/kit"]
   },
-  "include": ["src/**/*.js", "src/**/*.d.ts", "tests/**/*.js", "vite.config.js", "api-proxy-target.js"]
+  "include": ["src/**/*.js", "tests/**/*.js", "vite.config.js", "api-proxy-target.js"]
 }

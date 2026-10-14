@@ -74,10 +74,16 @@ run: migrate
 		trap 'exit 130' INT TERM; \
 		$(GOLDFIN) api & API_PID=$$!; \
 		$(GOLDFIN) worker & WORKER_PID=$$!; \
-		sleep 0.5; \
-		if ! kill -0 $$API_PID 2>/dev/null || ! kill -0 $$WORKER_PID 2>/dev/null; then \
-			echo "api or worker failed to start"; exit 1; \
-		fi; \
+		HEALTH_URL="$$(node -e 'import("vite").then(async ({ loadEnv }) => { const { resolveApiProxyTarget } = await import("./api-proxy-target.js"); const e = loadEnv("development", ".", ["API_ADDR", "API_ORIGIN"]); console.log(resolveApiProxyTarget(e.API_ORIGIN, e.API_ADDR)); })')/healthz"; \
+		ready=0; \
+		for i in $$(seq 1 30); do \
+			if ! kill -0 $$API_PID 2>/dev/null || ! kill -0 $$WORKER_PID 2>/dev/null; then \
+				echo "api or worker failed to start"; exit 1; \
+			fi; \
+			if curl -fsS "$$HEALTH_URL" >/dev/null 2>&1; then ready=1; break; fi; \
+			sleep 0.5; \
+		done; \
+		if [ "$$ready" -ne 1 ]; then echo "api did not become ready at $$HEALTH_URL"; exit 1; fi; \
 		$(PNPM) dev & VITE_PID=$$!; \
 		while kill -0 $$VITE_PID 2>/dev/null; do \
 			if ! kill -0 $$API_PID 2>/dev/null || ! kill -0 $$WORKER_PID 2>/dev/null; then \
