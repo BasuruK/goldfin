@@ -1,3 +1,5 @@
+/// <reference types="@sveltejs/kit" />
+
 declare module '$app/environment' {
-  export const browser: boolean;
+  export * from '$app/env';
 }

@@ -8,7 +8,7 @@
     "moduleResolution": "bundler",
     "target": "esnext",
     "skipLibCheck": true,
-    "types": ["node"]
+    "types": ["node", "@sveltejs/kit"]
   },
   "include": ["src/**/*.js", "src/**/*.d.ts", "tests/**/*.js", "vite.config.js", "api-proxy-target.js"]
 }

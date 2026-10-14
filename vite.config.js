@@ -14,18 +14,22 @@ const lib = fileURLToPath(new URL('./src/lib', import.meta.url));
 
 export default defineConfig(({ mode }) => {
   const { API_ADDR: apiAddr, API_ORIGIN: apiOrigin } = loadEnv(mode, root, ['API_ADDR', 'API_ORIGIN']);
+  const proxy = {
+    '/api': {
+      target: resolveApiProxyTarget(apiOrigin, apiAddr),
+      changeOrigin: true
+    }
+  };
   return {
     plugins: [sveltekit({ adapter: adapter() })],
     server: {
-      proxy: {
-        '/api': {
-          target: resolveApiProxyTarget(apiOrigin, apiAddr),
-          changeOrigin: true
-        }
-      },
+      proxy,
       fs: {
         allow: [root, goldfin]
       }
+    },
+    preview: {
+      proxy
     },
     resolve: {
       // `#lib` is declared here rather than left to SvelteKit: this project keeps its
