@@ -13,8 +13,7 @@ const goldfin = fileURLToPath(new URL('./Goldfin_Components/src', import.meta.ur
 const lib = fileURLToPath(new URL('./src/lib', import.meta.url));
 
 export default defineConfig(({ mode }) => {
-  const apiAddr = loadEnv(mode, root, 'API_ADDR').API_ADDR;
-  const apiOrigin = loadEnv(mode, root, 'API_ORIGIN').API_ORIGIN;
+  const { API_ADDR: apiAddr, API_ORIGIN: apiOrigin } = loadEnv(mode, root, ['API_ADDR', 'API_ORIGIN']);
   return {
     plugins: [sveltekit({ adapter: adapter() })],
     server: {

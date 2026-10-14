@@ -49,13 +49,9 @@ db-up:
 db-down:
 	docker compose stop postgres
 
-db-wait: db-up
-	@echo "Waiting for Postgres…"
-	@for i in $$(seq 1 $(PG_WAIT_SECONDS)); do \
-		docker compose exec -T postgres sh -c 'pg_isready -h 127.0.0.1 -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"' >/dev/null 2>&1 && exit 0; \
-		sleep 1; \
-	done; \
-	echo "Postgres did not become ready in time."; exit 1
+# The compose healthcheck decides readiness; --wait fails fast with the container's own status.
+db-wait:
+	docker compose up -d --wait --wait-timeout $(PG_WAIT_SECONDS) postgres
 
 migrate: check-env db-wait $(GOLDFIN)
 	$(GOLDFIN) migrate
@@ -69,21 +65,24 @@ run-worker: check-env db-wait $(GOLDFIN)
 run-web:
 	$(PNPM) dev
 
-# ponytail: one shell, three processes; trap kills api/worker when vite exits or on Ctrl+C.
+# ponytail: one shell, three processes, each in its own process group (`set -m`) so cleanup also reaches
+# the children `pnpm dev` spawns. The trap goes first: any early exit, failed start or Ctrl+C stops them all.
 run: check-env db-wait $(GOLDFIN)
-	@$(GOLDFIN) api & API_PID=$$!; \
+	@set -m; API_PID=; WORKER_PID=; VITE_PID=; \
+		cleanup() { for p in $$API_PID $$WORKER_PID $$VITE_PID; do kill -- -$$p 2>/dev/null; done; }; \
+		trap cleanup EXIT; \
+		trap 'exit 130' INT TERM; \
+		$(GOLDFIN) api & API_PID=$$!; \
 		$(GOLDFIN) worker & WORKER_PID=$$!; \
 		sleep 0.5; \
 		if ! kill -0 $$API_PID 2>/dev/null || ! kill -0 $$WORKER_PID 2>/dev/null; then \
 			echo "api or worker failed to start"; exit 1; \
 		fi; \
 		$(PNPM) dev & VITE_PID=$$!; \
-		trap 'kill $$API_PID $$WORKER_PID $$VITE_PID 2>/dev/null' INT TERM EXIT; \
 		while kill -0 $$VITE_PID 2>/dev/null; do \
 			if ! kill -0 $$API_PID 2>/dev/null || ! kill -0 $$WORKER_PID 2>/dev/null; then \
-				echo "api or worker exited unexpectedly"; kill $$VITE_PID 2>/dev/null; wait $$VITE_PID 2>/dev/null; exit 1; \
+				echo "api or worker exited unexpectedly"; exit 1; \
 			fi; \
 			sleep 0.5; \
 		done; \
-		wait $$VITE_PID; status=$$?; \
-		exit $$status
+		wait $$VITE_PID

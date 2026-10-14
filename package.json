@@ -12,7 +12,7 @@
     "preview": "vite preview --host 127.0.0.1 --port 5174 --strictPort",
     "preview:test": "vite preview --host 127.0.0.1 --port 5175 --strictPort",
     "test": "playwright test",
-    "test:unit": "node --test tests/**/*.test.js",
+    "test:unit": "node --test \"tests/**/*.test.js\"",
     "check": "svelte-check --threshold warning",
     "typecheck": "tsc -p tsconfig.check.json",
     "knip": "knip"

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
@@ -21,8 +22,10 @@ describe('apiProxyTarget', () => {
     assert.equal(apiProxyTarget('https://api.example.com'), 'https://api.example.com');
   });
 
-  it('rewrites 0.0.0.0 bind address for local proxy', () => {
+  it('rewrites wildcard bind addresses for local proxy', () => {
     assert.equal(apiProxyTarget('0.0.0.0:8080'), 'http://127.0.0.1:8080');
+    assert.equal(apiProxyTarget('[::]:8080'), 'http://127.0.0.1:8080');
+    assert.equal(apiProxyTarget(':8080'), 'http://127.0.0.1:8080');
   });
 });
 
@@ -34,5 +37,18 @@ describe('resolveApiProxyTarget', () => {
   it('falls back to API_ADDR when API_ORIGIN is blank', () => {
     assert.equal(resolveApiProxyTarget('', '127.0.0.1:9000'), 'http://127.0.0.1:9000');
     assert.equal(resolveApiProxyTarget(undefined, '127.0.0.1:9000'), 'http://127.0.0.1:9000');
+    assert.equal(resolveApiProxyTarget('   ', '127.0.0.1:9000'), 'http://127.0.0.1:9000');
+  });
+
+  it('resolves a bare :port API_ADDR to loopback when API_ORIGIN is unset', () => {
+    assert.equal(resolveApiProxyTarget(undefined, ':8080'), 'http://127.0.0.1:8080');
+  });
+});
+
+describe('DEFAULT_API_HOST', () => {
+  it('matches the API_ADDR default in cmd/goldfin/main.go', () => {
+    const main = readFileSync(new URL('../cmd/goldfin/main.go', import.meta.url), 'utf8');
+    const goDefault = main.match(/envOr\("API_ADDR",\s*"([^"]+)"\)/)?.[1];
+    assert.equal(DEFAULT_API_HOST, goDefault);
   });
 });

@@ -60,6 +60,10 @@ func subcommand(args []string) (string, error) {
 	}
 }
 
+// migrateTimeout bounds connect, ping and the migrations together, so a stalled database fails the
+// command instead of hanging it. Each migration runs in its own transaction, so a cancel rolls back.
+const migrateTimeout = 2 * time.Minute
+
 func runMigrate() error {
 	dsn := mustEnv("DATABASE_URL")
 	db, err := sql.Open("pgx", dsn)
@@ -67,14 +71,16 @@ func runMigrate() error {
 		return err
 	}
 	defer func() { _ = db.Close() }()
-	if err := db.PingContext(context.Background()); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), migrateTimeout)
+	defer cancel()
+	if err := db.PingContext(ctx); err != nil {
 		return err
 	}
 	if err := goose.SetDialect("postgres"); err != nil {
 		return err
 	}
 	goose.SetBaseFS(migrations.FS)
-	if err := goose.Up(db, "."); err != nil {
+	if err := goose.UpContext(ctx, db, "."); err != nil {
 		return err
 	}
 	return nil
