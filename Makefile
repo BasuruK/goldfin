@@ -6,12 +6,11 @@ SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
 GOLDFIN := .cache/goldfin
-GOLDFIN_SRC := $(shell find . \( -path ./.cache -o -path ./node_modules -o -path ./build -o -path ./.svelte-kit -o -path ./.pnpm-store -o -path ./.git \) -prune -o \( -name '*.go' -o -name '*.sql' \) -print 2>/dev/null)
 PNPM := pnpm
 PG_WAIT_SECONDS ?= 60
 GOLANGCI_LINT := go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0
 
-.PHONY: help check check-env build-goldfin db-up db-down db-wait migrate run run-api run-worker run-web
+.PHONY: help check check-env build-goldfin $(GOLDFIN) db-up db-down db-wait migrate run run-api run-worker run-web
 
 help:
 	@echo "Goldfin local dev"
@@ -20,7 +19,7 @@ help:
 	@echo "  make db-up       Start Postgres (docker compose)"
 	@echo "  make db-down     Stop Postgres"
 	@echo "  make migrate     Run goose migrations (needs .env with DATABASE_URL)"
-	@echo "  make run         api + worker + vite (Vite proxies /api to API_ORIGIN or API_ADDR)"
+	@echo "  make run         migrate + api + worker + vite (Vite proxies /api to API_ORIGIN or API_ADDR)"
 	@echo "  make run-api     Go API only"
 	@echo "  make run-worker  Go worker only"
 	@echo "  make run-web     Vite dev server only"
@@ -36,8 +35,9 @@ check:
 
 check-env:
 	@test -f .env || (echo "Missing .env — run: cp .env.example .env" && exit 1)
+	@grep -q '^DATABASE_URL=.' .env || (echo "Missing DATABASE_URL in .env — see .env.example" && exit 1)
 
-$(GOLDFIN): $(GOLDFIN_SRC) go.mod go.sum
+$(GOLDFIN):
 	@mkdir -p .cache
 	go build -o $(GOLDFIN) ./cmd/goldfin
 
@@ -67,7 +67,7 @@ run-web:
 
 # ponytail: one shell, three processes, each in its own process group (`set -m`) so cleanup also reaches
 # the children `pnpm dev` spawns. The trap goes first: any early exit, failed start or Ctrl+C stops them all.
-run: check-env db-wait $(GOLDFIN)
+run: migrate
 	@set -m; API_PID=; WORKER_PID=; VITE_PID=; \
 		cleanup() { for p in $$API_PID $$WORKER_PID $$VITE_PID; do kill -- -$$p 2>/dev/null; done; }; \
 		trap cleanup EXIT; \
