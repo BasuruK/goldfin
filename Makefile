@@ -6,7 +6,7 @@ SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
 GOLDFIN := .cache/goldfin
-GOLDFIN_SRC = $(wildcard cmd/goldfin/*.go db/migrations/*.go db/migrations/*.sql internal/*/*.go)
+GOLDFIN_SRC = $(wildcard cmd/goldfin/*.go db/migrations/*.go db/migrations/*.sql)
 PNPM := pnpm
 PG_WAIT_SECONDS ?= 60
 GOLANGCI_LINT := go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0
