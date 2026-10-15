@@ -102,3 +102,15 @@ port 8400). SvelteKit injection is dev-only via `src/lib/impeccable/ImpeccableLi
 marked blocks in `src/routes/+layout.svelte` — do not remove those markers by hand; use
 `impeccable live-inject --remove` when tearing down. Prefer live iteration over guessing layout in
 chat when refining Connectors or other Operate-mode screens.
+
+## Rules from PR #40 review
+- Never invent module paths, config keys, or flags. Verify in node_modules, `go doc`, or official docs first.
+- Never silence a checker (casts, ambient shims, strict:false, nolint). Fix the cause or ask.
+- Review comments are hypotheses. Verify against docs, run `make check`, reject wrong ones with a one-line reason.
+- Same finding twice = wrong design. Stop patching; simplify or ask.
+- One config var per concept, full URL form, validated once at startup. No silent fallbacks.
+- Makefile recipes run commands. No traps, PIDs, background jobs, or sleeps.
+- No speculative code: no stubs, extensions, or helpers before first real use.
+- A new test must fail first. That proves it runs.
+- Never type dependency versions, action SHAs, or image digests by hand. Resolve them with a command.
+- Review-fix commits touch flagged lines only. Never add features during review.
