@@ -36,6 +36,9 @@ const PROVIDERS = [
   }
 ];
 
+/** The provider a new or unreadable Connector gets; `providerByType` falls back to the same one. */
+export const DEFAULT_PROVIDER_TYPE = PROVIDERS[0].value;
+
 /** @param {unknown} value @returns {value is ProviderType} */
 export function isProviderType(value) {
   return PROVIDERS.some(p => p.value === value);

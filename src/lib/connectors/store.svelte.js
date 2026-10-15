@@ -1,5 +1,5 @@
 import { finishConnectionCheck, runConnectionCheck } from './connection-check.js';
-import { defaultBaseUrlFor, defaultNameFor } from './providers.js';
+import { DEFAULT_PROVIDER_TYPE, defaultBaseUrlFor, defaultNameFor } from './providers.js';
 import { createEmptyConnector, loadConnectors, saveConnectors } from './storage.js';
 import { applyConnectorPatch, beginDiscovery, finishDiscovery, addManualModel, isCatalogEditable } from './models.js';
 import { previewModelCatalog } from './model-preview.js';
@@ -50,9 +50,9 @@ export function editingConnector() {
 }
 
 export function openAddDialog() {
-  const draft = createEmptyConnector('openai');
-  draft.name = defaultNameFor('openai');
-  draft.baseUrl = defaultBaseUrlFor('openai');
+  const draft = createEmptyConnector(DEFAULT_PROVIDER_TYPE);
+  draft.name = defaultNameFor(DEFAULT_PROVIDER_TYPE);
+  draft.baseUrl = defaultBaseUrlFor(DEFAULT_PROVIDER_TYPE);
   connectorStore.connectors = [...connectorStore.connectors, draft];
   connectorStore.editingId = draft.id;
   connectorStore.adding = true;
