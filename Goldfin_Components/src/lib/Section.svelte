@@ -1,6 +1,6 @@
 <script>
   /* `reference` is the mono note beside the title; `id` stays the HTML id. */
-  let { title, reference, legend, id, class: className = '', 'data-od-id': odId, children } = $props();
+  let { title, reference = undefined, legend = undefined, id, class: className = '', 'data-od-id': odId, children } = $props();
 </script>
 <section class={['section', className]} data-od-id={odId} {id}>
   <div class="section-head">

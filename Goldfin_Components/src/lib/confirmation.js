@@ -1,3 +1,4 @@
+/** @param {(result: 'confirmed' | 'canceled') => void} onResult */
 export function createConfirmation(onResult = () => {}) {
   let active = false;
   let confirmed = false;

@@ -2,6 +2,9 @@
   import TimelineMarker from './TimelineMarker.svelte';
   import Pill from './Pill.svelte';
   // `status` is a string (rendered in a Pill) or a snippet that replaces the Pill entirely.
+  /** @type {{ title: string, description?: string, meta?: string, time?: string, datetime?: string,
+   * state?: string, status?: string | import('svelte').Snippet, statusVariant?: string, icon?: string,
+   * dateColumn?: boolean, collapsible?: boolean, open?: boolean, summary?: string, children?: import('svelte').Snippet }} */
   let {
     title,
     description = '',
@@ -18,7 +21,6 @@
     summary = 'Details',
     children
   } = $props();
-  const isSnippet = $derived(typeof status === 'function');
 </script>
 
 <li class="timeline-item" data-state={state} aria-current={state === 'current' ? 'step' : undefined}>
@@ -34,7 +36,7 @@
     {/if}
     <div class="od-cluster timeline-heading">
       <h4 class="timeline-title">{title}</h4>
-      {#if isSnippet}
+      {#if typeof status === 'function'}
         {@render status()}
       {:else}
         <Pill variant={statusVariant} class="timeline-status">{status}</Pill>

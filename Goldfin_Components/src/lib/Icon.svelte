@@ -1,7 +1,7 @@
 <script>
   import { glyphForName } from './icons.js';
 
-  let { name = 'chevron', size } = $props();
+  let { name = 'chevron', size = undefined } = $props();
 
   const glyph = $derived(glyphForName(name));
 </script>

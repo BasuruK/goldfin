@@ -1,6 +1,7 @@
 <script>
   import { onDestroy } from 'svelte';
   import { createLoadingTask } from './loading.js';
+  /** @type {{ children?: import('svelte').Snippet<[{ busy: boolean, state: string, start: () => void, cancel: () => void }]>, delay?: number, onComplete?: () => void }} */
   let { children, delay = 1600, onComplete = () => {} } = $props();
   let state = $state('idle');
   const task = createLoadingTask(next => state = next);

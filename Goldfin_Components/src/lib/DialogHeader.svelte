@@ -2,7 +2,7 @@
   import MosaicHeader from './MosaicHeader.svelte';
   import Icon from './Icon.svelte';
   // `parts` is the bits-ui Dialog or AlertDialog namespace; Title/Description/Close differ between them.
-  let { parts, title, description, icon = '', close = false, actions } = $props();
+  let { parts, title, description, icon = '', close = false, actions = undefined } = $props();
   const Title = $derived(parts.Title);
   const Description = $derived(parts.Description);
   const Close = $derived(parts.Close);

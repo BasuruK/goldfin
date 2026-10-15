@@ -11,6 +11,7 @@ import { resolveApiProxyTarget } from './api-proxy-target.js';
 const root = fileURLToPath(new URL('.', import.meta.url));
 const goldfin = fileURLToPath(new URL('./Goldfin_Components/src', import.meta.url));
 const lib = fileURLToPath(new URL('./src/lib', import.meta.url));
+const alias = { $goldfin: goldfin, '#lib': lib, $lib: lib };
 
 export default defineConfig(({ mode }) => {
   const { API_ADDR: apiAddr, API_ORIGIN: apiOrigin } = loadEnv(mode, root, ['API_ADDR', 'API_ORIGIN']);
@@ -21,7 +22,12 @@ export default defineConfig(({ mode }) => {
     }
   };
   return {
-    plugins: [sveltekit({ adapter: adapter() })],
+    plugins: [sveltekit({
+      adapter: adapter(),
+      // Kit passes the same aliases to Vite and its generated type configuration.
+      // `$lib` is required by Impeccable live-inject; app code prefers `#lib`.
+      alias
+    })],
     server: {
       proxy,
       fs: {
@@ -32,11 +38,7 @@ export default defineConfig(({ mode }) => {
       proxy
     },
     resolve: {
-      // `#lib` is declared here rather than left to SvelteKit: this project keeps its
-      // config inline instead of in svelte.config.js, and kit does not register the
-      // alias for the client bundle without one.
-      // `$lib` is required by Impeccable live-inject; app code prefers `#lib`.
-      alias: { $goldfin: goldfin, '#lib': lib, $lib: lib },
+      alias,
       // The library is consumed from source, so without this its own node_modules
       // would put a second svelte and bits-ui in the bundle. Two runtimes means
       // broken context. Dedupe forces one copy, the app's.

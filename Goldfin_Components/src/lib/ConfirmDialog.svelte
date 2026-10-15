@@ -6,7 +6,7 @@
   import Icon from './Icon.svelte';
   import { createConfirmation } from './confirmation.js';
   let { open = $bindable(false), trigger, iconTrigger = false, title, description, action = 'Confirm',
-    tone = 'neutral', icon = 'link', onConfirm = () => {}, onResult, children, ...rest } = $props();
+    tone = 'neutral', icon = 'link', onConfirm = () => {}, onResult = undefined, children = undefined, ...rest } = $props();
   const triggerClass = $derived(
     iconTrigger
       ? `btn icon dialog-icon-trigger${tone === 'bad' ? ' dialog-icon-trigger--bad' : ''}`
