@@ -1,68 +1,51 @@
 # Coding standards
 
-Read at review, against the diff. Judgement calls only: anything a linter can decide lives in
-`make check` (`.golangci.yml`, `svelte-check`, tests), not here. Evidence for each section is the
-review history of PRs #32, #38, #39 and #40.
+Apply every rule in the touched layer before writing code, and verify every diff hunk against it at review. Judgement calls only: anything a linter can decide belongs in `make check` (`.golangci.yml`, `svelte-check`, `knip`, tests).
 
 ## Outbound HTTP (worker)
 
-The destination is user-supplied, so every call is hostile until proven otherwise.
+The destination is user-supplied; treat every call as hostile:
 
-- One hardened client in `internal/provider`. A second `http.Client` is a finding.
-- A table-driven test covers the blocked address ranges, built on `netip` predicates. A new range
-  is a new row, never a new `if`.
-- Redirects: same-host only, with a hop limit.
-- Responses: a body-size cap that errors loudly when exceeded, never truncates silently.
-- Success: a 2xx status plus a body that parses into the expected shape. A status code alone proves
-  nothing.
-- URLs: build with `url.Parse` and `JoinPath`. String concatenation is a finding.
-- Budgets: a job's total time budget sits below the stale-reclaim window.
+- **Single client**: Route all outbound calls through the single hardened `http.Client` in `internal/provider`.
+- **SSRF table**: Drive blocked-address checks from a table-driven `netip` predicate test; add new ranges as table rows.
+- **Redirects**: Restrict redirects to same-host with a bounded hop limit.
+- **Body cap**: Enforce a response body-size cap that returns an explicit error when exceeded.
+- **Verified response**: Require both a `2xx` status and a response body that parses into the expected shape.
+- **URL construction**: Build URLs exclusively with `url.Parse` and `JoinPath`.
+- **Time budget**: Bound a job's total time budget strictly below the stale-reclaim window.
 
 ## State transitions (jobs, claims, migrations)
 
-Every state machine ships a **failure table** in its ticket: two writers, a crash mid-flight, shutdown
-mid-flight, a stale reclaim, a rollback after data exists. Review checks the code against that table.
+Verify every state transition against the ticket's **Failure table** (`AGENTS.md`):
 
-- A write that finishes a claim matches the claim token and checks rows affected. A zero count is an
-  error.
-- Shutdown interrupts a job and releases it. It never records it as failed.
-- A Down migration runs against data the Up path produced.
-- A migration with no schema effect is deleted.
-- Every opened resource (pool, body, listener) has an owner that closes it.
+- **Claim token**: Match the active claim token on completion writes and require `rowsAffected == 1`.
+- **Shutdown release**: Interrupt in-flight jobs on shutdown and release their claims for re-run.
+- **Down migration**: Write `Down` migrations that succeed against rows produced by the `Up` path.
+- **Schema effect**: Keep only migrations that mutate schema state.
+- **Resource ownership**: Assign every opened resource (pool, body, listener) a single owner that closes it.
 
 ## Frontend async
 
-- Every `fetch` carries an `AbortSignal` and a timeout, a guarded `.json()`, and routes its error
-  through the single mapping function. A timeout is never reported as "API unreachable".
-- A result is guarded by a per-request token. A per-connector revision is too coarse.
-- State that drives the UI is reactive. A plain `Map` or module variable is a finding.
-- An optimistic update has a rollback, and the success path clears the previous failure message.
-- Users see mapped messages. Raw `TypeError` or `SyntaxError` text is a finding.
-- Credentials follow [ADR 0005](docs/adr/0005-credential-handling.md): plaintext exists only in the
-  creating request and in worker memory. The `localStorage` copy in `storage.js` is interim and
-  dies with the worker-backed slice; new code never persists a credential on the client.
+- **Guarded fetch**: Pass an `AbortSignal` and timeout to every `fetch`, guard `.json()`, and route failures through the single error mapper with distinct timeout and reachability messages.
+- **Request token**: Guard async completions with a per-request token rather than a connector-wide revision.
+- **Reactive state**: Hold UI-driving state in reactive Svelte state (`$state` / `$derived`).
+- **Optimistic rollback**: Pair every optimistic update with a rollback path and clear prior failure messages on success.
+- **Mapped errors**: Surface only mapped user-facing messages in the UI.
+- **Client credentials** (`docs/adr/0005-credential-handling.md`): Keep Credential plaintext in the creating request and worker memory only; the interim `localStorage` copy in `storage.js` is retired with the worker-backed slice.
 
 ## Contracts across layers
 
-- One source per constant: API paths, default addresses, timeouts, state names. A value repeated in
-  two files is a finding.
-- A field the client reads must be produced by the worker, and a field the API accepts must be
-  persisted or rejected. Check both directions.
-- A state value means the same thing on every path. `ready` is never returned for a failed check.
-- Mocks assert the request payload, so contract drift fails a test.
-- A shared function carries no feature-specific wording. A verification timeout never says "discovery".
-
-## Dead and speculative code
-
-- Every new function has a caller or a test that needs it. A helper for a "planned" flow is deleted.
-- A migration of callers deletes the old function in the same diff.
-- A computed value nobody reads is deleted.
+- **Single constant**: Define each shared constant (API path, default address, timeout, state name) in one source file.
+- **Startup config**: Use one config variable per concept in full URL form, validated once at startup with explicit failure on missing or malformed values.
+- **Direct recipes**: Run foreground commands directly in `Makefile` recipes; delegate process orchestration to Docker Compose or Go.
+- **Round-trip fields**: Produce every client-read field in the worker, and persist or reject every API-accepted field.
+- **Unambiguous state**: Give each state value one meaning across all paths, reserving `ready` for checks that succeeded.
+- **Payload assertions**: Assert request payloads inside test mocks so contract drift fails tests.
+- **Caller-neutral errors**: Keep shared helpers free of caller-specific labels by naming the active operation in error messages.
 
 ## Accepted for v1
 
-Do not raise these again. A change that widens them goes through an ADR.
+Settled for v1 (widening either requires an ADR):
 
-- **No authentication on the API.** It listens on loopback in local development. Production access
-  and authentication are later slices ([ADR 0012](docs/adr/0012-worker-checks-gate-connector-saves.md)).
-- **`updated_at` has no trigger.** `internal/jobs/store.go` is the single writer. Add a trigger when a
-  second writer appears.
+- **Loopback API** (`docs/adr/0012-worker-checks-gate-connector-saves.md`): Local development binds loopback without auth; production access and authentication land in a later slice.
+- **Single-writer `updated_at`**: `internal/jobs/store.go` is the sole writer; add a database trigger when a second writer is introduced.
