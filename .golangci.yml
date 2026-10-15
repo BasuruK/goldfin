@@ -17,3 +17,8 @@ linters:
     revive:
       rules:
         - name: deep-exit
+
+formatters:
+  enable:
+    - gofmt
+    - goimports

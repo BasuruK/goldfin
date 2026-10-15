@@ -1,9 +1,7 @@
 # Local dev. Requires: docker, go, pnpm, and a repo-root `.env` (cp .env.example .env).
-# Checks also require govulncheck, zizmor and gitleaks (CI installs pinned versions).
+# Checks also require golangci-lint, govulncheck, zizmor and gitleaks (CI installs pinned versions).
 
 .DEFAULT_GOAL := help
-
-GOLANGCI_LINT := go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0
 
 .PHONY: help check up run watch down migrate logs
 
@@ -21,7 +19,7 @@ help:
 check:
 	go build ./...
 	go vet ./...
-	$(GOLANGCI_LINT) run
+	golangci-lint run
 	govulncheck ./...
 	zizmor .github/workflows
 	gitleaks detect --no-banner --redact
