@@ -29,6 +29,10 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Install security scanners
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@v1.9.0
+          python3 -m pip install zizmor==1.31.0
       - run: make check
 
   e2e:

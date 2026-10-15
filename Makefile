@@ -1,4 +1,5 @@
 # Local dev orchestration. Requires: docker, go, pnpm, repo-root `.env` (see .env.example).
+# Checks also require govulncheck and zizmor (CI installs pinned versions).
 # `cmd/goldfin` is a thin local stub until the full API/worker stack lands on main.
 
 SHELL := /bin/bash
@@ -16,7 +17,7 @@ GOLANGCI_LINT := go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v
 help:
 	@echo "Goldfin local dev"
 	@echo ""
-	@echo "  make check       vet, lint, Go tests, unit tests, svelte-check, knip (CI runs this)"
+	@echo "  make check       vet, lint, vulnerabilities, workflows, Go/unit tests, svelte-check, knip"
 	@echo "  make db-up       Start Postgres (docker compose)"
 	@echo "  make db-down     Stop Postgres"
 	@echo "  make migrate     Run goose migrations (needs .env with DATABASE_URL)"
@@ -28,6 +29,8 @@ help:
 check:
 	go vet ./...
 	$(GOLANGCI_LINT) run
+	govulncheck ./...
+	zizmor .github/workflows
 	go test ./...
 	$(PNPM) test:unit
 	$(PNPM) check
