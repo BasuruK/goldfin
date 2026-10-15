@@ -1,116 +1,41 @@
 # Goldfin
 
-Goldfin evaluates a financial organization's system prompt for document field extraction. It runs a
-Pipeline (OCR, then LLM extraction) over a customer-built Dataset and produces scores that say which
-Stage lost the value. Single tenant, single user.
+Single-tenant evaluator running an OCR-then-LLM Pipeline over customer Datasets to attribute which Stage lost a Field value.
 
-## The stack
+## Context pointers & invariants
 
-Settled in [ADR 0010](docs/adr/0010-go-api-postgres-three-containers.md). Do not re-litigate without a
-new ADR.
+Read the matching target on turn 1 before exploring or editing that branch:
 
-- **API**: Go. One binary, three container roles: `web` (nginx + static SvelteKit), `api` (JSON
-  HTTP), `worker` (same binary, different subcommand). One image.
-- **Database**: Postgres. Migrations are goose; queries are sqlc. An ORM is not to be introduced.
-- **Object storage**: RustFS, required, for Document bytes only.
-- **Frontend**: SvelteKit, `adapter-static`. No Node runtime ships. nginx proxies `/api`, so the
-  browser never meets CORS.
-- **The `api` container never makes an outbound call and never decrypts a Credential.** Every call
-  goes through the worker. See [ADR 0005](docs/adr/0005-credential-handling.md).
+- **Domain & vocabulary** (`GLOSSARY.md`, `docs/agents/domain.md`): Domain terms, schemas, or Pipeline, Stage, State, Extraction, Match, Verdict, Validity, Coverage, Judge, Dataset, Prompt, Run, Comparison, Probe, Connector, or Credential logic. Use `GLOSSARY.md` terms verbatim.
+- **Prompts, formats, & scoring** (`docs/adr/0002-declare-formats-never-infer.md`, `docs/adr/0003-goldfin-does-not-rescue-the-model.md`, `docs/adr/0004-a-blank-cell-is-an-assertion.md`, `docs/adr/0006-judge-contract.md`, `docs/adr/0007-validity-is-structural-and-advisory.md`): LLM calls, Manifest ingest, Normalization, blank cells, Judge, or Validity. **Invariant**: score the prompt as deployed—zero output schemas, format reminders, malformed-output retries, or Judge rescue.
+- **Runs, retries, & gateways** (`docs/adr/0008-a-re-attempt-is-a-new-run.md`, `docs/adr/0009-a-fused-gateway-is-supported.md`): Run execution, re-attempts (always new Runs with snapshotted Connector definitions), or fused OCR+LLM gateways (first-class; zero Connector splittability requirement).
+- **Topology, Credentials, & worker checks** (`docs/adr/0005-credential-handling.md`, `docs/adr/0010-go-api-postgres-three-containers.md`, `docs/adr/0011-model-selection-belongs-to-the-connector.md`, `docs/adr/0012-worker-checks-gate-connector-saves.md`): Containers (`web` nginx + static SvelteKit, `api` Go HTTP, `worker` Go subcommand over Postgres + `goose`; changes require an ADR), Credentials (read 0005's v1 banner), model catalogs, or Connector saves. **Invariant**: only `worker` makes outbound calls or decrypts a Credential.
+- **Worker HTTP, job claims, migrations, & code standards** (`CODING_STANDARDS.md`): Outbound HTTP/provider clients, job claim stores, shutdown, migrations (`db/`), Go API/worker (`cmd/`), frontend async/stores (`src/lib/`), or `Makefile`.
+- **UI & design system** (`DESIGN.md`, `PRODUCT.md`): Svelte components, CSS, `Goldfin_Components/`, or `src/routes/`. For live layout iteration, run `pnpm dev` and `/impeccable live` (remove `src/routes/+layout.svelte` markers via `impeccable live-inject --remove`).
+- **Issues & triage** (`docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`): GitHub issues or PRs via `gh`.
 
-## How we work
+## Execution sequence
 
-These are the rules that keep the product small. Breaking them is how it got complicated before.
+### 1. Scope (`seam`)
 
-**One feature at a time.** A feature is one seam: the Connector screen, the Dataset ingest, the Run
-view. Build it, verify it, stop. Do not widen into adjacent cleanup, speculative endpoints, or
-infrastructure nobody asked for. If an idea is worth doing but is not this feature, finish the feature,
-then **ask the user** whether to do it. Absorbing it silently is the failure mode, not having it.
+1. Deliver one feature seam and one layer per ticket and PR (`/to-spec` → `/to-tickets` → `/implement`; split multi-layer work via `/split-to-prs`).
+2. End `/to-spec` and each ticket with a **Failure table** (two writers, mid-flight crash, mid-flight shutdown, timeout, stale reclaim/result, rollback after data exists) for every outbound call, job claim, migration, and async UI path.
+3. Cut `/to-tickets` at a single layer (provider client, job queue/migrations, or frontend store).
+4. Implement UI strictly from `DESIGN.md` and OpenDesign handoffs; ask for the design artefact when absent.
+- **Criterion**: Single-layer seam, design artefact, and failure table are pinned before coding.
 
-**UI first, and the design is not yours.** The user designs in OpenDesign and hands over `DESIGN.md`,
-frames, images and instructions. Implement from that artefact. **Never scaffold a throwaway UI
-prototype** when a design artefact exists. Two sources of truth will drift, and the design is the
-one he is looking at. Ask for the design file; do not offer to design it.
+### 2. Build (`red` → green)
 
-**The flow.** Per feature: `/to-spec` (scope: this feature only) → `/to-tickets` → `/implement` per
-ticket. `/implement` drives `/tdd` and closes with `/code-review`, then `/open-code-review-delegate`. Wayfinder is done; its decisions
-live in `GLOSSARY.md` and `docs/adr/`, and they are binding.
+1. Drive `/implement` with `/tdd`: write a failing test at the seam and watch it go *red* before writing implementation code. Note any trivial-glue exemption in the PR description.
+2. Verify module paths, config keys, and flags in `node_modules`, `go doc`, or Context7. Resolve dependency versions, action SHAs, and image digests via CLI commands.
+3. Fix compiler, type, and lint errors at the root declaration or call site while keeping strict type and lint checks intact.
+4. Migrate all callers and delete replaced functions in the same diff.
+- **Criterion**: Every new behavior has a test that went red then green, and all callers use the new contract.
 
-- `/to-spec` ends with a **Failure modes** section: for each outbound call, job or claim, and async UI
-  path, name what happens on a crash, a timeout, shutdown, two writers, and a stale result.
-  [`CODING_STANDARDS.md`](CODING_STANDARDS.md) lists the cases.
-- `/to-tickets` cuts one layer per ticket: provider client, job queue and migrations, frontend store.
-  Each layer carries its own defect class and its own failure table.
-- `/code-review` reads `CODING_STANDARDS.md` for its Standards axis.
-- `/open-code-review-delegate` runs after `/code-review`, as the last step of every `/implement`. The
-  OCR agent runs locally, and OCR only selects files and resolves rules: you perform the review.
-  Fix its valid findings inside the feature, and name any you reject and why.
+### 3. Verify & review (`sweep`)
 
-**A test for new logic.** New domain logic needs a test. Trivial glue is exempt. Say why in the PR
-description rather than silently skipping it.
-
-**Ask about what is left.** Valid review findings and fixes inside the current feature need no
-permission: do them. When a turn leaves work *outside* the feature undone, end with one question that
-names it: "Fix X too?" Silent omission is how a scope creeps.
-
-## Done means
-
-- `make check` is green. A red check is yours to fix before you report done.
-- Review your own diff against [`CODING_STANDARDS.md`](CODING_STANDARDS.md) first.
-- **Sweep the class.** After fixing a bug, grep for its siblings: same function shape, same package,
-  the Go and JS sides of the same contract.
-- **Delete what you replace.** Migrating callers deletes the old function in the same change. Nothing
-  ships without a caller or a test that needs it.
-- UI changes get a Playwright screenshot at 375px and 1280px. Compare spacing against neighbouring
-  elements and the `DESIGN.md` tokens.
-
-## Before you touch something
-
-`GLOSSARY.md` is the glossary and it is strict. Use its terms; do not invent synonyms, and do not use a
-word it reserves for something else. The load-bearing ADRs:
-
-- **[0003](docs/adr/0003-goldfin-does-not-rescue-the-model.md)**: Goldfin does not rescue the model.
-  If a change makes the model more likely to succeed, it is grading its own homework. Load-bearing for
-  everything touching the LLM call.
-- **[0005](docs/adr/0005-credential-handling.md)**: Credential storage and lifecycle. **Its
-  obligations are decided but largely unimplemented in v1**; read the amendment banner.
-- **[0008](docs/adr/0008-a-re-attempt-is-a-new-run.md)**: a re-attempt is a new Run, and a Run copies
-  the Connector definition it used.
-- **[0009](docs/adr/0009-a-fused-gateway-is-supported.md)**: a fused gateway is supported, not
-  degraded. **Standing instruction: the premise that a Connector must be splittable is gone from the
-  model, and no future ticket may re-derive it.**
-
-## Agent skills
-
-### Issue tracker
-
-Issues are tracked as GitHub issues in `BasuruK/goldfin` via the `gh` CLI. See `docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-Default five-role vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
-
-### Impeccable (UI iteration)
-
-Product context lives in `PRODUCT.md`; visual contract in `DESIGN.md`. For interactive UI work on the
-Svelte app, use **Impeccable live**: run `pnpm dev`, then `/impeccable live` in the agent (helper on
-port 8400). SvelteKit injection is dev-only via `src/lib/impeccable/ImpeccableLiveRoot.svelte` and
-marked blocks in `src/routes/+layout.svelte` — do not remove those markers by hand; use
-`impeccable live-inject --remove` when tearing down. Prefer live iteration over guessing layout in
-chat when refining Connectors or other Operate-mode screens.
-
-## Rules from PR #40 review
-- Never invent module paths, config keys, or flags. Verify in node_modules, `go doc`, or official docs first.
-- Never silence a checker (casts, ambient shims, strict:false, nolint). Fix the cause or ask.
-- Review comments are hypotheses. Verify against docs, run `make check`, reject wrong ones with a one-line reason.
-- Same finding twice = wrong design. Stop patching; simplify or ask.
-- One config var per concept, full URL form, validated once at startup. No silent fallbacks.
-- Makefile recipes run commands. No traps, PIDs, background jobs, or sleeps.
-- No speculative code: no stubs, extensions, or helpers before first real use.
-- A new test must fail first. That proves it runs.
-- Never type dependency versions, action SHAs, or image digests by hand. Resolve them with a command.
-- Review-fix commits touch flagged lines only. Never add features during review.
+1. **Sweep**: After a bug fix, grep Go and JS sides of the contract, the package, and sibling functions for the same shape and fix every match.
+2. **Visual**: Capture Playwright screenshots at `375px` and `1280px` for UI changes and verify spacing against `DESIGN.md` tokens.
+3. **Gate**: Run `make check` and resolve every failure until green.
+4. **Review**: Self-review against `CODING_STANDARDS.md`, run `/code-review`, then `/open-code-review-delegate`. Verify findings against docs and `make check`, apply valid in-seam fixes in commits touching only flagged lines, and reject invalid ones with a one-line reason. If a finding recurs, stop patching and simplify or ask.
+5. **Handoff**: If work *outside* the seam remains, end with one question: `"Fix X too?"`

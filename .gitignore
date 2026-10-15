@@ -12,9 +12,6 @@ node_modules/
 .mavis/
 .serena/
 
-
-#Ignore vscode AI rules
-.github/instructions/codacy.instructions.md
 prototypes/UI improvement discussion.zip
 
 # Playwright
@@ -24,8 +21,6 @@ prototypes/UI improvement discussion.zip
 /playwright/.cache/
 /playwright/.auth/
 .cursor/hooks/state/continual-learning.json
-
-.codacy/
 
 # Impeccable live sessions (config under .impeccable/live/config.json is committed)
 .impeccable/live/sessions/
