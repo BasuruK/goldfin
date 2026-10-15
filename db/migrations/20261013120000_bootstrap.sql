@@ -1,7 +1,6 @@
+-- Pipeline tracer: proves migrate runs end to end. The first real table replaces it.
 -- +goose Up
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
+SELECT 1;
 
 -- +goose Down
--- Goldfin runs in a dedicated database and owns its schema; rolling back this
--- bootstrap migration requires rolling back any dependent objects first (RESTRICT).
-DROP EXTENSION IF EXISTS pgcrypto RESTRICT;
+SELECT 1;

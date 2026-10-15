@@ -36,6 +36,11 @@ const PROVIDERS = [
   }
 ];
 
+/** @param {unknown} value @returns {value is ProviderType} */
+export function isProviderType(value) {
+  return PROVIDERS.some(p => p.value === value);
+}
+
 /** @param {ProviderType} type */
 export function providerByType(type) {
   return PROVIDERS.find(p => p.value === type) ?? PROVIDERS[0];

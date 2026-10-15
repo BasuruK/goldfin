@@ -16,5 +16,35 @@ services:
       timeout: 5s
       retries: 10
 
+  migrate:
+    build: { context: ., dockerfile: Dockerfile.dev }
+    command: ["migrate"]
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: "no"
+
+  api:
+    build: { context: ., dockerfile: Dockerfile.dev }
+    command: ["api"]
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+      API_ADDR: 0.0.0.0:8080
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD", "/goldfin", "healthcheck"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+    develop:
+      watch:
+        - { path: ./cmd, action: rebuild }
+        - { path: ./db, action: rebuild }
+        - { path: ./go.mod, action: rebuild }
+
 volumes:
   goldfin-pgdata:

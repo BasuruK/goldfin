@@ -11,3 +11,14 @@ linters:
     - noctx
     - gosec
     - gocritic
+    - revive
+    - contextcheck
+  settings:
+    revive:
+      rules:
+        - name: deep-exit
+
+formatters:
+  enable:
+    - gofmt
+    - goimports

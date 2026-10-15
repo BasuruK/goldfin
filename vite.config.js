@@ -2,7 +2,7 @@ import { fileURLToPath } from 'node:url';
 import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig, loadEnv } from 'vite';
-import { resolveApiProxyTarget } from './api-proxy-target.js';
+import { apiProxyTarget } from './api-proxy-target.js';
 
 // The component library is referenced from its source, never copied. `$goldfin`
 // points at the library's src, so `$goldfin/lib/index.js` and
@@ -13,14 +13,11 @@ const goldfin = fileURLToPath(new URL('./Goldfin_Components/src', import.meta.ur
 const lib = fileURLToPath(new URL('./src/lib', import.meta.url));
 const alias = { $goldfin: goldfin, '#lib': lib, $lib: lib };
 
-export default defineConfig(({ mode }) => {
-  const { API_ADDR: apiAddr, API_ORIGIN: apiOrigin } = loadEnv(mode, root, ['API_ADDR', 'API_ORIGIN']);
-  const proxy = {
-    '/api': {
-      target: resolveApiProxyTarget(apiOrigin, apiAddr),
-      changeOrigin: true
-    }
-  };
+export default defineConfig(({ command, mode }) => {
+  // Dev and preview proxy /api; `vite build` needs no API_URL.
+  const proxy = command === 'serve'
+    ? { '/api': { target: apiProxyTarget(loadEnv(mode, root, 'API_').API_URL), changeOrigin: true } }
+    : undefined;
   return {
     plugins: [sveltekit({
       adapter: adapter(),

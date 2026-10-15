@@ -1,4 +1,4 @@
-import { providerByType } from './providers.js';
+import { isProviderType } from './providers.js';
 
 const STORAGE_KEY = 'goldfin.connectors.v1';
 
@@ -33,10 +33,7 @@ function normalizeConnector(raw) {
   const entry = /** @type {Record<string, unknown>} */ (raw);
   if (typeof entry.id !== 'string' || !entry.id) return null;
 
-  const providerType =
-    typeof entry.providerType === 'string' && providerByType(/** @type {ProviderType} */ (entry.providerType)).value === entry.providerType
-      ? /** @type {ProviderType} */ (entry.providerType)
-      : 'openai';
+  const providerType = isProviderType(entry.providerType) ? entry.providerType : 'openai';
 
   /** @type {ConnectionStatus} */
   let connectionStatus =
