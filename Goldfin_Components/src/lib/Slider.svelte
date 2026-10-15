@@ -2,7 +2,7 @@
   import { Slider as Primitive, useId } from 'bits-ui';
   import { formatValue } from './format.js';
   let { id = useId(), value = $bindable(0), label, min = 0, max = 100,
-    step = 1, size = 'default', disabled = false, format = 'integer', unit = '',
+    step = 1, size = 'default', disabled = false, format = /** @type {import('./format.js').Format} */ ('integer'), unit = '',
     description = '', onValueChange, onValueCommit, ...rest } = $props();
   const text = $derived(formatValue(value, format));
 </script>

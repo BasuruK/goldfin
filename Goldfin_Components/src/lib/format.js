@@ -1,6 +1,8 @@
+/** @typedef {'integer' | 'decimal'} Format */
+
 /**
  * @param {unknown} value
- * @param {string} [format]
+ * @param {Format} [format]
  */
 export function formatValue(value, format = 'integer') {
   const number = Number(value);
