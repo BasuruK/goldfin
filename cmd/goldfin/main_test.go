@@ -1,6 +1,9 @@
 package main
 
 import (
+	"context"
+	"database/sql"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -15,6 +18,11 @@ func TestSubcommand(t *testing.T) {
 	_, err = subcommand([]string{"goldfin"})
 	if err == nil {
 		t.Fatal("expected usage error")
+	}
+
+	_, err = subcommand([]string{"goldfin", "migrate", "--dry-run"})
+	if err == nil {
+		t.Fatal("expected error for trailing arguments")
 	}
 
 	_, err = subcommand([]string{"goldfin", "worker"})
@@ -63,6 +71,27 @@ func TestHealthcheck(t *testing.T) {
 	down.Close()
 	if err := healthcheck(t.Context(), addr); err == nil {
 		t.Fatal("expected error when nothing is listening")
+	}
+}
+
+func TestRunAPIReturnsNilAfterCancel(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	if err := runAPI(ctx, "127.0.0.1:0"); err != nil {
+		t.Fatalf("runAPI after cancel: %v", err)
+	}
+}
+
+func TestPingHonoursExpiredContext(t *testing.T) {
+	db, err := sql.Open("pgx", "postgres://u:p@127.0.0.1:1/db?sslmode=disable")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = db.Close() }()
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	if err := ping(ctx, db); !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected context.Canceled, got %v", err)
 	}
 }
 
