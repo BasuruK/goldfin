@@ -5,17 +5,23 @@ export const sampleModelIds = [
   'gemini-2.5-pro',
   'llama-3.3-70b-instruct'
 ];
+/** @param {unknown} value */
 export function modelError(value) {
   return sampleModelIds.includes(String(value ?? '').trim())
     ? ''
     : 'Unknown model ID — pick one from the sample registry.';
 }
+/** @param {unknown} value */
 export function suiteError(value) {
   return String(value ?? '').trim().length >= 3 ? '' : 'Enter a suite name with at least 3 characters.';
 }
 
 /* A chosen file is matched against the accept string locally; FileDrop selects a file, it never
    uploads one. An accept list of nothing (empty, whitespace or commas only) accepts everything. */
+/**
+ * @param {{ name?: string, type?: string } | null | undefined} candidate
+ * @param {string | null | undefined} accept
+ */
 export function matchesAccept(candidate, accept) {
   const types = String(accept ?? '').split(',').map(value => value.trim().toLowerCase()).filter(Boolean);
   if (!types.length) return true;

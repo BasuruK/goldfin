@@ -39,6 +39,7 @@
     setProviderType(record.id, providerType);
   });
 
+  /** @param {boolean} next */
   function onOpenChange(next) {
     if (!next) {
       const id = connectorStore.editingId;
@@ -122,14 +123,14 @@
             <Input
               label="Name"
               value={record.name}
-              oninput={e => fieldInput('name', e)}
+              oninput={(/** @type {Event} */ e) => fieldInput('name', e)}
               placeholder={provider.label}
             />
             <Input
               label="Base URL"
               inlineMessage
               value={record.baseUrl}
-              oninput={e => fieldInput('baseUrl', e)}
+              oninput={(/** @type {Event} */ e) => fieldInput('baseUrl', e)}
               type="url"
               autocomplete="off"
               spellcheck="false"
@@ -139,7 +140,7 @@
               label="API Key"
               inlineMessage
               value={record.apiKey}
-              oninput={e => fieldInput('apiKey', e)}
+              oninput={(/** @type {Event} */ e) => fieldInput('apiKey', e)}
               type="password"
               autocomplete="off"
               placeholder={record.providerType === 'web_request' ? 'Optional' : 'sk-…'}

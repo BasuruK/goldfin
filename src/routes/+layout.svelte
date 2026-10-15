@@ -25,6 +25,7 @@
   const expanded = $derived(shell.sidebarMode === 'expanded');
   const integrationsOpen = $derived(shell.integrationsOpen && (expanded || shell.mobile));
 
+  /** @param {string} href */
   const isActive = href =>
     href === '/' ? page.url.pathname === '/' : page.url.pathname.startsWith(href);
 
@@ -45,6 +46,7 @@
   });
 
   $effect(() => {
+    /** @param {KeyboardEvent} event */
     const onKey = event => {
       if (event.key === 'Escape') closeLayers({ restoreFocus: true });
     };

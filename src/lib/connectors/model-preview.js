@@ -1,3 +1,10 @@
+/** @typedef {import('./providers.js').ProviderType} ProviderType */
+/** @typedef {import('./models.js').CatalogResult} CatalogResult */
+
+/**
+ * @param {ProviderType} providerType
+ * @returns {Promise<CatalogResult>}
+ */
 export async function previewModelCatalog(providerType) {
   if (providerType === 'azure' || providerType === 'web_request') {
     return {

@@ -1,13 +1,23 @@
 const TOKEN = /("(?:[^"\\]|\\.)*")(\s*:)?|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|\b(true|false|null)\b|([{}[\],:])/g;
+/** @type {Record<string, string>} */
 const LITERAL_CLASS = { true: 'k-ok', false: 'k-ok', null: 'k-bad' };
 
+/** @param {string} line */
 export function isNullLine(line) {
   return /: null,?$/.test(line);
 }
 
+/** @param {string} line */
 const indentOf = line => line.length - line.trimStart().length;
 const OPENS_NODE = /[{[]\s*,?$/;
 
+/** @typedef {{ opens: boolean, end: number }} NodeRange */
+
+/**
+ * @param {string[]} lines
+ * @param {number} index
+ * @returns {NodeRange}
+ */
 export function nodeRange(lines, index) {
   const line = lines[index];
   if (!OPENS_NODE.test(line)) return { opens: false, end: index };
@@ -20,6 +30,10 @@ export function nodeRange(lines, index) {
   return { opens: true, end };
 }
 
+/**
+ * @param {string[]} lines
+ * @returns {(number | null)[]}
+ */
 export function countChildItems(lines) {
   return lines.map((line, index) => {
     if (!OPENS_NODE.test(line)) return null;
@@ -40,13 +54,22 @@ export function countChildItems(lines) {
 
 /* Fold state is a set of opening-line indexes. Each entry hides its own descendants only,
    so one fold never collapses another line's children. */
+/**
+ * @param {Set<number>} folded
+ * @param {number} index
+ */
 export function toggleFold(folded, index) {
   const next = new Set(folded);
   next.has(index) ? next.delete(index) : next.add(index);
   return next;
 }
 
+/**
+ * @param {NodeRange[]} ranges
+ * @param {Set<number>} folded
+ */
 export function hiddenLines(ranges, folded) {
+  /** @type {boolean[]} */
   const mask = new Array(ranges.length).fill(false);
   for (const index of folded) {
     const range = ranges[index];
@@ -56,7 +79,9 @@ export function hiddenLines(ranges, folded) {
   return mask;
 }
 
+/** @param {string} line */
 export function tokenizeJsonLine(line) {
+  /** @type {{ text: string, cls: string | null }[]} */
   const tokens = [];
   let last = 0;
   for (const match of line.matchAll(TOKEN)) {

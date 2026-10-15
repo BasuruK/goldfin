@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { boxOf } from './support.js';
 
 test('Integrations expands without navigation and opens Connectors from the rail', async ({ page }) => {
   await page.goto('/');
@@ -20,6 +21,7 @@ test('Integrations expands without navigation and opens Connectors from the rail
 });
 
 test('model preview starts disabled, saves toggles, and blocks them after connection changes', async ({ page }) => {
+  /** @type {string[]} */
   const outbound = [];
   page.on('request', request => {
     if (request.url().includes('api.openai.com')) outbound.push(request.url());
@@ -68,7 +70,10 @@ test('model panel reveals through intermediate frames when motion is allowed', a
   await page.getByRole('button', { name: 'Add connector', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Preview models', exact: true })).toBeVisible();
   const frames = await page.evaluate(async () => {
-    [...document.querySelectorAll('button')].find(button => button.textContent.trim() === 'Preview models').click();
+    const opener = [...document.querySelectorAll('button')].find(button => button.textContent?.trim() === 'Preview models');
+    if (!opener) throw new Error('Preview models button is missing');
+    opener.click();
+    /** @type {number[]} */
     const seen = [];
     for (let frame = 0; frame < 20; frame++) {
       await new Promise(resolve => requestAnimationFrame(resolve));
@@ -91,8 +96,8 @@ for (const viewport of [{ width: 1280, height: 800 }, { width: 375, height: 720 
     await dialog.getByRole('button', { name: 'Preview models', exact: true }).click();
     const panel = dialog.locator('.model-panel');
     await expect(panel).toHaveCSS('transform', 'none');
-    const formBox = await dialog.locator('.connector-form-panel').boundingBox();
-    const panelBox = await panel.boundingBox();
+    const formBox = await boxOf(dialog.locator('.connector-form-panel'));
+    const panelBox = await boxOf(panel);
     if (viewport.width > 800) expect(panelBox.x).toBeGreaterThanOrEqual(formBox.x + formBox.width);
     else expect(panelBox.y).toBeGreaterThanOrEqual(formBox.y + formBox.height);
     expect(panelBox.x).toBeGreaterThanOrEqual(0);

@@ -3,6 +3,7 @@
   import Icon from './Icon.svelte';
   let { children, icon = '' } = $props();
   let hasMosaic = $state(false);
+  /** @param {boolean} next */
   function setMosaic(next) { hasMosaic = next; }
 </script>
 <div class="modal-head" class:has-mosaic={hasMosaic}>

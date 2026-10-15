@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { boxOf } from './support.js';
 
 test('Integrations opens and closes through intermediate sizes and keyboard activation is instant', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
@@ -7,8 +8,10 @@ test('Integrations opens and closes through intermediate sizes and keyboard acti
   await expect(group).toBeVisible();
   const frames = await page.evaluate(async () => {
     const trigger = document.querySelector('[title="Integrations"]');
-    const reveal = document.querySelector('#integrations-links').closest('.nav-reveal');
+    const reveal = document.querySelector('#integrations-links')?.closest('.nav-reveal');
+    if (!trigger || !reveal) throw new Error('Integrations trigger or reveal is missing');
     const readFrames = async () => {
+      /** @type {number[]} */
       const sizes = [];
       for (let frame = 0; frame < 24; frame++) {
         await new Promise(resolve => requestAnimationFrame(resolve));
@@ -22,7 +25,7 @@ test('Integrations opens and closes through intermediate sizes and keyboard acti
     const closing = await readFrames();
     return { opening, closing };
   });
-  const fullHeight = frames.opening.at(-1);
+  const fullHeight = frames.opening[frames.opening.length - 1];
   expect(fullHeight).toBeGreaterThan(0);
   expect(frames.opening.some(height => height > 0 && height < fullHeight)).toBe(true);
   expect(frames.closing.some(height => height > 0 && height < fullHeight)).toBe(true);
@@ -90,18 +93,18 @@ test('model table puts names before small toggles and scrolls without growing th
   )).toBe(true);
   const table = page.getByRole('table', { name: 'Models', exact: true });
   const row = table.getByRole('row').nth(1);
-  const name = await row.getByRole('rowheader').boundingBox();
+  const name = await boxOf(row.getByRole('rowheader'));
   const toggle = row.getByRole('switch', { name: 'model-0', exact: true });
-  const toggleBox = await toggle.boundingBox();
+  const toggleBox = await boxOf(toggle);
   expect(name.x).toBeLessThan(toggleBox.x);
   expect(toggleBox.width).toBe(28);
   expect(toggleBox.height).toBe(16);
   const scroll = page.getByRole('region', { name: 'Model list', exact: true });
-  const before = await scroll.boundingBox();
+  const before = await boxOf(scroll);
   expect(await scroll.evaluate(node => node.scrollHeight > node.clientHeight)).toBe(true);
   await scroll.evaluate(node => { node.scrollTop = node.scrollHeight; });
   await expect(table.getByRole('switch', { name: 'model-59', exact: true })).toBeInViewport();
-  expect((await scroll.boundingBox()).height).toBe(before.height);
+  expect((await boxOf(scroll)).height).toBe(before.height);
 });
 
 for (const theme of ['light', 'dark']) {
@@ -112,8 +115,8 @@ for (const theme of ['light', 'dark']) {
       await page.addInitScript(value => localStorage.setItem('goldfin.theme', value), theme);
       await page.goto('/connectors/');
       if (viewport.width < 768) await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
-      const parentBox = await page.getByRole('button', { name: 'Integrations', exact: true }).boundingBox();
-      const childBox = await page.getByRole('link', { name: 'Connectors', exact: true }).boundingBox();
+      const parentBox = await boxOf(page.getByRole('button', { name: 'Integrations', exact: true }));
+      const childBox = await boxOf(page.getByRole('link', { name: 'Connectors', exact: true }));
       expect(childBox.x - parentBox.x).toBe(32);
       const stem = await page.locator('#integrations-links > li').first().evaluate(node => {
         const rule = getComputedStyle(node, '::before');
@@ -145,11 +148,11 @@ for (const theme of ['light', 'dark']) {
       await entry.fill('custom-model');
       await entry.press('Enter');
       await expect(dialog.getByRole('switch', { name: 'custom-model', exact: true })).toHaveCount(1);
-      const fieldBox = await dialog.getByLabel('API Key', { exact: true }).boundingBox();
-      const footerBox = await dialog.locator('.connector-dialog-foot').boundingBox();
+      const fieldBox = await boxOf(dialog.getByLabel('API Key', { exact: true }));
+      const footerBox = await boxOf(dialog.locator('.connector-dialog-foot'));
       expect(footerBox.y - (fieldBox.y + fieldBox.height)).toBeLessThanOrEqual(24);
-      const formBox = await dialog.locator('.connector-form-panel').boundingBox();
-      const modelsBox = await dialog.locator('.model-panel').boundingBox();
+      const formBox = await boxOf(dialog.locator('.connector-form-panel'));
+      const modelsBox = await boxOf(dialog.locator('.model-panel'));
       if (viewport.width >= 768) {
         expect(Math.abs((formBox.y + formBox.height / 2) - (modelsBox.y + modelsBox.height / 2))).toBeLessThanOrEqual(1);
       } else {

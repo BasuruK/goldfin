@@ -3,12 +3,16 @@
   import { createMosaicTiles, mosaicPeak } from './mosaic.js';
   /* onready reports whether the band has tiles, so a header can drop its fallback pattern. */
   let { onready = () => {} } = $props();
+  /** @type {HTMLDivElement | undefined} */
   let band;
   let columns = $state(1);
+  /** @type {import('./mosaic.js').MosaicTile[]} */
   let tiles = $state([]);
   let paused = $state(false);
+  /** @type {Set<import('./mosaic.js').MosaicTile>} */
   const pendingPeaks = new Set();
   let peakFrame = 0;
+  /** @param {import('./mosaic.js').MosaicTile} tile */
   function queuePeak(tile) {
     pendingPeaks.add(tile);
     peakFrame ||= requestAnimationFrame(flushPeaks);
@@ -19,19 +23,21 @@
     pendingPeaks.clear();
   }
   onMount(() => {
+    const target = band;
+    if (!target) return;
     /* The band is inset 0 on its positioned parent, so its box is the box to tile. */
-    function resize() {
-      const nextColumns = Math.max(1, Math.ceil(band.clientWidth / 10));
-      const rows = Math.max(1, Math.ceil(band.clientHeight / 10));
+    const resize = () => {
+      const nextColumns = Math.max(1, Math.ceil(target.clientWidth / 10));
+      const rows = Math.max(1, Math.ceil(target.clientHeight / 10));
       if (nextColumns !== columns || nextColumns * rows !== tiles.length) {
         columns = nextColumns;
         tiles = createMosaicTiles(columns, rows);
       }
-    }
+    };
     function visibility() { paused = document.hidden; }
     resize(); visibility();
     const observer = new ResizeObserver(resize);
-    observer.observe(band);
+    observer.observe(target);
     document.addEventListener('visibilitychange', visibility);
     return () => {
       cancelAnimationFrame(peakFrame);

@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
+import { boxOf } from './support.js';
 
 test('static app shell loads with the approved dark theme', async ({ page }) => {
+  /** @type {string[]} */
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
 
@@ -25,7 +27,7 @@ test('the sidebar collapses to a rail and reopens using the keyboard', async ({ 
 
   const sidebar = page.locator('#primary-nav');
   const toggle = page.getByRole('button', { name: 'Collapse navigation' });
-  const expandedWidth = (await sidebar.boundingBox()).width;
+  const expandedWidth = (await boxOf(sidebar)).width;
 
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
   await toggle.focus();

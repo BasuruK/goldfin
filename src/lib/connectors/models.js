@@ -1,10 +1,24 @@
+/**
+ * @typedef {import('./storage.js').ConnectorRecord} ConnectorRecord
+ * @typedef {ConnectorRecord['models'][number]} ConnectorModel
+ * @typedef {{ state: 'unsupported' | 'failed', message?: string }
+ *   | { state?: 'ready', ids: string[], source: ConnectorModel['source'], message?: string }} CatalogResult
+ */
+
 /** @param {{ catalogState: string }} record */
 export function isCatalogEditable(record) {
   return ['ready', 'unsupported'].includes(record.catalogState);
 }
 
+/**
+ * @param {ConnectorRecord} record
+ * @param {Partial<ConnectorRecord>} patch
+ * @returns {ConnectorRecord}
+ */
 export function applyConnectorPatch(record, patch) {
-  const changed = ['providerType', 'baseUrl', 'apiKey'].some(
+  /** @type {(keyof ConnectorRecord)[]} */
+  const connectionFields = ['providerType', 'baseUrl', 'apiKey'];
+  const changed = connectionFields.some(
     field => field in patch && patch[field] !== record[field]
   );
   if (!changed) return { ...record, ...patch };
@@ -17,6 +31,7 @@ export function applyConnectorPatch(record, patch) {
   };
 }
 
+/** @param {ConnectorRecord} record */
 export function availableModelIds(record) {
   if (!isCatalogEditable(record)) return [];
   return (record.models ?? [])
@@ -24,6 +39,7 @@ export function availableModelIds(record) {
     .map(model => model.id);
 }
 
+/** @param {ConnectorRecord} record @returns {ConnectorRecord} */
 export function beginDiscovery(record) {
   return {
     ...record, catalogState: 'loading', catalogMessage: '',
@@ -31,13 +47,19 @@ export function beginDiscovery(record) {
   };
 }
 
+/**
+ * @param {ConnectorRecord} record
+ * @param {number} revision
+ * @param {CatalogResult} result
+ * @returns {ConnectorRecord}
+ */
 export function finishDiscovery(record, revision, result) {
   if (record.discoveryRevision !== revision) return record;
-  const state = result.state ?? 'ready';
-  if (state !== 'ready') {
-    return { ...record, catalogState: state, catalogMessage: result.message ?? '' };
+  if (!('ids' in result)) {
+    return { ...record, catalogState: result.state, catalogMessage: result.message ?? '' };
   }
   const previous = new Map((record.models ?? []).map(model => [model.id, model.enabled]));
+  /** @type {ConnectorModel[]} */
   const models = [...new Set(result.ids)].map(id => ({
     id, enabled: previous.get(id) ?? false, source: result.source
   }));
@@ -49,6 +71,7 @@ export function finishDiscovery(record, revision, result) {
   return { ...record, models, catalogState: 'ready', catalogMessage: result.message ?? '' };
 }
 
+/** @param {ConnectorRecord} record @param {string} value @returns {ConnectorRecord} */
 export function addManualModel(record, value) {
   const id = value.trim();
   if (!id || (record.models ?? []).some(model => model.id === id)) return record;

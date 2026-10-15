@@ -1,6 +1,7 @@
 const NO_CLIPBOARD = 'Clipboard requires localhost or HTTPS.';
 const FALLBACK = 'Copy failed. Select and copy the text manually.';
 
+/** @param {string} text */
 export function clipboardWrite(text) {
   if (!globalThis.navigator?.clipboard) throw new Error(NO_CLIPBOARD);
   return globalThis.navigator.clipboard.writeText(text);
@@ -8,6 +9,21 @@ export function clipboardWrite(text) {
 
 /* The clipboard, the clock and the render sink are injected so the reset window and the
    post-unmount guard are testable without a browser. destroy() stands in for onDestroy. */
+/**
+ * @typedef {{ copied: boolean, error: string }} CopyState
+ * @typedef {{
+ *   write?: (text: string) => unknown,
+ *   schedule?: typeof setTimeout,
+ *   unschedule?: typeof clearTimeout,
+ *   delay?: number,
+ *   fallback?: string
+ * }} CopyOptions
+ */
+
+/**
+ * @param {(state: CopyState) => void} render
+ * @param {CopyOptions} [options]
+ */
 export function createCopyTask(render, {
   write = clipboardWrite,
   schedule = setTimeout,
@@ -17,6 +33,7 @@ export function createCopyTask(render, {
 } = {}) {
   let copied = false;
   let error = '';
+  /** @type {ReturnType<typeof setTimeout> | null} */
   let timer = null;
   let alive = true;
   function clear() {
@@ -26,6 +43,7 @@ export function createCopyTask(render, {
     }
   }
   return {
+    /** @param {string} text */
     async copy(text) {
       try {
         await write(text);

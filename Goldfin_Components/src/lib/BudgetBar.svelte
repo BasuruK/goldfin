@@ -3,6 +3,7 @@
   let { prompt = 0, completion = 0, maximum = 4096, label = 'Token budget' } = $props();
   const parts = $derived(budgetParts(prompt, completion, maximum));
   const meterMax = $derived(Number.isFinite(maximum) ? Math.max(1, maximum) : 1);
+  /** @param {number} value */
   const format = value => value.toLocaleString('en-US');
 </script>
 

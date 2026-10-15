@@ -3,8 +3,7 @@
   "compilerOptions": {
     "allowJs": true,
     "checkJs": true,
-    // shortcut: strict mode is deferred to its own PR, done last (Basuru approved; probe: 223 errors).
-    "strict": false
+    "strict": true
   },
   "include": ["src", "tests", "*.js"]
 }

@@ -3,12 +3,14 @@
   import { isCatalogEditable } from './models.js';
   import { addModelById, previewModelsById, setModelEnabled } from './store.svelte.js';
 
+  /** @type {{ record: import('./storage.js').ConnectorRecord }} */
   let { record } = $props();
   let manualId = $state('');
   const models = $derived(record.models ?? []);
   const enabledCount = $derived(models.filter(model => model.enabled).length);
   const editable = $derived(isCatalogEditable(record));
 
+  /** @param {Event} event */
   function addModel(event) {
     event.preventDefault();
     addModelById(record.id, manualId);
@@ -37,7 +39,7 @@
           </th>
           <td class="model-toggle-cell">
             <Switch size="sm" label={model.id} checked={model.enabled} disabled={!editable}
-                    onCheckedChange={checked => setModelEnabled(record.id, model.id, checked)} />
+                    onCheckedChange={(/** @type {boolean} */ checked) => setModelEnabled(record.id, model.id, checked)} />
           </td>
         </tr>
       {:else}

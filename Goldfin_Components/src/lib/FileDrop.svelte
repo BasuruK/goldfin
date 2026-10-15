@@ -11,16 +11,19 @@
     description = 'Click to browse or drop a file here'
   } = $props();
   const id = useId();
+  /** @type {HTMLInputElement | undefined} */
   let input;
   let error = $state('');
 
   function syncInput() {
+    if (!input) return;
     const transfer = new DataTransfer();
     if (file) transfer.items.add(file);
     input.files = transfer.files;
   }
 
   /* Local only: FileDrop selects a file, it never uploads one. */
+  /** @param {File | null | undefined} candidate */
   function choose(candidate) {
     if (!candidate) return;
     if (!matchesAccept(candidate, accept)) {
@@ -30,9 +33,10 @@
     }
     file = candidate;
     error = '';
-    if (input.files[0] !== candidate) syncInput();
+    if (input?.files?.[0] !== candidate) syncInput();
   }
 
+  /** @param {DragEvent} event */
   function drop(event) {
     event.preventDefault();
     choose(event.dataTransfer?.files[0]);
@@ -54,7 +58,7 @@
       id={id}
       type="file"
       {accept}
-      onchange={event => choose(event.currentTarget.files[0])}
+      onchange={event => choose(event.currentTarget.files?.[0])}
     />
   </label>
   {#if error}<p class="field-msg error" role="alert">{error}</p>{/if}

@@ -60,6 +60,12 @@ export function connectionFailureField(message) {
   return null;
 }
 
+/**
+ * @param {import('./storage.js').ConnectorRecord | undefined} record
+ * @param {string} requestId
+ * @param {CheckResult} result
+ * @param {string} checkedAt
+ */
 export function finishConnectionCheck(record, requestId, result, checkedAt) {
   if (!record || record.checkRequestId !== requestId) return record;
   return {

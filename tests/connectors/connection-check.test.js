@@ -7,6 +7,7 @@ import {
   validateBaseUrl,
   validateForCheck
 } from '../../src/lib/connectors/connection-check.js';
+import { makeRecord } from './fixtures.js';
 
 describe('validateBaseUrl', () => {
   it('rejects empty', () => {
@@ -19,29 +20,30 @@ describe('validateBaseUrl', () => {
 
   it('accepts http on loopback only', () => {
     assert.equal(validateBaseUrl('http://127.0.0.1:8080/v1'), null);
-    assert.match(validateBaseUrl('http://api.example.com/v1'), /https/);
+    assert.match(String(validateBaseUrl('http://api.example.com/v1')), /https/);
   });
 
   it('rejects garbage', () => {
-    assert.match(validateBaseUrl('not-a-url'), /valid URL/);
+    assert.match(String(validateBaseUrl('not-a-url')), /valid URL/);
   });
 });
 
 describe('finishConnectionCheck', () => {
+  /** @type {import('../../src/lib/connectors/connection-check.js').CheckResult} */
   const result = { status: 'ok', message: 'Reachable' };
   const checkedAt = '2026-10-12T00:00:00Z';
   it('applies the current reply to an unchanged connection', () => {
-    const record = { checkRequestId: 'current', connectionStatus: 'testing' };
+    const record = makeRecord({ checkRequestId: 'current', connectionStatus: 'testing' });
     assert.deepEqual(finishConnectionCheck(record, 'current', result, checkedAt), {
       ...record, connectionStatus: 'ok', connectionMessage: 'Reachable', lastCheckedAt: checkedAt
     });
   });
   it('ignores a reply after connection changes invalidate its request', () => {
-    const record = { checkRequestId: null, connectionStatus: 'idle' };
+    const record = makeRecord({ checkRequestId: null, connectionStatus: 'idle' });
     assert.equal(finishConnectionCheck(record, 'old', result, checkedAt), record);
   });
   it('ignores a superseded request', () => {
-    const record = { checkRequestId: 'new', connectionStatus: 'testing' };
+    const record = makeRecord({ checkRequestId: 'new', connectionStatus: 'testing' });
     assert.equal(finishConnectionCheck(record, 'old', result, checkedAt), record);
   });
   it('ignores a deleted Connector', () => {
@@ -52,7 +54,7 @@ describe('finishConnectionCheck', () => {
 describe('validateForCheck', () => {
   it('requires api key for openai', () => {
     assert.match(
-      validateForCheck({ baseUrl: 'https://api.openai.com/v1', apiKey: '', providerType: 'openai' }),
+      String(validateForCheck({ baseUrl: 'https://api.openai.com/v1', apiKey: '', providerType: 'openai' })),
       /API Key/
     );
   });
@@ -92,7 +94,7 @@ describe('runConnectionCheck', () => {
   it('fails when the request times out', async () => {
     const realTimeout = AbortSignal.timeout.bind(AbortSignal);
     mock.method(AbortSignal, 'timeout', () => realTimeout(50));
-    mock.method(globalThis, 'fetch', async (_url, init) => {
+    mock.method(globalThis, 'fetch', async (/** @type {string} */ _url, /** @type {RequestInit | undefined} */ init) => {
       const signal = init?.signal;
       await new Promise((_resolve, reject) => {
         if (signal) {

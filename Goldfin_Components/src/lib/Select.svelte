@@ -1,6 +1,7 @@
 <script>
   import { Select as Primitive, Label, useId } from 'bits-ui';
   import Icon from './Icon.svelte';
+  /** @typedef {{ value: string, label: string, disabled?: boolean, tone?: string, note?: string }} SelectItem */
   let {
     id = useId(),
     type = 'single',
@@ -10,12 +11,13 @@
     placeholder = 'Select an option',
     disabled = false,
     tone = false,
-    summary = count => count + ' selected',
+    summary = (/** @type {number} */ count) => count + ' selected',
     ...rest
   } = $props();
-  const picked = $derived(items.find(item => item.value === value));
+  const picked = $derived(items.find((/** @type {SelectItem} */ item) => item.value === value));
   const selected = $derived(type === 'multiple' ? summary(value.length) : picked?.label || placeholder);
   // Tone colour always comes from a token; ufg3 is the neutral fallback.
+  /** @param {{ tone?: string }} item */
   function dotColor(item) { return 'var(--' + (item.tone || 'ufg3') + ')'; }
 </script>
 <div class="dd">
