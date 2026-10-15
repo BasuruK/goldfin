@@ -33,7 +33,11 @@ describe('apiProxyTarget', () => {
   });
 
   it('rejects malformed input', () => {
-    assert.throws(() => apiProxyTarget('127.0.0.1:8080'), TypeError);
-    assert.throws(() => apiProxyTarget('not a url'), TypeError);
+    for (const value of ['127.0.0.1:8080', 'not a url']) {
+      assert.throws(
+        () => apiProxyTarget(value),
+        (err) => err instanceof TypeError && err.message.includes('API_URL') && err.message.includes(value)
+      );
+    }
   });
 });

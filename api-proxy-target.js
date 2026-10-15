@@ -1,6 +1,11 @@
 export function apiProxyTarget(value) {
   if (!value?.trim()) throw new Error('API_URL is not set. Copy .env.example to .env.');
-  const url = new URL(value.trim()); // throws on malformed input
+  let url;
+  try {
+    url = new URL(value.trim());
+  } catch {
+    throw new TypeError(`API_URL is not a valid URL: "${value}"`);
+  }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
     throw new Error(`API_URL must be http(s), got ${url.protocol}`);
   }
