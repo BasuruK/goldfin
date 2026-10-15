@@ -101,22 +101,25 @@ func runMigrate(ctx context.Context) error {
 	return goose.UpContext(ctx, db, ".")
 }
 
-// runAPI serves until ctx is cancelled. A cancel that lands before the listener is up is harmless:
-// Shutdown makes ListenAndServe return ErrServerClosed.
+// runAPI serves until ctx is cancelled. The listener exists before Serve starts, so a cancel that
+// lands early is harmless: Shutdown makes Serve close it and return ErrServerClosed.
 func runAPI(ctx context.Context, addr string) error {
 	mux := http.NewServeMux()
 	registerAPIRoutes(mux)
 	srv := &http.Server{
-		Addr:              addr,
 		Handler:           mux,
 		ReadHeaderTimeout: readHeaderTimeout,
 		ReadTimeout:       readTimeout,
 		WriteTimeout:      writeTimeout,
 		IdleTimeout:       idleTimeout,
 	}
-	slog.Info("api listening", "addr", addr)
+	ln, err := (&net.ListenConfig{}).Listen(ctx, "tcp", addr)
+	if err != nil {
+		return err
+	}
+	slog.Info("api listening", "addr", ln.Addr().String())
 	errCh := make(chan error, 1)
-	go func() { errCh <- srv.ListenAndServe() }()
+	go func() { errCh <- srv.Serve(ln) }()
 
 	select {
 	case err := <-errCh:

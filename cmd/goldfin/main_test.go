@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"errors"
+	"log/slog"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -79,6 +82,26 @@ func TestRunAPIReturnsNilAfterCancel(t *testing.T) {
 	cancel()
 	if err := runAPI(ctx, "127.0.0.1:0"); err != nil {
 		t.Fatalf("runAPI after cancel: %v", err)
+	}
+}
+
+func TestRunAPIDoesNotLogListeningWhenBindFails(t *testing.T) {
+	var logs bytes.Buffer
+	prev := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, nil)))
+	t.Cleanup(func() { slog.SetDefault(prev) })
+
+	busy, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = busy.Close() }()
+
+	if err := runAPI(t.Context(), busy.Addr().String()); err == nil {
+		t.Fatal("expected a bind error")
+	}
+	if bytes.Contains(logs.Bytes(), []byte("api listening")) {
+		t.Fatalf("logged listening although the bind failed: %s", logs.String())
 	}
 }
 
