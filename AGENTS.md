@@ -33,14 +33,36 @@ prototype** when a design artefact exists. Two sources of truth will drift, and 
 one he is looking at. Ask for the design file; do not offer to design it.
 
 **The flow.** Per feature: `/to-spec` (scope: this feature only) → `/to-tickets` → `/implement` per
-ticket. `/implement` drives `/tdd` and closes with `/code-review`. Wayfinder is done; its decisions
+ticket. `/implement` drives `/tdd` and closes with `/code-review`, then `/open-code-review-delegate`. Wayfinder is done; its decisions
 live in `GLOSSARY.md` and `docs/adr/`, and they are binding.
+
+- `/to-spec` ends with a **Failure modes** section: for each outbound call, job or claim, and async UI
+  path, name what happens on a crash, a timeout, shutdown, two writers, and a stale result.
+  [`CODING_STANDARDS.md`](CODING_STANDARDS.md) lists the cases.
+- `/to-tickets` cuts one layer per ticket: provider client, job queue and migrations, frontend store.
+  Each layer carries its own defect class and its own failure table.
+- `/code-review` reads `CODING_STANDARDS.md` for its Standards axis.
+- `/open-code-review-delegate` runs after `/code-review`, as the last step of every `/implement`. The
+  OCR agent runs locally, and OCR only selects files and resolves rules: you perform the review.
+  Fix its valid findings inside the feature, and name any you reject and why.
 
 **A test for new logic.** New domain logic needs a test. Trivial glue is exempt. Say why in the PR
 description rather than silently skipping it.
 
-**Ask about what is left.** When a turn changes code and leaves something undone, end with one
-question that names it: "Fix X too?" Silent omission is how a scope creeps.
+**Ask about what is left.** Valid review findings and fixes inside the current feature need no
+permission: do them. When a turn leaves work *outside* the feature undone, end with one question that
+names it: "Fix X too?" Silent omission is how a scope creeps.
+
+## Done means
+
+- `make check` is green. A red check is yours to fix before you report done.
+- Review your own diff against [`CODING_STANDARDS.md`](CODING_STANDARDS.md) first.
+- **Sweep the class.** After fixing a bug, grep for its siblings: same function shape, same package,
+  the Go and JS sides of the same contract.
+- **Delete what you replace.** Migrating callers deletes the old function in the same change. Nothing
+  ships without a caller or a test that needs it.
+- UI changes get a Playwright screenshot at 375px and 1280px. Compare spacing against neighbouring
+  elements and the `DESIGN.md` tokens.
 
 ## Before you touch something
 
@@ -80,3 +102,15 @@ port 8400). SvelteKit injection is dev-only via `src/lib/impeccable/ImpeccableLi
 marked blocks in `src/routes/+layout.svelte` — do not remove those markers by hand; use
 `impeccable live-inject --remove` when tearing down. Prefer live iteration over guessing layout in
 chat when refining Connectors or other Operate-mode screens.
+
+## Rules from PR #40 review
+- Never invent module paths, config keys, or flags. Verify in node_modules, `go doc`, or official docs first.
+- Never silence a checker (casts, ambient shims, strict:false, nolint). Fix the cause or ask.
+- Review comments are hypotheses. Verify against docs, run `make check`, reject wrong ones with a one-line reason.
+- Same finding twice = wrong design. Stop patching; simplify or ask.
+- One config var per concept, full URL form, validated once at startup. No silent fallbacks.
+- Makefile recipes run commands. No traps, PIDs, background jobs, or sleeps.
+- No speculative code: no stubs, extensions, or helpers before first real use.
+- A new test must fail first. That proves it runs.
+- Never type dependency versions, action SHAs, or image digests by hand. Resolve them with a command.
+- Review-fix commits touch flagged lines only. Never add features during review.

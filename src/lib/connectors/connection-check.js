@@ -97,6 +97,7 @@ export async function runConnectionCheck(config) {
   }
 
   const url = probeUrl(String(config.baseUrl).trim(), config.providerType);
+  /** @type {Record<string, string>} */
   const headers = {};
   const apiKey = String(config.apiKey ?? '').trim();
   if (apiKey) {

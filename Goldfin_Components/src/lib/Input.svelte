@@ -1,8 +1,8 @@
 <script>
   import { useId } from 'bits-ui';
   let { id = useId(), value = $bindable(''), label, description = '', message = '',
-    error = '', inlineMessage = false, validate, onblur, oninput, type = 'text', disabled = false,
-    required = false, affix = false, prefix, suffix, ...rest } = $props();
+    error = '', inlineMessage = false, validate = undefined, onblur = undefined, oninput = undefined, type = 'text', disabled = false,
+    required = false, affix = false, prefix = undefined, suffix = undefined, ...rest } = $props();
   let localError = $state('');
   const shownError = $derived(error || localError);
   /* The framed input is styled by `.price-input input`, so it carries no class of its own. */

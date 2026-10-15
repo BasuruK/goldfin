@@ -1,6 +1,9 @@
 <script>
   /* One size across every state: the label keeps its box and is only hidden while the
      spinner is centred over the whole button (DESIGN.md, loading buttons). */
+  /** @type {Pick<import('svelte/elements').HTMLButtonAttributes, 'type' | 'onclick' | 'disabled' | 'children'> & {
+   * busy?: boolean, idle?: string, working?: string, variant?: string, size?: string
+   * }} */
   let {
     busy = false,
     idle = '',

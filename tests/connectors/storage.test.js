@@ -30,12 +30,10 @@ describe('loadConnectors', () => {
         return this.store.size;
       }
     };
-    // @ts-expect-error test shim
     globalThis.localStorage = memory;
   });
 
   afterEach(() => {
-    // @ts-expect-error cleanup
     delete globalThis.localStorage;
   });
 

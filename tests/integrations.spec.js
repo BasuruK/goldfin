@@ -34,6 +34,8 @@ test('model preview starts disabled, saves toggles, and blocks them after connec
   await expect(model).toHaveAttribute('aria-checked', 'false');
   await model.click();
   await expect(model).toHaveAttribute('aria-checked', 'true');
+  // A pristine draft is dropped on close; give it content so it is kept.
+  await dialog.getByLabel('API Key', { exact: true }).fill('sk-test');
   await dialog.getByRole('button', { name: 'Done', exact: true }).click();
   await page.reload();
   await page.getByRole('button', { name: 'Configure', exact: true }).click();

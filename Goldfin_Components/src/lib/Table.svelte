@@ -16,6 +16,7 @@
   } = $props();
   const id = useId();
   let key = $state('');
+  /** @type {'ascending' | 'descending'} */
   let direction = $state('ascending');
   let feedback = $state('');
   const sorted = $derived(key ? sortRows(rows, key, direction) : rows);

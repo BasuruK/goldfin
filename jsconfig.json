@@ -1,0 +1,10 @@
+{
+  "extends": "$app/tsconfig",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    // shortcut: strict mode waits for Step 10 (Basuru approved; probe: 225 errors, guard: 30).
+    "strict": false
+  },
+  "include": ["src", "tests", "*.js"]
+}

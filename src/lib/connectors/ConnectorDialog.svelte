@@ -27,6 +27,7 @@
   const record = $derived(editingConnector());
   const provider = $derived(record ? providerByType(record.providerType) : null);
 
+  /** @type {import('./providers.js').ProviderType} */
   let providerType = $state('openai');
 
   $effect(() => {

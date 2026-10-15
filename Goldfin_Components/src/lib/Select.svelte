@@ -20,7 +20,7 @@
 </script>
 <div class="dd">
   <Label.Root for={id} class="label">{label}</Label.Root>
-  <Primitive.Root {...rest} {type} {items} bind:value {disabled}>
+  <Primitive.Root {...rest} type={type === 'multiple' ? 'multiple' : 'single'} {items} bind:value {disabled}>
     <Primitive.Trigger {id} class="dd-trigger">
       {#if tone}
         <span class="dd-lead">

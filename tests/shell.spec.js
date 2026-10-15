@@ -227,7 +227,7 @@ test('the rail text exits on a transition rather than being removed from the DOM
      some frame in between is neither opaque nor gone. */
   const trace = await page.evaluate(async () => {
     const node = document.querySelector('.nav-label');
-    document.querySelector('#primary-nav .brand > .btn-slot > .btn').click();
+    /** @type {HTMLElement} */ (document.querySelector('#primary-nav .brand > .btn-slot > .btn')).click();
     const seen = [];
     for (let i = 0; i < 20; i++) {
       await new Promise(r => requestAnimationFrame(r));
