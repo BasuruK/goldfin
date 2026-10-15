@@ -49,7 +49,7 @@ test('Delete is hidden in Add and appears when configuring an added Connector', 
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByRole('button', { name: 'Delete connector', exact: true })).toHaveCount(0);
   // A pristine draft is dropped on close; give it content so it is kept.
-  await dialog.getByLabel('API Key', { exact: true }).fill('sk-test');
+  await dialog.getByLabel('API Key', { exact: true }).fill('test-key-not-real');
   await dialog.getByRole('button', { name: 'Done', exact: true }).click();
   await page.getByRole('button', { name: 'Configure', exact: true }).click();
   await expect(dialog.getByRole('button', { name: 'Delete connector', exact: true })).toBeVisible();

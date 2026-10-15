@@ -1,0 +1,3 @@
+# User-confirmed synthetic value in the deleted Connector credentials prototype.
+# Match only this historical commit, file, rule, and line.
+2246193108479a9b437a970f822903adfdedcd5d:prototypes/connector-credentials/index.html:generic-api-key:274

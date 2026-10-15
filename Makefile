@@ -1,5 +1,5 @@
 # Local dev orchestration. Requires: docker, go, pnpm, repo-root `.env` (see .env.example).
-# Checks also require govulncheck and zizmor (CI installs pinned versions).
+# Checks also require govulncheck, zizmor and gitleaks (CI installs pinned versions).
 # `cmd/goldfin` is a thin local stub until the full API/worker stack lands on main.
 
 SHELL := /bin/bash
@@ -31,6 +31,7 @@ check:
 	$(GOLANGCI_LINT) run
 	govulncheck ./...
 	zizmor .github/workflows
+	gitleaks detect --no-banner --redact
 	go test ./...
 	$(PNPM) test:unit
 	$(PNPM) check
