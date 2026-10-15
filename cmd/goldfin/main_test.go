@@ -17,6 +17,11 @@ func TestSubcommand(t *testing.T) {
 		t.Fatal("expected usage error")
 	}
 
+	_, err = subcommand([]string{"goldfin", "worker"})
+	if err == nil {
+		t.Fatal("worker was removed; expected unknown subcommand error")
+	}
+
 	_, err = subcommand([]string{"goldfin", "nope"})
 	if err == nil {
 		t.Fatal("expected unknown subcommand error")
@@ -26,7 +31,7 @@ func TestSubcommand(t *testing.T) {
 func TestHealthz(t *testing.T) {
 	mux := http.NewServeMux()
 	registerAPIRoutes(mux)
-	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/healthz", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, healthPath, nil)
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 
@@ -35,6 +40,29 @@ func TestHealthz(t *testing.T) {
 	}
 	if rec.Body.String() != "ok" {
 		t.Fatalf("body: got %q", rec.Body.String())
+	}
+}
+
+func TestHealthcheck(t *testing.T) {
+	mux := http.NewServeMux()
+	registerAPIRoutes(mux)
+	ok := httptest.NewServer(mux)
+	defer ok.Close()
+	if err := healthcheck(t.Context(), ok.Listener.Addr().String()); err != nil {
+		t.Fatalf("healthy api: %v", err)
+	}
+
+	bad := httptest.NewServer(http.NotFoundHandler())
+	defer bad.Close()
+	if err := healthcheck(t.Context(), bad.Listener.Addr().String()); err == nil {
+		t.Fatal("expected error for non-200 status")
+	}
+
+	down := httptest.NewServer(mux)
+	addr := down.Listener.Addr().String()
+	down.Close()
+	if err := healthcheck(t.Context(), addr); err == nil {
+		t.Fatal("expected error when nothing is listening")
 	}
 }
 
