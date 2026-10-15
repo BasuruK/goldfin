@@ -4,6 +4,7 @@
   import { createLoadingTask, sampleSuiteMatches } from './loading.js';
   let query = $state('');
   let loadingState = $state('idle');
+  /** @type {string[]} */
   let matches = $state([]);
   const id = useId();
   const task = createLoadingTask(next => loadingState = next);

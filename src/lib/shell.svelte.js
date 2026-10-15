@@ -7,6 +7,7 @@ import { browser } from '$app/env';
 
    Storage throws in a locked-down profile, and this module is also evaluated
    while prerendering, where there is no window at all. */
+/** @param {string} key @param {string} fallback */
 const read = (key, fallback) => {
   if (!browser) return fallback;
   try {
@@ -52,6 +53,7 @@ function isExpanded() {
 
 /* The shell's own DOM handles. They exist so focus can go back where it came
    from, and so no route has to know they exist. */
+/** @type {{ sidebarToggle: HTMLElement | null, sidebar: HTMLElement | null, profileButton: HTMLElement | null }} */
 export const handles = $state({ sidebarToggle: null, sidebar: null, profileButton: null });
 
 function persist() {
@@ -125,6 +127,7 @@ export function toggleProfile() {
   if (shell.profileOpen && !isExpanded() && !shell.mobile) shell.sidebarMode = 'expanded';
 }
 
+/** @param {{ detail: number }} event */
 export function toggleIntegrations(event) {
   shell.integrationsAnimate = event.detail > 0;
   if (!isExpanded() && !shell.mobile) {

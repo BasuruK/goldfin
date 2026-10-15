@@ -6,7 +6,9 @@
   let sinking = $state(false);
   let status = $state('');
   let alive = true;
+  /** @type {ReturnType<typeof setTimeout> | undefined} */
   let timer;
+  /** @type {ReturnType<typeof setTimeout> | undefined} */
   let sinkTimer;
   let currentRun = 0;
   onDestroy(() => {
@@ -14,6 +16,7 @@
     clearTimeout(timer);
     clearTimeout(sinkTimer);
   });
+  /** @param {string} message */
   function settle(message) {
     if (!alive) return;
     busy = false;

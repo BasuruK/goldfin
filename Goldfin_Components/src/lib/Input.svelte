@@ -7,10 +7,12 @@
   const shownError = $derived(error || localError);
   /* The framed input is styled by `.price-input input`, so it carries no class of its own. */
   const controlAttrs = $derived(affix ? rest : { ...rest, class: 'input' });
+  /** @param {FocusEvent} event */
   function blurred(event) {
     if (validate) localError = validate(value) || '';
     onblur?.(event);
   }
+  /** @param {Event} event */
   function edited(event) {
     if (validate && localError) localError = validate(value) || '';
     oninput?.(event);

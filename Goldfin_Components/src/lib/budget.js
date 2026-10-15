@@ -1,3 +1,11 @@
+/** @typedef {{ used: number, remaining: number, exceeded: boolean, promptPercent: number, completionPercent: number }} BudgetParts */
+
+/**
+ * @param {number} prompt
+ * @param {number} completion
+ * @param {number} maximum
+ * @returns {BudgetParts}
+ */
 export function budgetParts(prompt, completion, maximum) {
   const max = Number.isFinite(maximum) && maximum > 0 ? maximum : 0;
   const p = Number.isFinite(prompt) ? Math.max(0, prompt) : 0;

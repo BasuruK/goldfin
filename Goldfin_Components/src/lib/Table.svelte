@@ -16,10 +16,11 @@
   } = $props();
   const id = useId();
   let key = $state('');
-  /** @type {'ascending' | 'descending'} */
+  /** @type {import('./table.js').Direction} */
   let direction = $state('ascending');
   let feedback = $state('');
   const sorted = $derived(key ? sortRows(rows, key, direction) : rows);
+  /** @param {import('./table.js').Column} column */
   function sort(column) {
     direction = nextDirection(column.key, key, direction);
     key = column.key;

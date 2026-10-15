@@ -1,3 +1,4 @@
+/** @param {string | undefined} value */
 export function apiProxyTarget(value) {
   if (!value?.trim()) throw new Error('API_URL is not set. Copy .env.example to .env.');
   let url;

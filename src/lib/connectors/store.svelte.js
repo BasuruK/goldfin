@@ -1,5 +1,5 @@
 import { finishConnectionCheck, runConnectionCheck } from './connection-check.js';
-import { defaultBaseUrlFor, defaultNameFor } from './providers.js';
+import { DEFAULT_PROVIDER_TYPE, defaultBaseUrlFor, defaultNameFor } from './providers.js';
 import { createEmptyConnector, loadConnectors, saveConnectors } from './storage.js';
 import { applyConnectorPatch, beginDiscovery, finishDiscovery, addManualModel, isCatalogEditable } from './models.js';
 import { previewModelCatalog } from './model-preview.js';
@@ -28,14 +28,17 @@ function persist(list, options = {}) {
   }, PERSIST_DEBOUNCE_MS);
 }
 
+/** @param {ConnectorRecord} record @param {Partial<ConnectorRecord>} patch */
 function touch(record, patch) {
   return { ...applyConnectorPatch(record, patch), updatedAt: new Date().toISOString() };
 }
 
+/** @param {unknown} value */
 function safeTrim(value) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
+/** @type {{ connectors: ConnectorRecord[], dialogOpen: boolean, editingId: string | null, adding: boolean }} */
 export const connectorStore = $state({
   connectors: loadConnectors(),
   dialogOpen: false,
@@ -50,9 +53,9 @@ export function editingConnector() {
 }
 
 export function openAddDialog() {
-  const draft = createEmptyConnector('openai');
-  draft.name = defaultNameFor('openai');
-  draft.baseUrl = defaultBaseUrlFor('openai');
+  const draft = createEmptyConnector(DEFAULT_PROVIDER_TYPE);
+  draft.name = defaultNameFor(DEFAULT_PROVIDER_TYPE);
+  draft.baseUrl = defaultBaseUrlFor(DEFAULT_PROVIDER_TYPE);
   connectorStore.connectors = [...connectorStore.connectors, draft];
   connectorStore.editingId = draft.id;
   connectorStore.adding = true;
@@ -129,6 +132,7 @@ export async function testConnectorById(id) {
   patchConnector(id, { connectionStatus: 'testing', connectionMessage: 'Checking…', checkRequestId: requestId }, {
     immediate: true
   });
+  /** @type {import('./connection-check.js').CheckResult} */
   let result;
   try {
     result = await runConnectionCheck({
@@ -145,14 +149,16 @@ export async function testConnectorById(id) {
   }
   const current = connectorStore.connectors.find(c => c.id === id);
   const finished = finishConnectionCheck(current, requestId, result, new Date().toISOString());
-  if (finished !== current) patchConnector(id, finished, { immediate: true });
+  if (finished && finished !== current) patchConnector(id, finished, { immediate: true });
 }
 
+/** @param {string} id */
 export async function previewModelsById(id) {
   const record = connectorStore.connectors.find(c => c.id === id);
   if (!record) return;
   const loading = beginDiscovery(record);
   patchConnector(id, loading, { immediate: true });
+  /** @type {import('./models.js').CatalogResult} */
   let result;
   try {
     result = await previewModelCatalog(record.providerType);
@@ -165,6 +171,7 @@ export async function previewModelsById(id) {
   if (finished !== current) patchConnector(id, finished, { immediate: true });
 }
 
+/** @param {string} id @param {string} modelId @param {boolean} enabled */
 export function setModelEnabled(id, modelId, enabled) {
   const record = connectorStore.connectors.find(c => c.id === id);
   if (!record || !isCatalogEditable(record)) return;
@@ -173,6 +180,7 @@ export function setModelEnabled(id, modelId, enabled) {
   });
 }
 
+/** @param {string} id @param {string} value */
 export function addModelById(id, value) {
   const record = connectorStore.connectors.find(c => c.id === id);
   if (!record || record.catalogState === 'loading') return;

@@ -23,6 +23,7 @@
     }
   });
 
+  /** @param {string} url */
   function hostFromUrl(url) {
     try {
       return new URL(url).host;

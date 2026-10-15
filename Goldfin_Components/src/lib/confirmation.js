@@ -12,6 +12,7 @@ export function createConfirmation(onResult = () => {}) {
     }
   };
 }
+/** @param {string} value */
 export function validSuiteName(value) {
   return value.trim().length >= 3;
 }

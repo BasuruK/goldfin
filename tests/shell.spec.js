@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { boxOf } from './support.js';
 
 /* The shell's own behaviour: focus return, theme application and the boundary
    between a rail and a drawer. These are the rules the shell module owns, so
@@ -35,7 +36,7 @@ test('a stored desktop collapse does not shrink the mobile drawer', async ({ pag
 
   const sidebar = page.locator('#primary-nav');
   await expect(page.getByText('Goldfin', { exact: true })).toBeVisible();
-  expect((await sidebar.boundingBox()).width).toBeCloseTo(258, 3);
+  expect((await boxOf(sidebar)).width).toBeCloseTo(258, 3);
 
   // `display: revert` rolled this back to the user-agent sheet rather than to
   // app.css, so the name and the role sat on one line inside the drawer.
@@ -99,16 +100,17 @@ test('the theme button is compact, not stretched across the menu', async ({ page
 
   const menu = page.locator('#profile-menu');
   const swap = menu.locator('.theme-swap');
-  const button = await swap.boundingBox();
-  const menuBox = await menu.boundingBox();
+  const button = await boxOf(swap);
+  const menuBox = await boxOf(menu);
   // A full-width bar holding one icon reads as a broken row, so the button is
   // sized to the glyph. Square-ish, not a menu-width strip.
   expect(button.width).toBeLessThan(48);
   expect(button.width).toBeLessThan(menuBox.width / 2);
   // Start-aligned so it shares an optical line with the Settings icon below.
   // Compared on the glyphs, not the borders: the row below has its own pad.
+  /** @param {import('@playwright/test').Locator} locator */
   const centre = async locator => {
-    const box = await locator.boundingBox();
+    const box = await boxOf(locator);
     return box.x + box.width / 2;
   };
   expect(await centre(swap.locator('.icon'))).toBeCloseTo(
@@ -135,17 +137,24 @@ test('the collapsed rail centres every icon on the rail', async ({ page }) => {
     .toBe(64);
 
   const centres = await page.evaluate(() => {
+    /** @param {string} selector */
+    const find = selector => {
+      const el = document.querySelector(selector);
+      if (!el) throw new Error(`${selector} is missing`);
+      return el;
+    };
+    /** @param {Element} el */
     const mid = el => {
       const r = el.getBoundingClientRect();
       return +(r.x + r.width / 2).toFixed(1);
     };
-    const nav = document.querySelector('#primary-nav').getBoundingClientRect();
+    const nav = find('#primary-nav').getBoundingClientRect();
     return {
       rail: +(nav.x + nav.width / 2).toFixed(1),
-      mark: mid(document.querySelector('.brand-mark')),
+      mark: mid(find('.brand-mark')),
       links: [...document.querySelectorAll('.nav-link > .icon, .nav-disclosure > svg')]
         .filter(el => getComputedStyle(el).visibility !== 'hidden').map(mid),
-      avatar: mid(document.querySelector('.profile-avatar'))
+      avatar: mid(find('.profile-avatar'))
     };
   });
 
@@ -192,9 +201,9 @@ test('the brand row carries the Goldfin mark and an edge-straddling collapse tog
   await expect(mark).toBeVisible();
   expect(await mark.locator('path').count()).toBeGreaterThan(1);
 
-  const nav = await page.locator('#primary-nav').boundingBox();
+  const nav = await boxOf(page.locator('#primary-nav'));
   const toggle = page.locator('#primary-nav').getByRole('button', { name: 'Collapse navigation' });
-  const box = await toggle.boundingBox();
+  const box = await boxOf(toggle);
   // Straddling means half out: the overhang has to be about half the button,
   // not merely positive. A margin alone can push a button past an edge but
   // cannot centre it on one.
@@ -209,7 +218,7 @@ test('the collapse pill keeps a 40px desktop hit area around its small visible o
   await page.goto('/');
 
   const pill = page.locator('#primary-nav').getByRole('button', { name: 'Collapse navigation' });
-  const visible = await pill.boundingBox();
+  const visible = await boxOf(pill);
   // Small enough to read as a handle on the bar rather than a second control.
   expect(visible.width).toBeLessThan(30);
   expect(await hitArea(pill)).toEqual({ width: 40, height: 40 });
@@ -227,7 +236,10 @@ test('the rail text exits on a transition rather than being removed from the DOM
      some frame in between is neither opaque nor gone. */
   const trace = await page.evaluate(async () => {
     const node = document.querySelector('.nav-label');
-    /** @type {HTMLElement} */ (document.querySelector('#primary-nav .brand > .btn-slot > .btn')).click();
+    const toggle = document.querySelector('#primary-nav .brand > .btn-slot > .btn');
+    if (!node || !(toggle instanceof HTMLElement)) throw new Error('nav label or brand toggle is missing');
+    toggle.click();
+    /** @type {number[]} */
     const seen = [];
     for (let i = 0; i < 20; i++) {
       await new Promise(r => requestAnimationFrame(r));
@@ -261,8 +273,8 @@ test('the collapse toggle straddles the edge in the collapsed rail too', async (
     .poll(() => page.locator('#primary-nav').evaluate(node => node.getBoundingClientRect().width))
     .toBe(64);
 
-  const nav = await page.locator('#primary-nav').boundingBox();
-  const box = await page.locator('#primary-nav').getByRole('button', { name: 'Expand navigation' }).boundingBox();
+  const nav = await boxOf(page.locator('#primary-nav'));
+  const box = await boxOf(page.locator('#primary-nav').getByRole('button', { name: 'Expand navigation' }));
   // Absolute positioning is what keeps this true at both widths.
   expect(box.x + box.width - (nav.x + nav.width)).toBeGreaterThan(box.width / 2 - 2);
 });
@@ -296,7 +308,7 @@ test.describe('on a touch device', () => {
   test('the controls that open and close navigation meet the 44px touch target', async ({ page }) => {
     await page.goto('/');
 
-    const opener = await page.getByRole('button', { name: 'Open navigation' }).boundingBox();
+    const opener = await boxOf(page.getByRole('button', { name: 'Open navigation' }));
     expect(opener.width).toBeGreaterThanOrEqual(44);
     expect(opener.height).toBeGreaterThanOrEqual(44);
 
@@ -315,10 +327,12 @@ test.describe('on a touch device', () => {
 /* The clickable area of a control, including any pseudo-element that extends it.
    `.nav-pill` and the toggle keep a small visible box and a larger target, so
    the visible box alone under-reports what the user can actually press. */
+/** @param {import('@playwright/test').Locator} locator */
 async function hitArea(locator) {
   return locator.evaluate(node => {
     const r = node.getBoundingClientRect();
     const after = getComputedStyle(node, '::after');
+    /** @param {string} value */
     const px = value => parseFloat(value) || 0;
     return {
       width: r.width - px(after.left) - px(after.right),

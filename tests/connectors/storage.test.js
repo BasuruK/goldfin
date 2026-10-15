@@ -34,7 +34,7 @@ describe('loadConnectors', () => {
   });
 
   afterEach(() => {
-    delete globalThis.localStorage;
+    Reflect.deleteProperty(globalThis, 'localStorage');
   });
 
   it('drops malformed entries and clears transient states', () => {

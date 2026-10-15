@@ -13,6 +13,7 @@
   const counts = $derived(countChildItems(lines));
   const ranges = $derived(lines.map((_, index) => nodeRange(lines, index)));
   const hidden = $derived(hiddenLines(ranges, folded));
+  /** @param {number} index */
   const toggle = index => { folded = toggleFold(folded, index); };
 </script>
 
