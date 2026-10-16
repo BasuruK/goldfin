@@ -102,6 +102,36 @@ func TestClientRedirectPolicy(t *testing.T) {
 	}
 }
 
+func TestClientRedirectUsesEffectivePort(t *testing.T) {
+	client := NewClient()
+	t.Cleanup(client.CloseIdleConnections)
+	for _, tc := range []struct {
+		from, to string
+		allowed  bool
+	}{
+		{"https://host.invalid", "https://HOST.invalid:443/check", true},
+		{"http://host.invalid:80", "http://host.invalid/check", true},
+		{"https://host.invalid:8443", "https://host.invalid:8443/check", true},
+		{"https://host.invalid", "https://host.invalid:444/check", false},
+		{"http://host.invalid", "https://host.invalid/check", false},
+		{"https://host.invalid", "https://host.invalid./check", false},
+		{"https://host.invalid", "https://sub.host.invalid/check", false},
+	} {
+		from, err := http.NewRequestWithContext(t.Context(), http.MethodHead, tc.from, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		to, err := http.NewRequestWithContext(t.Context(), http.MethodHead, tc.to, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = client.http.CheckRedirect(to, []*http.Request{from})
+		if (err == nil) != tc.allowed {
+			t.Errorf("%s -> %s: %v", tc.from, tc.to, err)
+		}
+	}
+}
+
 func TestClientBlocksLocalAddressesAndProxy(t *testing.T) {
 	proxy := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		t.Error("environment proxy bypassed destination checks")

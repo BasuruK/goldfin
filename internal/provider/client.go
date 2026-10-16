@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -34,12 +35,22 @@ func NewClient() *Client {
 				return errors.New("too many redirects")
 			}
 			origin := via[0].URL
-			if req.URL.Scheme != origin.Scheme || !strings.EqualFold(req.URL.Host, origin.Host) {
+			if req.URL.Scheme != origin.Scheme || !strings.EqualFold(req.URL.Hostname(), origin.Hostname()) || originPort(req.URL) != originPort(origin) {
 				return errors.New("redirect to a different origin blocked")
 			}
 			return nil
 		},
 	}}
+}
+
+func originPort(endpoint *url.URL) string {
+	if port := endpoint.Port(); port != "" {
+		return port
+	}
+	if endpoint.Scheme == "https" {
+		return "443"
+	}
+	return "80"
 }
 
 // CloseIdleConnections releases the client's idle connections during worker shutdown.
