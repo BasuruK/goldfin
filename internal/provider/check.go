@@ -21,7 +21,7 @@ type Finding struct {
 const RequestTimeout = 30 * time.Second
 
 // CheckWebRequest checks reachability only; it does not verify Credential validity.
-func CheckWebRequest(ctx context.Context, client *http.Client, baseURL, credential string) (Finding, error) {
+func (c *Client) CheckWebRequest(ctx context.Context, baseURL, credential string) (Finding, error) {
 	ctx, cancel := context.WithTimeout(ctx, RequestTimeout)
 	defer cancel()
 	endpoint, err := url.Parse(baseURL)
@@ -36,7 +36,7 @@ func CheckWebRequest(ctx context.Context, client *http.Client, baseURL, credenti
 		req.Header.Set("Authorization", "Bearer "+credential)
 	}
 	started := time.Now()
-	res, err := client.Do(req)
+	res, err := c.http.Do(req)
 	finding := Finding{Latency: time.Since(started)}
 	if err != nil {
 		switch {

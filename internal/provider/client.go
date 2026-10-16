@@ -12,8 +12,13 @@ import (
 
 const dialTimeout = 10 * time.Second
 
-// DefaultHTTPClient is shared by the worker; its owner closes idle connections.
-func DefaultHTTPClient() *http.Client {
+// Client owns the worker's hardened HTTP transport; callers cannot replace its policy.
+type Client struct {
+	http *http.Client
+}
+
+// NewClient creates a reusable worker client. Its owner closes idle connections.
+func NewClient() *Client {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	// Environment proxies must not bypass validation of the actual destination.
 	transport.Proxy = nil
@@ -21,7 +26,7 @@ func DefaultHTTPClient() *http.Client {
 	transport.DialContext = func(ctx context.Context, network, address string) (net.Conn, error) {
 		return dialPublic(ctx, dialer, network, address)
 	}
-	return &http.Client{
+	return &Client{http: &http.Client{
 		Transport: transport,
 		Timeout:   RequestTimeout,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
@@ -34,8 +39,11 @@ func DefaultHTTPClient() *http.Client {
 			}
 			return nil
 		},
-	}
+	}}
 }
+
+// CloseIdleConnections releases the client's idle connections during worker shutdown.
+func (c *Client) CloseIdleConnections() { c.http.CloseIdleConnections() }
 
 func dialPublic(ctx context.Context, dialer *net.Dialer, network, address string) (net.Conn, error) {
 	// Transport detaches dials from requests; bound DNS and all address attempts together.

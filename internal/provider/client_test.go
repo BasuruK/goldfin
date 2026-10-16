@@ -62,7 +62,7 @@ func TestDialPublicBoundsDetachedConnectionWork(t *testing.T) {
 	}
 }
 
-func TestDefaultHTTPClientRedirectPolicy(t *testing.T) {
+func TestClientRedirectPolicy(t *testing.T) {
 	sink := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		t.Error("redirect sent a request to a different origin")
 	}))
@@ -83,10 +83,10 @@ func TestDefaultHTTPClientRedirectPolicy(t *testing.T) {
 		}
 	}))
 	t.Cleanup(server.Close)
-	policy := DefaultHTTPClient()
+	policy := NewClient()
 	t.Cleanup(policy.CloseIdleConnections)
 	client := server.Client()
-	client.CheckRedirect = policy.CheckRedirect
+	client.CheckRedirect = policy.http.CheckRedirect
 	for _, tc := range []struct {
 		path string
 		ok   bool
@@ -95,28 +95,28 @@ func TestDefaultHTTPClientRedirectPolicy(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		finding, err := CheckWebRequest(t.Context(), client, endpoint.JoinPath(tc.path).String(), "test-credential")
+		finding, err := (&Client{http: client}).CheckWebRequest(t.Context(), endpoint.JoinPath(tc.path).String(), "test-credential")
 		if tc.ok != (err == nil) || (tc.ok && finding.Kind != "reachable") {
 			t.Errorf("%s: finding=%+v, error=%v", tc.path, finding, err)
 		}
 	}
 }
 
-func TestDefaultHTTPClientBlocksLocalAddressesAndProxy(t *testing.T) {
+func TestClientBlocksLocalAddressesAndProxy(t *testing.T) {
 	proxy := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		t.Error("environment proxy bypassed destination checks")
 	}))
 	t.Cleanup(proxy.Close)
 	t.Setenv("HTTP_PROXY", proxy.URL)
 	t.Setenv("HTTPS_PROXY", proxy.URL)
-	client := DefaultHTTPClient()
+	client := NewClient()
 	t.Cleanup(client.CloseIdleConnections)
 	for _, target := range []string{"http://127.0.0.1/", "https://127.0.0.1/", "https://[::1]/", "http://192.0.2.1/", "https://192.0.2.1/"} {
 		req, err := http.NewRequestWithContext(t.Context(), http.MethodHead, target, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
-		res, err := client.Do(req)
+		res, err := client.http.Do(req)
 		if err == nil {
 			_ = res.Body.Close()
 			t.Errorf("local address allowed: %s", target)

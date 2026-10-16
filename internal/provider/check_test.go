@@ -28,12 +28,21 @@ func TestCheckWebRequestSendsHEAD(t *testing.T) {
 	}
 	endpoint = endpoint.JoinPath("check")
 	endpoint.RawQuery = "probe=1"
-	finding, err := CheckWebRequest(t.Context(), server.Client(), endpoint.String(), "test-credential")
+	finding, err := (&Client{http: server.Client()}).CheckWebRequest(t.Context(), endpoint.String(), "test-credential")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if finding.Kind != "reachable" || finding.HTTPStatus != http.StatusNoContent || finding.Latency <= 0 {
 		t.Fatalf("finding: %+v", finding)
+	}
+}
+
+func TestNewClientAlwaysEnforcesDestinationPolicy(t *testing.T) {
+	client := NewClient()
+	t.Cleanup(client.CloseIdleConnections)
+	finding, err := client.CheckWebRequest(t.Context(), "http://127.0.0.1/", "")
+	if err == nil || finding.Kind != "" {
+		t.Fatalf("unsafe destination accepted: %+v, %v", finding, err)
 	}
 }
 
@@ -49,7 +58,7 @@ func TestCheckWebRequestRejectsUnsafeRequests(t *testing.T) {
 		{"https://user:credential-canary@host.invalid/", ""},
 		{server.URL, "credential-canary\r\nInjected: yes"},
 	} {
-		finding, err := CheckWebRequest(t.Context(), server.Client(), tc.endpoint, tc.credential)
+		finding, err := (&Client{http: server.Client()}).CheckWebRequest(t.Context(), tc.endpoint, tc.credential)
 		if err == nil || finding.Kind != "" {
 			t.Errorf("unsafe request accepted: %+v, %v", finding, err)
 			continue
@@ -71,7 +80,7 @@ func TestCheckWebRequestCancellationAndDeadline(t *testing.T) {
 	t.Cleanup(cancel)
 	finished := make(chan error, 1)
 	go func() {
-		finding, err := CheckWebRequest(ctx, server.Client(), server.URL, "")
+		finding, err := (&Client{http: server.Client()}).CheckWebRequest(ctx, server.URL, "")
 		if finding.Kind != "" {
 			t.Errorf("cancelled request produced finding: %+v", finding)
 		}
@@ -93,7 +102,7 @@ func TestCheckWebRequestCancellationAndDeadline(t *testing.T) {
 	}
 	deadline, stop := context.WithDeadline(t.Context(), time.Now().Add(-time.Second))
 	defer stop()
-	if finding, err := CheckWebRequest(deadline, server.Client(), server.URL, ""); !errors.Is(err, context.DeadlineExceeded) || finding.Kind != "" {
+	if finding, err := (&Client{http: server.Client()}).CheckWebRequest(deadline, server.URL, ""); !errors.Is(err, context.DeadlineExceeded) || finding.Kind != "" {
 		t.Fatalf("deadline: %+v, %v", finding, err)
 	}
 }
@@ -103,7 +112,7 @@ func TestCheckWebRequestRejectsFailedStatus(t *testing.T) {
 		w.WriteHeader(http.StatusServiceUnavailable)
 	}))
 	t.Cleanup(server.Close)
-	finding, err := CheckWebRequest(t.Context(), server.Client(), server.URL, "credential-canary")
+	finding, err := (&Client{http: server.Client()}).CheckWebRequest(t.Context(), server.URL, "credential-canary")
 	if err == nil || finding.Kind != "" || finding.HTTPStatus != http.StatusServiceUnavailable {
 		t.Fatalf("failed HEAD: finding=%+v, error=%v", finding, err)
 	}
@@ -120,7 +129,7 @@ func TestCheckWebRequestOmitsAbsentCredential(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	t.Cleanup(server.Close)
-	if _, err := CheckWebRequest(t.Context(), server.Client(), server.URL, ""); err != nil {
+	if _, err := (&Client{http: server.Client()}).CheckWebRequest(t.Context(), server.URL, ""); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -137,7 +146,7 @@ func TestCheckWebRequestBoundsWholeRequest(t *testing.T) {
 		}
 		return &http.Response{StatusCode: http.StatusNoContent, Body: http.NoBody}, nil
 	})}
-	if _, err := CheckWebRequest(t.Context(), client, "https://endpoint.invalid/check", ""); err != nil {
+	if _, err := (&Client{http: client}).CheckWebRequest(t.Context(), "https://endpoint.invalid/check", ""); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -165,7 +174,7 @@ func TestConcurrentChecksKeepCredentialsAndFindingsIsolated(t *testing.T) {
 		status     int
 	}{{"first-check", http.StatusOK}, {"second-check", http.StatusNoContent}} {
 		go func() {
-			finding, err := CheckWebRequest(t.Context(), server.Client(), server.URL, tc.credential)
+			finding, err := (&Client{http: server.Client()}).CheckWebRequest(t.Context(), server.URL, tc.credential)
 			finished <- reply{tc.status, finding, err}
 		}()
 	}
