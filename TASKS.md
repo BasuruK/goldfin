@@ -404,6 +404,21 @@ Validation: **39 unit tests pass** (16 new client tests covering payload/Credent
 
 Formal review: independent Standards and Spec reviews of the initial diff found real defects — a failed Save froze the retained draft (`saveState` stayed `finished`, silently dropping edits), the success path reintroduced a **Done** button instead of closing, page-leaving did not dispose polling, a throwing legacy clear was masked as success, and `listState: 'ready'` collided with the reserved check meaning. All were fixed (failed Save returns to `idle`; success sets a page `role=status` Reachable notice and closes before refreshing; `disposeConnectorsPage` reuses the full dialog reset on `onDestroy`; the clear boolean is honored; state renamed `loaded`), with Playwright tests added per finding. A Spec follow-up then found the disposal left a resurrected busy dialog and a duplicate-Save window between `finished` and close; both were fixed (disposal reuses `closeDialog`'s reset; the dialog closes before the list refresh) and covered by a browser-back test. Host OCR selected 8 reviewable files (client, store, dialog, card, ModelPanel, page, legacy storage, test support), reviewed **8/8, 0 findings**; TASKS.md, the three deletions, and test files were excluded by OCR's filters and covered by the independent axes. Residual by design: a second Save cannot supersede an in-flight one (Save is busy-disabled; supersession happens via Cancel/navigation, which the token tests prove), and the overall polling deadline is unit-tested at the client seam rather than with a 60-second browser wait.
 
+#### PR #49 external-review follow-up
+
+All four checks passed on `635a20f`. OpenCodeReview posted six findings, all on the Playwright mock helper `tests/support.js`; each was verified against the helper and its specs before any change:
+
+| Comment | Disposition and evidence |
+| --- | --- |
+| [4295713685 — mock options typed as unknown](https://github.com/BasuruK/goldfin/pull/49#discussion_r4295713685) | Accepted. `saved`/`attempts`/`savedOnSuccess` now use the client's `SavedConnector`/`SaveAttempt` typedefs; `svelte-check` stays 0/0, so a fixture typo fails type-checking instead of surfacing as a malformed-response error. |
+| [4295713727 — state.polls counted but never asserted](https://github.com/BasuruK/goldfin/pull/49#discussion_r4295713727) | Accepted by use, not deletion: the success spec now asserts `api.polls === 3` (queued → running → finished), proving the poll sequence it claims. |
+| [4295713735 — empty attempts fulfills an empty body](https://github.com/BasuruK/goldfin/pull/49#discussion_r4295713735) | Accepted, stronger than suggested: the helper throws at setup when `attempts` is explicitly empty, attributing the mistake to the spec immediately instead of aborting a route mid-test. |
+| [4295713750 — savedOnSuccess replaces the seeded list](https://github.com/BasuruK/goldfin/pull/49#discussion_r4295713750) | Accepted. It now appends de-duplicated by Connector id, matching its documented "joins the list" behavior; latent today (no spec seeds both) but a real trap. |
+| [4295713765 — helper cannot express transport failures](https://github.com/BasuruK/goldfin/pull/49#discussion_r4295713765) | Partly accepted. Added one `failPollAfter` option and rewrote the polling-failure spec on the helper, deleting its hand-rolled duplicate routes. Rejected broader status/body knobs: no spec needs them, and the helper stays a success-path mock plus this single failure switch. |
+| [4295713770 — hardcoded attempt id, poll ignores the handle](https://github.com/BasuruK/goldfin/pull/49#discussion_r4295713770) | Accepted. Create echoes the first configured attempt's id, and the poll route 404s any other handle, so a client polling the wrong id now fails the spec. |
+
+Post-fix validation: `svelte-check` 0 errors/0 warnings and the full Playwright suite passes (**50 tests**). Test-infrastructure only; no production code changed.
+
 **Failure table:**
 
 | Case | Frontend behavior / evidence |

@@ -34,6 +34,7 @@ test('a successful Save polls to Reachable and lists the checked Connector', asy
   await dialog.getByLabel('Credential label', { exact: true }).fill('Prod key');
   await dialog.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(dialog).toBeHidden();
+  expect(api.polls).toBe(3);
   await expect(page.getByText(/Reachable \(200, 42ms\)\. Gateway is saved\./)).toBeVisible();
   expect(api.posts).toEqual([{
     name: 'Gateway',
@@ -133,15 +134,10 @@ test('reloading mid-Save never renders the attempt as saved', async ({ page }) =
 });
 
 test('a polling failure mid-Save retains the draft and clears the busy state', async ({ page }) => {
-  let polls = 0;
-  await page.route('**/api/v1/connector-save-attempts/*', async route => {
-    polls += 1;
-    if (polls > 1) return route.abort();
-    await route.fulfill({ json: { id: 'attempt-1', state: 'running' } });
+  await mockConnectorApi(page, {
+    attempts: [{ id: 'attempt-1', state: 'running' }],
+    failPollAfter: 1
   });
-  await page.route('**/api/v1/connector-save-attempts', route =>
-    route.fulfill({ status: 202, json: { id: 'attempt-1', state: 'queued' } }));
-  await page.route('**/api/v1/connectors', route => route.fulfill({ json: { connectors: [] } }));
   await page.goto('/connectors/');
   const dialog = await openWebRequestDraft(page);
   await dialog.getByLabel('Name', { exact: true }).fill('Gateway');
