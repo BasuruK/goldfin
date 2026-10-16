@@ -28,9 +28,9 @@ func TestSubcommand(t *testing.T) {
 		t.Fatal("expected error for trailing arguments")
 	}
 
-	_, err = subcommand([]string{"goldfin", "worker"})
-	if err == nil {
-		t.Fatal("worker was removed; expected unknown subcommand error")
+	sub, err = subcommand([]string{"goldfin", "worker"})
+	if err != nil || sub != "worker" {
+		t.Fatalf("worker: got %q, %v", sub, err)
 	}
 
 	_, err = subcommand([]string{"goldfin", "nope"})

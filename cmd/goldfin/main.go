@@ -1,4 +1,4 @@
-// Local dev entrypoint (api / migrate / healthcheck). Replace with the full stack when it merges to main.
+// Local dev entrypoint (api / worker / migrate / healthcheck).
 package main
 
 import (
@@ -37,6 +37,8 @@ func run(args []string) error {
 	switch sub {
 	case "api":
 		return runAPI(ctx, addr)
+	case "worker":
+		return runWorker(ctx)
 	case "migrate":
 		return runMigrate(ctx)
 	case "healthcheck":
@@ -46,12 +48,12 @@ func run(args []string) error {
 }
 
 func subcommand(args []string) (string, error) {
-	const usage = "usage: goldfin <api|migrate|healthcheck>"
+	const usage = "usage: goldfin <api|worker|migrate|healthcheck>"
 	if len(args) != 2 {
 		return "", errors.New(usage)
 	}
 	switch args[1] {
-	case "api", "migrate", "healthcheck":
+	case "api", "worker", "migrate", "healthcheck":
 		return args[1], nil
 	default:
 		return "", fmt.Errorf("unknown subcommand: %s", args[1])

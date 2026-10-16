@@ -12,12 +12,13 @@ import (
 	"github.com/BasuruK/goldfin/db/migrations"
 	"github.com/BasuruK/goldfin/internal/jobs"
 	"github.com/BasuruK/goldfin/internal/secretbox"
+	"github.com/BasuruK/goldfin/internal/testdb"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func newTestStore(t *testing.T) (*jobs.Store, *pgxpool.Pool) {
 	t.Helper()
-	pool, db := newTestDatabase(t)
+	pool, db := testdb.New(t)
 	provider, err := migrations.NewProvider(db)
 	if err != nil {
 		t.Fatal(err)

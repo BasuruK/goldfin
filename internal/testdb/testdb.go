@@ -1,4 +1,5 @@
-package jobs_test
+// Package testdb creates isolated disposable schemas for database-backed tests.
+package testdb
 
 import (
 	"context"
@@ -14,7 +15,8 @@ import (
 	"github.com/jackc/pgx/v5/stdlib"
 )
 
-func newTestDatabase(t *testing.T) (*pgxpool.Pool, *sql.DB) {
+// New owns the test's schema, connections and cleanup; the database must be disposable.
+func New(t *testing.T) (*pgxpool.Pool, *sql.DB) {
 	t.Helper()
 	dsn := os.Getenv("TEST_DATABASE_URL")
 	if dsn == "" {
