@@ -76,12 +76,22 @@ func dialPublic(ctx context.Context, dialer *net.Dialer, network, address string
 			return nil, errors.New("blocked destination")
 		}
 	}
+	return dialAddresses(ctx, dialer.DialContext, network, port, addresses)
+}
+
+func dialAddresses(ctx context.Context, dial func(context.Context, string, string) (net.Conn, error), network, port string, addresses []netip.Addr) (net.Conn, error) {
+	deadline, _ := ctx.Deadline() // dialPublic supplies the total DNS/connection deadline.
 	var lastErr error
-	for _, addr := range addresses {
+	for i, addr := range addresses {
+		attempt, cancel := context.WithTimeout(ctx, time.Until(deadline)/time.Duration(len(addresses)-i))
 		// Dial the validated literal so DNS cannot change between validation and use.
-		conn, err := dialer.DialContext(ctx, network, net.JoinHostPort(addr.String(), port))
+		conn, err := dial(attempt, network, net.JoinHostPort(addr.String(), port))
+		cancel()
 		if err == nil {
 			return conn, nil
+		}
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
 		}
 		lastErr = err
 	}

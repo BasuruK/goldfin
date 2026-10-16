@@ -62,6 +62,28 @@ func TestDialPublicBoundsDetachedConnectionWork(t *testing.T) {
 	}
 }
 
+func TestDialAddressesFallsBackAfterStalledAddress(t *testing.T) {
+	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
+	defer cancel()
+	want, peer := net.Pipe()
+	t.Cleanup(func() { _ = want.Close(); _ = peer.Close() })
+	dial := func(attempt context.Context, _, address string) (net.Conn, error) {
+		if strings.HasPrefix(address, "[") {
+			<-attempt.Done()
+			return nil, attempt.Err()
+		}
+		if err := attempt.Err(); err != nil {
+			return nil, err
+		}
+		return want, nil
+	}
+	addresses := []netip.Addr{netip.MustParseAddr("2001:4860:4860::8888"), netip.MustParseAddr("8.8.8.8")}
+	got, err := dialAddresses(ctx, dial, "tcp", "443", addresses)
+	if err != nil || got != want {
+		t.Fatalf("reachable fallback was starved: connection=%v, error=%v", got, err)
+	}
+}
+
 func TestClientRedirectPolicy(t *testing.T) {
 	sink := httptest.NewTLSServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		t.Error("redirect sent a request to a different origin")
