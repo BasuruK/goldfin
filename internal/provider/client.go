@@ -20,12 +20,17 @@ type Client struct {
 
 // NewClient creates a reusable worker client. Its owner closes idle connections.
 func NewClient() *Client {
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	// Environment proxies must not bypass validation of the actual destination.
-	transport.Proxy = nil
 	dialer := &net.Dialer{Timeout: dialTimeout}
-	transport.DialContext = func(ctx context.Context, network, address string) (net.Conn, error) {
-		return dialPublic(ctx, dialer, network, address)
+	// Own the transport so global proxy/TLS hooks cannot bypass destination checks.
+	transport := &http.Transport{
+		DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
+			return dialPublic(ctx, dialer, network, address)
+		},
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   dialTimeout,
+		ExpectContinueTimeout: time.Second,
 	}
 	return &Client{http: &http.Client{
 		Transport: transport,

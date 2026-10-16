@@ -46,6 +46,37 @@ func TestBlockedAddr(t *testing.T) {
 	}
 }
 
+func TestNewClientOwnsTransport(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		transport http.RoundTripper
+	}{
+		{"custom", roundTripFunc(func(*http.Request) (*http.Response, error) {
+			t.Error("provider used the global transport")
+			return nil, errors.New("unexpected global transport")
+		})},
+		{"nil", (*http.Transport)(nil)},
+		{"custom TLS dialer", &http.Transport{
+			DialTLSContext: func(context.Context, string, string) (net.Conn, error) {
+				t.Error("global TLS dialer bypassed destination validation")
+				return nil, errors.New("unexpected global TLS dialer")
+			},
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			original := http.DefaultTransport
+			http.DefaultTransport = tc.transport
+			t.Cleanup(func() { http.DefaultTransport = original })
+			client := NewClient()
+			t.Cleanup(client.CloseIdleConnections)
+			finding, err := client.CheckWebRequest(t.Context(), "https://127.0.0.1/", "credential-canary")
+			if err == nil || finding.Kind != "" {
+				t.Fatalf("unsafe destination accepted: %+v, %v", finding, err)
+			}
+		})
+	}
+}
+
 func TestDialPublicBoundsDetachedConnectionWork(t *testing.T) {
 	controlled := false
 	dialer := &net.Dialer{ControlContext: func(ctx context.Context, _, _ string, _ syscall.RawConn) error {
