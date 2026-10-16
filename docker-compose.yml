@@ -48,6 +48,7 @@ services:
         - { path: ./internal, action: rebuild }
         - { path: ./go.mod, action: rebuild }
         - { path: ./go.sum, action: rebuild }
+        - { path: ./Dockerfile.dev, action: rebuild }
 
   worker:
     build: { context: ., dockerfile: Dockerfile.dev }
@@ -64,6 +65,7 @@ services:
         - { path: ./internal, action: rebuild }
         - { path: ./go.mod, action: rebuild }
         - { path: ./go.sum, action: rebuild }
+        - { path: ./Dockerfile.dev, action: rebuild }
 
 volumes:
   goldfin-pgdata:
