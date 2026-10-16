@@ -1,6 +1,6 @@
 # PR #38 recovery plan
 
-Status: T0/T1 settled; T2 is published as draft [PR #44](https://github.com/BasuruK/goldfin/pull/44). All four CI checks passed on `09b919e`; four subsequent review fixes through `923a73f` pass local checks/reviews and await updated CI. It is not merged; later layers remain queued. Update this file as each task finishes, recording commands, results, and remaining blockers.
+Status: T0/T1 settled; T2 is implemented in [PR #44](https://github.com/BasuruK/goldfin/pull/44) and ready for review. All four CI checks passed on `ea0a24e`, including OpenCodeReview with zero findings; all four original review threads are resolved. This final ledger update changes no provider code. The PR is not merged; later layers remain queued. Update this file as each task finishes, recording commands, results, and remaining blockers.
 
 ## Objective and sources
 
@@ -46,7 +46,7 @@ The open children have native blocking edges: #34 waits for #33, #35 waits for #
 | `pnpm check` | Passed with process-local `API_URL=http://127.0.0.1:8080`: 0 Svelte errors/warnings. Initial run without API_URL failed configuration loading. Sync also prints existing alias/path configuration diagnostics. |
 | `pnpm test:unit` | Passed: 34 tests. |
 | `pnpm knip` | Passed with process-local API_URL. Initial run without it failed to load Vite; its apparent unused/unresolved findings were not a valid baseline. Existing alias deprecation diagnostics remain. |
-| Replacement branches | T2 now has draft PR #44 and passing local gates; see its ticket below. Later replacement branches have not been created or checked. |
+| Replacement branches | T2 now has PR #44 ready for review, with passing local gates and CI evidence pinned below. Later replacement branches have not been created or checked. |
 
 The root gate currently uses strict `checkJs` through `svelte-check`, `knip`, and Go lint/security checks. There is no root ESLint configuration/script; preserve actual gates rather than introducing a new lint stack for this recovery.
 
@@ -100,7 +100,7 @@ Done when #34 acceptance passes on the integrated main and every replacement has
 
 ### T2 implementation ticket — Web Request provider check
 
-**Parent:** #34. **Layer:** provider client only. **Blocked by:** none (T0/T1 settled). **Status:** implemented and locally verified; draft [PR #44](https://github.com/BasuruK/goldfin/pull/44), not merged. Four CI checks passed on `09b919e`; the reviewed fixes await updated CI. Branch `feature/basuruk/34-web-request-provider-check`, based on main e5dd58b. Implementation commits: `2b8244b`, `a6e2d7a`; external-review fixes: `cb0069b`, `3a14043`, `474d8c6`, `923a73f`.
+**Parent:** #34. **Layer:** provider client only. **Blocked by:** none (T0/T1 settled). **Status:** implemented and verified; [PR #44](https://github.com/BasuruK/goldfin/pull/44) is ready for review, not merged. All four CI checks passed on `ea0a24e`, including the review fixes; the subsequent ledger update leaves provider code unchanged. Branch `feature/basuruk/34-web-request-provider-check`, based on main e5dd58b. Implementation commits: `2b8244b`, `a6e2d7a`; external-review fixes: `cb0069b`, `3a14043`, `474d8c6`, `923a73f`.
 
 **Confirmed test seam:** local HTTP(S) fixtures observe HEAD, optional Bearer, request identity, status and cancellation. Production callers use an opaque `Client` created by `NewClient`; they cannot inject a transport that bypasses policy. Hardened-client tests exercise redirect/address policy; a private dial adapter tests stalled-address fallback without external connections. The address predicate has a table-driven test as required by CODING_STANDARDS.md.
 
@@ -140,7 +140,7 @@ All four bot comments on `09b919e` were inspected. Each fix has a regression tes
 
 Follow-up independent Standards and Spec reviews covered `e5dd58b...923a73f`, with detailed review of `09b919e..923a73f`: **0 findings each**. Host OCR resolved rules for and reviewed both production files again: **2/2 files covered, 0 new findings**; test files were excluded by OCR's default path filter and reviewed by the independent axes. Sibling/caller sweep found no remaining old exported client/check API or production callers to migrate.
 
-Post-fix validation: `make check` passed in full, including 15 provider tests, 34 frontend unit tests, Svelte check (0 errors/warnings), lint/security gates, and Knip. `go test -race ./internal/provider -count=1` passed. These are local results for `923a73f`; CI's four passing checks still refer to `09b919e` until the fixes are pushed and checked. No live provider, database, worker, API, or UI validation is claimed. GitHub review-thread state is separate from these recorded code dispositions.
+Post-fix validation: `make check` passed in full, including 15 provider tests, 34 frontend unit tests, Svelte check (0 errors/warnings), lint/security gates, and Knip. `go test -race ./internal/provider -count=1` passed. These local results cover `923a73f`; GitHub subsequently passed all four checks (`check`, `e2e`, CodeRabbit, OpenCodeReview) on `ea0a24e`. [OpenCodeReview's final summary](https://github.com/BasuruK/goldfin/pull/44#issuecomment-6209181476) reports zero findings across both selected files. All four original review threads are resolved. This ledger-only update leaves that provider tree unchanged; use the PR's current checks for final-head merge eligibility. No live provider, database, worker, API, or UI validation is claimed.
 
 | Failure | Required provider-client behavior / evidence |
 | --- | --- |
@@ -234,3 +234,4 @@ Apply these expectations to Web Request HEAD and later OpenAI completion checks,
 - 2026-10-16: Main's full gate passed after local-only Go LF normalization (Git source unchanged). Preserved #38 at backup/pr38-before-replacements-20261016; started the T2 branch from e5dd58b. Implemented only the provider-client seam through red/green slices. Ten provider tests, race detector, focused lint, and full make check passed. Checked special-address policy against IANA's [IPv4](https://www.iana.org/assignments/iana-ipv4-special-registry/) and [IPv6](https://www.iana.org/assignments/iana-ipv6-special-registry/) registries; policy remains conservative for transition/reserved ranges. Review evidence follows after formal review.
 - 2026-10-16: Completed independent Standards/Spec review (0 findings each) and host OCR review (2/2 production files; dial-budget finding fixed in a separate regression-tested commit). Final 11-test provider suite, race detector, and full make check passed after the fix. Published draft replacement PR #44 and linked it to this T3 thread. No #38 changes, main merge, database reset, or later-layer implementation performed. Next replacement is T3 storage/jobs; it remains separate from this PR.
 - 2026-10-16: PR #44's four checks passed on `09b919e`; inspected four external OCR comments and committed isolated red/green fixes for mandatory hardened-client ownership, TLS Credentials, effective redirect ports, and bounded address fallback. Retained scheme/hostname origin restrictions. Follow-up Standards/Spec reviews found 0 issues each; host OCR reviewed 2/2 production files with 0 new issues. All 15 provider tests, race detector, and full make check passed after `923a73f`; updated CI remains pending publication of the fixes.
+- 2026-10-16: All four GitHub checks passed on `ea0a24e`; OpenCodeReview reported 0 findings across 2 selected files. Resolved the two remaining fixed review threads (the other two were already resolved) and marked PR #44 ready for review. Published this final documentation-only ledger update; provider code is unchanged and no later layer or merge was performed. T3 watches the resulting final-head check run before handoff; do not create another ledger-only commit merely to advance its recorded CI hash.
