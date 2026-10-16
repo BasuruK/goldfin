@@ -25,6 +25,9 @@
   "author": "",
   "license": "ISC",
   "type": "module",
+  "imports": {
+    "#lib/*": "./src/lib/*"
+  },
   "bugs": {
     "url": "https://github.com/BasuruK/goldfin/issues"
   },

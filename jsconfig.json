@@ -3,7 +3,13 @@
   "compilerOptions": {
     "allowJs": true,
     "checkJs": true,
-    "strict": true
+    "strict": true,
+    "paths": {
+      "$goldfin": ["./Goldfin_Components/src"],
+      "$goldfin/*": ["./Goldfin_Components/src/*"],
+      "$lib": ["./src/lib"],
+      "$lib/*": ["./src/lib/*"]
+    }
   },
   "include": ["src", "tests", "*.js"]
 }

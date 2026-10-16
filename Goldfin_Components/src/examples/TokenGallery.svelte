@@ -10,7 +10,7 @@
       { name: '--ufg3', light: 'oklch(52.526% 0.0179 257.24)', dark: 'oklch(65.792% 0.0151 258.36)' }
     ] },
     { heading: 'Surface layers', tokens: [
-      { name: '--ubg', light: 'oklch(100% 0 none)', dark: 'oklch(18.196% 0.0044 264.46)' },
+      { name: '--ubg', light: 'oklch(98.81% 0 none)', dark: 'oklch(16.41% 0.0044 84.59)' },
       { name: '--usurf', light: 'oklch(97.865% 0.0017 247.84)', dark: 'oklch(20.924% 0.0061 271.12)' },
       { name: '--uwell', light: 'oklch(98.837% 0.0013 286.38)', dark: 'oklch(19.595% 0.0062 271.09)' },
       { name: '--uline', light: 'oklch(92.455% 0.0058 264.53)', dark: 'oklch(29.312% 0.0095 268.35)' }

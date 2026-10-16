@@ -7,11 +7,12 @@ import { apiProxyTarget } from './api-proxy-target.js';
 // The component library is referenced from its source, never copied. `$goldfin`
 // points at the library's src, so `$goldfin/lib/index.js` and
 // `$goldfin/goldfin.css` resolve from any depth without a relative path
-// climbing back out of src/.
+// climbing back out of src/. `$lib` is kept for Impeccable live-inject;
+// app code uses `#lib` via package.json subpath imports.
 const root = fileURLToPath(new URL('.', import.meta.url));
 const goldfin = fileURLToPath(new URL('./Goldfin_Components/src', import.meta.url));
 const lib = fileURLToPath(new URL('./src/lib', import.meta.url));
-const alias = { $goldfin: goldfin, '#lib': lib, $lib: lib };
+const alias = { $goldfin: goldfin, $lib: lib };
 
 export default defineConfig(({ command, mode }) => {
   // Dev and preview proxy /api; `vite build` needs no API_URL.
@@ -20,10 +21,7 @@ export default defineConfig(({ command, mode }) => {
     : undefined;
   return {
     plugins: [sveltekit({
-      adapter: adapter(),
-      // Kit passes the same aliases to Vite and its generated type configuration.
-      // `$lib` is required by Impeccable live-inject; app code prefers `#lib`.
-      alias
+      adapter: adapter()
     })],
     server: {
       proxy,

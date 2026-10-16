@@ -2,7 +2,7 @@
 name: Goldfin
 description: Dark-first cool-neutral tooling for document extraction evaluation.
 colors:
-  page-bg: "oklch(18.196% 0.0044 264.46)"
+  page-bg: "oklch(19.13% 0 none)"
   surface-raised: "oklch(20.924% 0.0061 271.12)"
   surface-recessed: "oklch(19.595% 0.0062 271.09)"
   border: "oklch(29.312% 0.0095 268.35)"
@@ -129,7 +129,7 @@ Use semantic CSS variables in components. The following values record the curren
 
 | Token | Role | Dark | Light |
 | --- | --- | --- | --- |
-| `--ubg` | Page | `oklch(18.196% 0.0044 264.46)` | `oklch(100% 0 none)` |
+| `--ubg` | Page | `oklch(16.41% 0.0044 84.59)` | `oklch(98.81% 0 none)` |
 | `--usurf` | Raised surface | `oklch(20.924% 0.0061 271.12)` | `oklch(97.865% 0.0017 247.84)` |
 | `--uwell` | Recessed surface | `oklch(19.595% 0.0062 271.09)` | `oklch(98.837% 0.0013 286.38)` |
 | `--uline` | Divider/border | `oklch(29.312% 0.0095 268.35)` | `oklch(92.455% 0.0058 264.53)` |
@@ -170,7 +170,7 @@ Never `ease-in` on UI. Never `transition: all`. A transition that moves or scale
 | `--uout` | `oklch(21.789% 0.0197 160.35)` | `oklch(97.248% 0.0099 155.1)` |
 | `--uoutline` | `oklch(32.17% 0.0429 158.45)` | `oklch(91.154% 0.0292 156.6)` |
 | `--uhl` | `oklch(28.257% 0.0395 257.77)` | `oklch(93.816% 0.0208 261.77)` |
-| `--uhead` | `oklch(22.62% 0.0041 264.49)` | `oklch(100% 0 none)` |
+| `--uhead` | `oklch(19.13% 0 none)` | `oklch(100% 0 none)` |
 | `--uprompt` | `oklch(18.22% 0 none)` | `oklch(96.995% 0.0029 264.54)` |
 | `--upwell` | `oklch(15.907% 0 none)` | `oklch(100% 0 none)` |
 | `--uresult` | `oklch(22.645% 0 none)` | `oklch(100% 0 none)` |
