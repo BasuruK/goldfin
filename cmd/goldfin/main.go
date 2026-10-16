@@ -16,7 +16,6 @@ import (
 
 	"github.com/BasuruK/goldfin/db/migrations"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/pressly/goose/v3"
 )
 
 func main() {
@@ -92,13 +91,14 @@ func runMigrate(ctx context.Context) error {
 	if err := ping(ctx, db); err != nil {
 		return err
 	}
-	if err := goose.SetDialect("postgres"); err != nil {
+	provider, err := migrations.NewProvider(db)
+	if err != nil {
 		return err
 	}
-	goose.SetBaseFS(migrations.FS)
 	ctx, cancel := context.WithTimeout(ctx, migrateTimeout)
 	defer cancel()
-	return goose.UpContext(ctx, db, ".")
+	_, err = provider.Up(ctx)
+	return err
 }
 
 // runAPI serves until ctx is cancelled. The listener exists before Serve starts, so a cancel that

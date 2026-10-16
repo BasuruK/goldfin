@@ -1,6 +1,6 @@
 # PR #38 recovery plan
 
-Status: T0/T1 settled; T2 is implemented in [PR #44](https://github.com/BasuruK/goldfin/pull/44) and ready for review. All four CI checks passed on `92717a0`; a subsequent review identified one valid transport-ownership issue, fixed in `0858830` and verified locally. The other six findings are rejected with evidence below. CI/review checkpoints are pinned below; the PR's current checks govern final-head merge eligibility. The PR is not merged; later layers remain queued.
+Status: T2 landed in [PR #44](https://github.com/BasuruK/goldfin/pull/44), merged as `d4863ad` after all four checks passed on `1186065`. T3 storage/jobs is in progress on `feature/basuruk/34-save-attempt-storage`, based on that merged main. Later layers remain queued. Repeated OCR comments already dispositioned below are resolved without another code-change cycle, per user instruction.
 
 ## Objective and sources
 
@@ -100,7 +100,7 @@ Done when #34 acceptance passes on the integrated main and every replacement has
 
 ### T2 implementation ticket — Web Request provider check
 
-**Parent:** #34. **Layer:** provider client only. **Blocked by:** none (T0/T1 settled). **Status:** implemented and verified; [PR #44](https://github.com/BasuruK/goldfin/pull/44) is ready for review, not merged. All four CI checks passed on `92717a0`; local make check, race checks, and independent reviews passed after the transport-ownership fix `0858830`. Branch `feature/basuruk/34-web-request-provider-check`, based on main e5dd58b. Implementation commits: `2b8244b`, `a6e2d7a`; external-review fixes: `cb0069b`, `3a14043`, `474d8c6`, `923a73f`, `0858830`.
+**Parent:** #34. **Layer:** provider client only. **Status:** merged in [PR #44](https://github.com/BasuruK/goldfin/pull/44) as `d4863ad` on 2026-10-16. All four final checks passed on `1186065`; OCR reported zero findings, all 11 review threads were resolved, and the watch was stopped before handoff. CodeRabbit's last completed review covered `92717a0`; its follow-up hit a rate limit, while independent reviews covered the final fix. Implementation commits: `2b8244b`, `a6e2d7a`; external-review fixes: `cb0069b`, `3a14043`, `474d8c6`, `923a73f`, `0858830`.
 
 **Confirmed test seam:** local HTTP(S) fixtures observe HEAD, optional Bearer, request identity, status and cancellation. Production callers use an opaque `Client` created by `NewClient`; they cannot inject a transport that bypasses policy. Hardened-client tests exercise redirect/address policy; a private dial adapter tests stalled-address fallback without external connections. The address predicate has a table-driven test as required by CODING_STANDARDS.md.
 
@@ -170,6 +170,54 @@ Post-fix validation: **16 provider tests**, `go test -race ./internal/provider -
 | Timeout | The whole request, including redirects, is bounded; a deadline yields timeout and no Reachable finding. |
 | Stale reclaim/result | This function returns evidence only; it writes no active state. Claim-token fencing remains a required consumer obligation in T3/T4. |
 | Rollback after data exists | Failed HEAD returns no successful finding and changes no data; the later Save transaction owns rollback. |
+
+### T3 implementation ticket — checked-Save storage
+
+**Parent:** #34. **Layer:** database/jobs plus its Credential encryption primitive and migration entrypoint glue. **Base:** main `d4863ad0323a0425df906f21554fa8294c8a5521`. No worker execution, HTTP/API handlers, frontend, checked editing, deletion workflow, discovery, or model storage in this PR. Required CI database/generation setup accompanies the storage tests.
+
+**Pinned interface and test seams:** public storage methods stage/read an attempt, list active Connectors, claim work, complete or fail a held claim, and release it on shutdown. Test those methods against real isolated Postgres schemas. Inspect persisted bytes only for the storage obligations of encryption/cleanup and migration data fixtures; no mocked SQL or private-helper assertions. The Credential box has a public encrypt/decrypt seam; the future worker is its only production decryption caller. The embedded goose provider is the migration seam. These implement the already approved T3 tests and failure cases.
+
+**Contract:**
+
+- Stage only Web Request create proposals. Encrypt a supplied Credential under a 32-byte key with AES-GCM and a random nonce; require its label. Queueing writes no active Connector or generation. Return only the attempt handle; safe reads exclude ciphertext and claim tokens.
+- Persist the immutable name/base URL/proposed Credential until terminal completion. States remain queued/running/finished. A successful 2xx Reachable completion atomically creates the Connector and optional initial generation, records safe status/latency, and clears the candidate. Failure creates no active data and clears the candidate.
+- Use Postgres row locking/SKIP LOCKED and a fresh claim token per acquisition. Claims have a two-minute lease, at most five acquisitions, and a fifteen-minute absolute proposal expiry. Only a current, unexpired token can complete/fail/release, and a completion must affect exactly one row. Stale/duplicate writes fail explicitly. Claiming also terminalizes expired/exhausted attempts and clears their candidates.
+- Release a held claim to queued on shutdown; keep its immutable encrypted proposal for the next worker. Reclaim after a crash assigns a new token. The worker's later total budget must stay below the lease.
+- First schema contains only Connectors, Credential generations (including tombstone shape), and Save attempts. No fictitious Run references or speculative edit/delete API. Replace the no-op bootstrap with a fresh schema migration; disposable databases may be recreated rather than importing #38's discovery migration/history.
+- Use sqlc v1.31.1, resolved via Go/GitHub CLI and installed from the official SHA-256-verified release. Generate pgx/v5 queries; keep SQL authoritative. The migration provider owns embedded files and a Postgres session lock, replacing the entrypoint's global goose setup.
+
+**Disposable test setup:** dedicated container `goldfin-t3-storage-tests`, pinned main Postgres 16 image, loopback-only dynamic port, tmpfs data, test-only trust auth, database `goldfin_test`. Every test creates/drops only its own generated schema. No project/other database or volume reset. `TEST_DATABASE_URL` is required for the storage suite; CI supplies an isolated Postgres service so tests actually run. Stop the disposable container after validation. Fresh recreation is the reset procedure.
+
+- [x] Migration Up on empty schema; concurrent/repeated startup; Down with all three tables populated; cancelled migration remains retryable. A retry creates a fresh goose provider, matching a restarted command; goose caches failed initialization per instance. The migration regression passed three repeated runs after correcting that test assumption.
+- [x] Encryption round-trip, random nonces, invalid keys, wrong-key/tampered/truncated ciphertext rejection; no plaintext persistence. Explicit crypto/rand nonces keep the encryption path visible to strict gosec checks without exemptions.
+- [x] Staging and safe reads, optional Credential, atomic successful create, failed create and candidate cleanup.
+- [x] Competing claims/completions, shutdown release, stale lease/reclaim, absolute expiry and bounded exhaustion; stale/duplicate results cannot commit.
+- [x] Transaction rollback/cancel leaves active data absent and the attempt recoverable; tombstone retains generation identity/label while removing its ciphertext.
+- [ ] Generate/vet SQL, run required database tests without skips, make check, race checks, Standards/Spec review and host OCR; publish one storage-layer PR and update this ledger with actual evidence.
+
+Validation checkpoint before formal review: **12 jobs/migration tests plus 1 Credential-box test passed without skips**; `go test -race ./internal/jobs ./internal/secretbox -count=1` passed. `make check` passed with the disposable database, including pinned sqlc generation drift detection, the existing provider suite, 34 frontend unit tests, Svelte check, Knip, and lint/security gates. The real `go run ./cmd/goldfin migrate` command succeeded twice and produced the three expected tables. The entrypoint's provider-call replacement and CI service/Make recipes are trivial wiring; behavior is exercised through the migration provider and CLI smoke check rather than new glue unit tests. No UI screenshots, worker integration, or live outbound checks apply here.
+
+To reproduce locally in PowerShell (requires Docker; this creates only a temporary test database):
+
+```powershell
+docker run --rm -d --name goldfin-t3-storage-tests -p 127.0.0.1::5432 --tmpfs /var/lib/postgresql/data -e POSTGRES_USER=goldfin_test -e POSTGRES_DB=goldfin_test -e POSTGRES_HOST_AUTH_METHOD=trust postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+$goldfinTestPort = docker inspect goldfin-t3-storage-tests --format '{{(index (index .NetworkSettings.Ports "5432/tcp") 0).HostPort}}'
+$env:TEST_DATABASE_URL = "postgres://goldfin_test@127.0.0.1:$goldfinTestPort/goldfin_test?sslmode=disable"
+$env:API_URL = 'http://127.0.0.1:8080'
+make check
+docker stop goldfin-t3-storage-tests
+```
+
+The standard check tools still need to be on PATH. The tests fail clearly when their database is not configured; CI supplies its own fresh service. No migration version bypass or existing project-database reset was added.
+
+| Failure | Storage/migration behavior and planned evidence |
+| --- | --- |
+| Two writers | Real concurrent workers cannot share a claim or commit twice; two migration providers serialize startup. |
+| Mid-flight crash | Persisted proposal survives, stale lease can be reclaimed with a new token, bounded exhaustion removes the candidate. Migration transactions/history and session lock permit retry. |
+| Mid-flight shutdown | Fenced release requeues the same proposal; a cancelled database operation rolls back and a cancelled migration can retry. |
+| Timeout | DB contexts bound waits; expired lease/absolute TTL prevents late commit and terminal cleanup clears the candidate. |
+| Stale reclaim/result | Old tokens and duplicate completion/failure/release return claim-lost; successful current completion alone creates active data. |
+| Rollback after data exists | Induced completion failure rolls back Connector/generation/attempt together; Down succeeds with populated Connector, generation and attempt tables; later Up recreates clean schema. |
 
 ### 3. Later feature sequence
 
@@ -256,3 +304,4 @@ Apply these expectations to Web Request HEAD and later OpenAI completion checks,
 - 2026-10-16: PR #44's four checks passed on `09b919e`; inspected four external OCR comments and committed isolated red/green fixes for mandatory hardened-client ownership, TLS Credentials, effective redirect ports, and bounded address fallback. Retained scheme/hostname origin restrictions. Follow-up Standards/Spec reviews found 0 issues each; host OCR reviewed 2/2 production files with 0 new issues. All 15 provider tests, race detector, and full make check passed after `923a73f`; updated CI remains pending publication of the fixes.
 - 2026-10-16: All four GitHub checks passed on `ea0a24e`; OpenCodeReview reported 0 findings across 2 selected files. Resolved the two remaining fixed review threads (the other two were already resolved) and marked PR #44 ready for review. Published this final documentation-only ledger update; provider code is unchanged and no later layer or merge was performed. T3 watches the resulting final-head check run before handoff; do not create another ledger-only commit merely to advance its recorded CI hash.
 - 2026-10-16: All four checks passed on `92717a0`; CodeRabbit had no actionable comments, while OCR posted seven findings. Verified and rejected six against the contract/Go implementation. Fixed the mutable-default transport issue in `0858830` through a failing constructor regression and explicit transport ownership. Sixteen provider tests, race detector, and full make check passed; independent Standards/Spec and host OCR follow-up found no new issues. Recorded all seven dispositions before publishing the fix; no later-layer or merge work performed.
+- 2026-10-16: User merged #44 (`d4863ad`) and authorized the next task. Fetched main and created the separate T3 storage branch. Docker is available; started the dedicated tmpfs test Postgres container without touching any existing database/volume. Pinned the T3 interface, test seams, lease/expiry policy, and failure table before implementation.
