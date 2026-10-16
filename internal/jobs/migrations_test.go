@@ -40,7 +40,25 @@ func TestMigrationLifecycleWithPopulatedTables(t *testing.T) {
 	`).Scan(&label); err != nil || label != "Fixture label" {
 		t.Fatalf("tombstone must retain identity/label: %q, %v", label, err)
 	}
+	_, err = pool.Exec(t.Context(), `
+		INSERT INTO credential_generations (id, connector_id, label, ciphertext, state)
+		VALUES ('older', 'connector', 'Older label', decode(repeat('03', 32), 'hex'), 'superseded');
+		INSERT INTO connector_save_attempts (name, base_url, target_connector_id, base_revision, state, failure_code, expires_at)
+		VALUES ('Stale edit', 'https://example.com', 'connector', 1, 'finished', 'stale', now() + interval '1 hour');
+		INSERT INTO connector_save_attempts (name, base_url, target_connector_id, base_revision, expires_at)
+		VALUES ('Pending edit', 'https://example.com', 'connector', 1, now() + interval '1 hour');
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if _, err := provider.Down(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	var pending int
+	if err := pool.QueryRow(t.Context(), "SELECT count(*) FROM connector_save_attempts").Scan(&pending); err != nil || pending != 1 {
+		t.Fatalf("Down must drop edit attempts so none replay as creates: count=%d, error=%v", pending, err)
+	}
+	if _, err := provider.DownTo(t.Context(), 0); err != nil {
 		t.Fatal(err)
 	}
 	var tables int
