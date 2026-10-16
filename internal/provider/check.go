@@ -33,6 +33,9 @@ func (c *Client) CheckWebRequest(ctx context.Context, baseURL, credential string
 		return Finding{}, errors.New("could not build endpoint check")
 	}
 	if credential != "" {
+		if endpoint.Scheme != "https" {
+			return Finding{}, errors.New("credentials require an https endpoint")
+		}
 		req.Header.Set("Authorization", "Bearer "+credential)
 	}
 	started := time.Now()

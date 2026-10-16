@@ -63,11 +63,11 @@ func TestDialPublicBoundsDetachedConnectionWork(t *testing.T) {
 }
 
 func TestClientRedirectPolicy(t *testing.T) {
-	sink := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
+	sink := httptest.NewTLSServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		t.Error("redirect sent a request to a different origin")
 	}))
 	t.Cleanup(sink.Close)
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/same":
 			http.Redirect(w, r, "/done", http.StatusTemporaryRedirect)

@@ -12,7 +12,7 @@ import (
 )
 
 func TestCheckWebRequestSendsHEAD(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodHead || r.RequestURI != "/check?probe=1" {
 			t.Errorf("request: %s %s", r.Method, r.RequestURI)
 		}
@@ -46,8 +46,19 @@ func TestNewClientAlwaysEnforcesDestinationPolicy(t *testing.T) {
 	}
 }
 
-func TestCheckWebRequestRejectsUnsafeRequests(t *testing.T) {
+func TestCheckWebRequestRequiresTLSForCredential(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
+		t.Error("Credential request reached a plaintext endpoint")
+	}))
+	t.Cleanup(server.Close)
+	finding, err := (&Client{http: server.Client()}).CheckWebRequest(t.Context(), server.URL, "credential-canary")
+	if err == nil || finding.Kind != "" || strings.Contains(err.Error(), "credential-canary") {
+		t.Fatalf("plaintext Credential check: %+v, %v", finding, err)
+	}
+}
+
+func TestCheckWebRequestRejectsUnsafeRequests(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		t.Error("unsafe request reached the endpoint")
 	}))
 	t.Cleanup(server.Close)
@@ -108,7 +119,7 @@ func TestCheckWebRequestCancellationAndDeadline(t *testing.T) {
 }
 
 func TestCheckWebRequestRejectsFailedStatus(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusServiceUnavailable)
 	}))
 	t.Cleanup(server.Close)
@@ -152,7 +163,7 @@ func TestCheckWebRequestBoundsWholeRequest(t *testing.T) {
 }
 
 func TestConcurrentChecksKeepCredentialsAndFindingsIsolated(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Header.Get("Authorization") {
 		case "Bearer first-check":
 			w.WriteHeader(http.StatusOK)
