@@ -4,12 +4,15 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"errors"
 	"log/slog"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/BasuruK/goldfin/internal/testdb"
 )
 
 func TestSubcommand(t *testing.T) {
@@ -86,6 +89,9 @@ func TestRunAPIReturnsNilAfterCancel(t *testing.T) {
 }
 
 func TestRunAPIDoesNotLogListeningWhenBindFails(t *testing.T) {
+	pool, _ := testdb.New(t)
+	t.Setenv("DATABASE_URL", pool.Config().ConnConfig.ConnString())
+	t.Setenv("APP_KEY", base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{1}, 32)))
 	var logs bytes.Buffer
 	prev := slog.Default()
 	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, nil)))
@@ -97,8 +103,9 @@ func TestRunAPIDoesNotLogListeningWhenBindFails(t *testing.T) {
 	}
 	defer func() { _ = busy.Close() }()
 
-	if err := runAPI(t.Context(), busy.Addr().String()); err == nil {
-		t.Fatal("expected a bind error")
+	var bindError *net.OpError
+	if err := runAPI(t.Context(), busy.Addr().String()); !errors.As(err, &bindError) || bindError.Op != "listen" {
+		t.Fatalf("expected a bind error, got %v", err)
 	}
 	if bytes.Contains(logs.Bytes(), []byte("api listening")) {
 		t.Fatalf("logged listening although the bind failed: %s", logs.String())
