@@ -35,6 +35,7 @@ test('a successful Save polls to Reachable and lists the checked Connector', asy
   await dialog.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(dialog).toBeHidden();
   expect(api.polls).toBe(3);
+  expect(api.unexpectedPolls).toEqual([]);
   await expect(page.getByText(/Reachable \(200, 42ms\)\. Gateway is saved\./)).toBeVisible();
   expect(api.posts).toEqual([{
     name: 'Gateway',
