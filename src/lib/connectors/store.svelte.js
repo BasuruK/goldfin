@@ -175,14 +175,16 @@ export async function saveDraft() {
       }
     });
     if (token !== saveToken) return;
-    connectorStore.saveState = 'finished';
     if (finished.finding) {
+      if (token !== saveToken) return;
+      connectorStore.saveState = 'finished';
       connectorStore.saveNotice =
         `Reachable (${finished.finding.httpStatus}, ${finished.finding.latencyMs}ms). ${draft.name.trim()} is saved.`;
       // Close before refreshing: no window where the committed draft looks editable.
       closeDialog();
       await loadConnectorList();
     } else {
+      if (token !== saveToken) return;
       // A failed check keeps the draft editable so it can be corrected and retried.
       connectorStore.saveState = 'idle';
       const code = finished.failureCode ?? '';

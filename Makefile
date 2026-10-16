@@ -7,12 +7,13 @@ SQLC = go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
 
 .DEFAULT_GOAL := help
 
-.PHONY: help check generate up run watch down migrate logs
+.PHONY: help check lint generate up run watch down migrate logs
 
 help:
 	@echo "Goldfin local dev"
 	@echo ""
 	@echo "  make check    vet, lint, vulnerabilities, workflows, Go/unit tests, svelte-check, knip"
+	@echo "  make lint     build, vet, golangci-lint, svelte-check, knip"
 	@echo "  make generate Regenerate Go storage queries from SQL"
 	@echo "  make up       Start postgres, migrate, api, worker; wait until running/healthy"
 	@echo "  make run      up, then Vite on the host"
@@ -21,18 +22,20 @@ help:
 	@echo "  make migrate  Apply migrations"
 	@echo "  make logs     Follow api and worker logs"
 
-check:
-	$(SQLC) diff
+lint:
 	go build ./...
 	go vet ./...
 	golangci-lint run
+	pnpm check
+	pnpm knip
+
+check: lint
+	$(SQLC) diff
 	govulncheck ./...
 	zizmor .github/workflows
 	gitleaks detect --no-banner --redact
 	go test ./...
 	pnpm test:unit
-	pnpm check
-	pnpm knip
 
 generate:
 	$(SQLC) generate

@@ -33,6 +33,8 @@
   --duration-sidebar-padding: var(--duration-sidebar-exit);
   /* Collapsed hairline: nav-groups gap + top margin = bottom margin (see .nav-sep). */
   --rail-collapsed-sep-gap: 6px;
+  /* Vertical rhythm between top-level nav rows (Home → Integrations, etc.). */
+  --nav-group-gap: 14px;
 }
 
 /* ── frame ──────────────────────────────────────────────────────────────── */
@@ -172,7 +174,7 @@
 .nav-groups {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--nav-group-gap);
   min-block-size: 0;
   padding: 12px 8px 8px;
   overflow-y: auto;
@@ -265,7 +267,11 @@
 .nav-disclosure > svg { flex: none; inline-size: var(--nav-icon-size); block-size: var(--nav-icon-size); }
 .nav-chevron { margin-inline-start: auto; display: flex; }
 .nav-chevron[data-open='true'] { transform: rotate(180deg); }
-.nav-sublist { --nav-child-gap: 4px; margin-block-start: var(--nav-child-gap); margin-inline-start: 32px; }
+.nav-sublist {
+  --nav-child-gap: 4px;
+  margin-block-start: var(--nav-group-gap);
+  margin-inline-start: 32px;
+}
 .nav-sublist > li { position: relative; }
 .nav-sublist > li::before {
   content: '';
@@ -277,7 +283,7 @@
   border-inline-start: 1px solid var(--ufg3);
   border-block-end: 1px solid var(--ufg3);
   border-end-start-radius: 4px;
-  opacity: 0.8;
+  opacity: 0.4;
   pointer-events: none;
   z-index: 1;
 }

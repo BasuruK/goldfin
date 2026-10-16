@@ -18,7 +18,7 @@ test('static app shell loads with the approved dark theme', async ({ page }) => 
   const pageColor = await page.locator('body').evaluate((body) =>
     getComputedStyle(body).getPropertyValue('--ubg').trim()
   );
-  expect(pageColor).toContain('18.196%');
+  expect(pageColor).toContain('16.41%');
   expect(errors).toEqual([]);
 });
 

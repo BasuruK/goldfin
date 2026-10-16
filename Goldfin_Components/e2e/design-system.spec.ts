@@ -233,13 +233,13 @@ test('core tokens resolve in dark and light', async ({ page }) => {
   await page.evaluate(() => document.body.removeAttribute('data-theme'));
   const dark = await read();
   expect(dark.scheme).toBe('dark');
-  expect(dark.bg).toBe('oklch(0.18196 0.0044 264.46)');   // --ubg dark, #111214
+  expect(dark.bg).toBe('oklch(0.1641 0.0044 84.59)');     // --ubg dark, #0f0e0c
   expect(dark.fg).toBe('oklch(0.96696 0.0029 264.54)');  // --ufg dark, #f3f4f6
 
   await page.evaluate(() => document.body.setAttribute('data-theme', 'light'));
   const light = await read();
   expect(light.scheme).toBe('light');
-  expect(light.bg).toBe('oklch(1 0 none)');               // --ubg light, #ffffff
+  expect(light.bg).toBe('oklch(0.9881 0 0)');             // --ubg light, #fbfbfb
 
   expect(light.bg).not.toBe(dark.bg);
 });

@@ -121,7 +121,7 @@ for (const theme of ['light', 'dark']) {
       expect(stem.horizontal).toBe('1px');
       expect(stem.height).toBeGreaterThan(10);
       expect(stem.end).toBe(-2);
-      expect(stem.opacity).toBe('0.8');
+      expect(stem.opacity).toBe('0.4');
       await page.locator('#primary-nav').screenshot({ path: `test-results/nav-${theme}-${viewport.width}.png` });
       if (viewport.width < 768) await page.getByRole('link', { name: 'Connectors', exact: true }).click();
       await page.getByRole('button', { name: 'Add connector', exact: true }).click();
