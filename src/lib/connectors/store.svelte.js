@@ -33,7 +33,7 @@ let listToken = 0;
  *   draft: ConnectorRecord | null,
  *   saveState: 'idle' | 'queued' | 'running' | 'finished',
  *   saveError: string,
- *   saveErrorField: 'name' | 'baseUrl' | 'credentialLabel' | null,
+ *   saveErrorField: 'name' | 'baseUrl' | 'credential' | 'credentialLabel' | null,
  *   saveNotice: string,
  *   legacyPresent: boolean,
  *   legacyError: string
@@ -109,7 +109,9 @@ export function patchDraft(patch) {
   const draft = connectorStore.draft;
   if (!draft) return;
   connectorStore.draft = { ...applyConnectorPatch(draft, patch), updatedAt: new Date().toISOString() };
-  if (connectorStore.saveErrorField && connectorStore.saveErrorField in patch) {
+  // The draft calls the Credential field `apiKey`; validation calls it `credential`.
+  const errorField = connectorStore.saveErrorField === 'credential' ? 'apiKey' : connectorStore.saveErrorField;
+  if (errorField && errorField in patch) {
     connectorStore.saveError = '';
     connectorStore.saveErrorField = null;
   }

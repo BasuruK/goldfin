@@ -37,5 +37,6 @@ Read the matching target on turn 1 before exploring or editing that branch:
 1. **Sweep**: After a bug fix, grep Go and JS sides of the contract, the package, and sibling functions for the same shape and fix every match.
 2. **Visual**: Capture Playwright screenshots at `375px` and `1280px` for UI changes and verify spacing against `DESIGN.md` tokens.
 3. **Gate**: Run `make check` and resolve every failure until green.
-4. **Review**: Self-review against `CODING_STANDARDS.md`, run `/code-review`, then `/open-code-review-delegate`. Verify findings against docs and `make check`, apply valid in-seam fixes in commits touching only flagged lines, and reject invalid ones with a one-line reason. If a finding recurs, stop patching and simplify or ask.
+4. **Review**: The local trio is the gate, run once each before push: self-review against `CODING_STANDARDS.md`, `/code-review` (Spec and Standards), `/open-code-review-delegate`. CodeRabbit (`.coderabbit.yaml`) is the only hosted reviewer; OpenCodeReview runs locally only. On the PR, fix `bug`/`security` findings and disposition every other finding in one batch (accept as a tracked issue, or reject with a one-line reason), in at most one fix round. Verify every applied finding against docs and `make check`, in commits touching only flagged lines. A finding that recurs after one round means the seam is wrong: simplify or ask.
 5. **Handoff**: If work *outside* the seam remains, end with one question: `"Fix X too?"`
+- **Criterion**: Local trio green before push; external review closed after at most one fix round.

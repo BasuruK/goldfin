@@ -263,6 +263,17 @@ describe('validateSaveDraft', () => {
     assert.equal(validateSaveDraft({ ...draft, credential: 'secret', credentialLabel: 'Prod' }), null);
   });
 
+  it('rejects control characters in the Credential before they reach a header', () => {
+    for (const credential of ['tok\r\nen', 'tok\u0000en', 'tok\u0085en', 'tok\ten']) {
+      assert.deepEqual(
+        validateSaveDraft({ ...draft, credential, credentialLabel: 'Prod' }),
+        { field: 'credential', message: 'Remove control characters from the API Key.' },
+        JSON.stringify(credential)
+      );
+    }
+    assert.equal(validateSaveDraft({ ...draft, credential: 'tok en-._~', credentialLabel: 'Prod' }), null);
+  });
+
   it('mirrors the API URL rules so rejection is field-level, not opaque', () => {
     assert.deepEqual(
       validateSaveDraft({ ...draft, baseUrl: 'https://user:token@example.com/x' }),

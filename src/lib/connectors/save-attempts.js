@@ -248,7 +248,7 @@ export async function pollSaveAttempt(id, options = {}) {
 
 /**
  * @param {SaveDraft} draft
- * @returns {{ field: 'name' | 'baseUrl' | 'credentialLabel', message: string } | null}
+ * @returns {{ field: 'name' | 'baseUrl' | 'credential' | 'credentialLabel', message: string } | null}
  */
 export function validateSaveDraft(draft) {
   if (!draft.name.trim()) return { field: 'name', message: 'Name is required.' };
@@ -276,6 +276,9 @@ export function validateSaveDraft(draft) {
   }
   if (draft.credential !== '' && url.protocol !== 'https:') {
     return { field: 'baseUrl', message: 'Use https when a Credential is set.' };
+  }
+  if (/[\p{Cc}]/u.test(draft.credential)) {
+    return { field: 'credential', message: 'Remove control characters from the API Key.' };
   }
   if (draft.credential !== '' && !draft.credentialLabel.trim()) {
     return { field: 'credentialLabel', message: 'A label is required when a Credential is set.' };

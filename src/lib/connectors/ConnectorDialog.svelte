@@ -60,7 +60,7 @@
     return '';
   });
 
-  /** @param {'name' | 'baseUrl' | 'credentialLabel'} field */
+  /** @param {'name' | 'baseUrl' | 'credential' | 'credentialLabel'} field */
   function fieldError(field) {
     return connectorStore.saveErrorField === field ? connectorStore.saveError : '';
   }
@@ -119,6 +119,7 @@
               placeholder={record.providerType === 'web_request' ? 'Optional' : 'sk-…'}
               description={record.providerType === 'web_request' ? 'Optional for public endpoints.' : ''}
               disabled={fieldsDisabled}
+              error={fieldError('credential')}
             />
             {#if record.apiKey}
               <Input
