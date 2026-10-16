@@ -1,6 +1,7 @@
 # Local dev. Requires: docker, go, pnpm, and a repo-root `.env` (cp .env.example .env).
 # Checks also require golangci-lint, govulncheck, zizmor and gitleaks (CI installs pinned versions).
-# Storage tests require TEST_DATABASE_URL pointing to a disposable *_test or *_tests database.
+# `make check` fails unless TEST_DATABASE_URL points to a disposable *_test or *_tests database.
+# See TASKS.md, "T3 implementation ticket", for its isolated Docker setup and cleanup commands.
 
 SQLC = go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
 

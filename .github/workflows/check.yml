@@ -31,7 +31,7 @@ jobs:
         ports:
           - "127.0.0.1:5432:5432"
         options: >-
-          --health-cmd "pg_isready -U goldfin_test -d goldfin_test"
+          --health-cmd "pg_isready -h 127.0.0.1 -U goldfin_test -d goldfin_test"
           --health-interval 2s
           --health-timeout 5s
           --health-retries 15
