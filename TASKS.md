@@ -419,6 +419,8 @@ All four checks passed on `635a20f`. OpenCodeReview posted six findings, all on 
 
 Post-fix validation: `svelte-check` 0 errors/0 warnings and the full Playwright suite passes (**50 tests**). Test-infrastructure only; no production code changed.
 
+Second round on `a97e545` (all four checks passed): OpenCodeReview posted five more findings on the same helper. Each verified as valid and fixed in one pass — the mock now imports `SAVE_ATTEMPTS_PATH`/`CONNECTORS_PATH` from the client instead of duplicating literals, rejects unexpected HTTP verbs with 405, throws (failing the spec) on a poll for an unconfigured handle instead of simulating a 404 no spec could trigger, keys the `savedOnSuccess` insert on `connectorId` matching so the worker-linkage contract is actually exercised, and drops the dead `next?.` in favor of a loud empty-attempts guard (which also satisfies strict indexing). Follow-up validation: `svelte-check` 0/0, Knip clean, full Playwright suite **50 passed**. Still test-infrastructure only.
+
 **Failure table:**
 
 | Case | Frontend behavior / evidence |
