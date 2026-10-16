@@ -13,7 +13,6 @@ import {
 /** @typedef {import('./storage.js').ConnectorRecord} ConnectorRecord */
 /** @typedef {import('./providers.js').ProviderType} ProviderType */
 /** @typedef {import('./save-attempts.js').SavedConnector} SavedConnector */
-/** @typedef {import('./save-attempts.js').ReachableFinding} ReachableFinding */
 
 const FAILURE_MESSAGES = {
   unreachable: 'The worker could not reach this endpoint. Check the Base URL, then try again.',
@@ -102,12 +101,13 @@ export function closeDialog() {
 export function disposeConnectorsPage() {
   closeDialog();
   listToken += 1;
+  connectorStore.saveNotice = '';
 }
 
 /** @param {Partial<ConnectorRecord>} patch */
 export function patchDraft(patch) {
   const draft = connectorStore.draft;
-  if (!draft || connectorStore.saveState === 'finished') return;
+  if (!draft) return;
   connectorStore.draft = { ...applyConnectorPatch(draft, patch), updatedAt: new Date().toISOString() };
   if (connectorStore.saveErrorField && connectorStore.saveErrorField in patch) {
     connectorStore.saveError = '';
@@ -183,9 +183,10 @@ export async function saveDraft() {
     } else {
       // A failed check keeps the draft editable so it can be corrected and retried.
       connectorStore.saveState = 'idle';
-      connectorStore.saveError =
-        FAILURE_MESSAGES[/** @type {keyof typeof FAILURE_MESSAGES} */ (finished.failureCode)] ??
-        'The check failed. Review the Connector details, then try again.';
+      const code = finished.failureCode ?? '';
+      connectorStore.saveError = Object.hasOwn(FAILURE_MESSAGES, code)
+        ? FAILURE_MESSAGES[/** @type {keyof typeof FAILURE_MESSAGES} */ (code)]
+        : 'The check failed. Review the Connector details, then try again.';
     }
   } catch (error) {
     if (token !== saveToken || (error instanceof Error && error.name === 'AbortError')) return;
@@ -221,7 +222,7 @@ export async function previewDraftModels() {
     result = { state: 'failed', message: 'Could not load the preview. Try again.' };
   }
   const current = connectorStore.draft;
-  if (!current) return;
+  if (!current || current.id !== draft.id) return;
   const finished = finishDiscovery(current, loading.discoveryRevision, result);
   if (finished !== current) connectorStore.draft = finished;
 }

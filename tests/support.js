@@ -51,8 +51,10 @@ export async function mockConnectorApi(page, options = {}) {
     if (requestedId !== attemptId) {
       throw new Error(`mockConnectorApi: unexpected poll for "${requestedId}", expected "${attemptId}"`);
     }
-    const next = attempts.length > 1 ? attempts.shift() : attempts[0];
-    if (!next) throw new Error('mockConnectorApi: attempts must not be empty');
+    // Non-empty by construction: the setup guard rejects an empty `attempts`.
+    const next = /** @type {import('../src/lib/connectors/save-attempts.js').SaveAttempt} */ (
+      attempts.length > 1 ? attempts.shift() : attempts[0]
+    );
     if (next.state === 'finished' && next.finding && options.savedOnSuccess && next.connectorId === options.savedOnSuccess.id) {
       const saved = options.savedOnSuccess;
       if (!state.connectors.some(entry => entry.id === saved.id)) {

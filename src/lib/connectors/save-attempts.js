@@ -102,7 +102,11 @@ function isNonEmptyString(value) {
 function parseAttempt(body) {
   if (!body || typeof body !== 'object') throw new SaveAttemptError('malformed', MESSAGES.malformed);
   const attempt = /** @type {Record<string, unknown>} */ (body);
-  if (!isNonEmptyString(attempt.id) || !['queued', 'running', 'finished'].includes(String(attempt.state))) {
+  if (
+    !isNonEmptyString(attempt.id) ||
+    typeof attempt.state !== 'string' ||
+    !['queued', 'running', 'finished'].includes(attempt.state)
+  ) {
     throw new SaveAttemptError('malformed', MESSAGES.malformed);
   }
   /** @type {SaveAttempt} */
@@ -218,20 +222,26 @@ export async function pollSaveAttempt(id, options = {}) {
   const deadline = Date.now() + deadlineMs;
   for (;;) {
     if (options.signal?.aborted) throw options.signal.reason ?? new DOMException('Aborted', 'AbortError');
-    const attempt = await getSaveAttempt(id, { signal: options.signal });
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) throw new SaveAttemptError('timeout', MESSAGES.timeout);
+    const attempt = await getSaveAttempt(id, {
+      signal: options.signal,
+      timeoutMs: Math.min(REQUEST_TIMEOUT_MS, remaining)
+    });
     options.onUpdate?.(attempt);
     if (attempt.state === 'finished') return attempt;
     if (Date.now() + intervalMs > deadline) throw new SaveAttemptError('timeout', MESSAGES.timeout);
     await new Promise((resolve, reject) => {
-      const timer = setTimeout(resolve, intervalMs);
-      options.signal?.addEventListener(
-        'abort',
-        () => {
-          clearTimeout(timer);
-          reject(options.signal?.reason ?? new DOMException('Aborted', 'AbortError'));
-        },
-        { once: true }
-      );
+      const signal = options.signal;
+      const onAbort = () => {
+        clearTimeout(timer);
+        reject(signal?.reason ?? new DOMException('Aborted', 'AbortError'));
+      };
+      const timer = setTimeout(() => {
+        signal?.removeEventListener('abort', onAbort);
+        resolve(undefined);
+      }, intervalMs);
+      signal?.addEventListener('abort', onAbort, { once: true });
     });
   }
 }
@@ -251,6 +261,21 @@ export function validateSaveDraft(draft) {
   }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
     return { field: 'baseUrl', message: 'Enter a valid http(s) URL.' };
+  }
+  if (url.username || url.password) {
+    return { field: 'baseUrl', message: 'Remove the username or password from the URL.' };
+  }
+  if (url.hash) {
+    return { field: 'baseUrl', message: 'Remove the # fragment from the URL.' };
+  }
+  const secretKeys = ['api_key', 'token', 'access_token', 'sig', 'key', 'subscription-key', 'x-amz-signature'];
+  for (const key of url.searchParams.keys()) {
+    if (secretKeys.includes(key.toLowerCase())) {
+      return { field: 'baseUrl', message: 'Remove secret query parameters from the URL.' };
+    }
+  }
+  if (draft.credential !== '' && url.protocol !== 'https:') {
+    return { field: 'baseUrl', message: 'Use https when a Credential is set.' };
   }
   if (draft.credential !== '' && !draft.credentialLabel.trim()) {
     return { field: 'credentialLabel', message: 'A label is required when a Credential is set.' };

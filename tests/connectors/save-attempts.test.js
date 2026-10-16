@@ -145,6 +145,16 @@ describe('getSaveAttempt', () => {
     });
     mock.restoreAll();
   });
+
+  it('rejects a non-string state without coercion', async () => {
+    mockFetch(async () => jsonResponse(200, { id: 'a1', state: ['queued'] }));
+    await assert.rejects(getSaveAttempt('a1'), (error) => {
+      assert.ok(error instanceof SaveAttemptError);
+      assert.equal(error.kind, 'malformed');
+      return true;
+    });
+    mock.restoreAll();
+  });
 });
 
 describe('listConnectors', () => {
@@ -204,6 +214,26 @@ describe('pollSaveAttempt', () => {
     mock.restoreAll();
   });
 
+  it('bounds an in-flight poll by the remaining deadline, not the request timeout', async () => {
+    mockFetch(async (/** @type {string} */ _url, /** @type {RequestInit | undefined} */ init) => {
+      const signal = init?.signal;
+      await new Promise((_resolve, reject) => {
+        signal?.addEventListener('abort', () => reject(signal.reason ?? new DOMException('Aborted', 'AbortError')));
+      });
+    });
+    const started = Date.now();
+    await assert.rejects(
+      pollSaveAttempt('a1', { intervalMs: 1, deadlineMs: 30 }),
+      (error) => {
+        assert.ok(error instanceof SaveAttemptError);
+        assert.equal(error.kind, 'timeout');
+        return true;
+      }
+    );
+    assert.ok(Date.now() - started < 2_000, 'poll must not wait out the 10s request timeout');
+    mock.restoreAll();
+  });
+
   it('stops when the caller aborts', async () => {
     mockFetch(async () => jsonResponse(200, { id: 'a1', state: 'running' }));
     const controller = new AbortController();
@@ -231,5 +261,31 @@ describe('validateSaveDraft', () => {
       { field: 'credentialLabel', message: 'A label is required when a Credential is set.' }
     );
     assert.equal(validateSaveDraft({ ...draft, credential: 'secret', credentialLabel: 'Prod' }), null);
+  });
+
+  it('mirrors the API URL rules so rejection is field-level, not opaque', () => {
+    assert.deepEqual(
+      validateSaveDraft({ ...draft, baseUrl: 'https://user:token@example.com/x' }),
+      { field: 'baseUrl', message: 'Remove the username or password from the URL.' }
+    );
+    assert.deepEqual(
+      validateSaveDraft({ ...draft, baseUrl: 'https://example.com/x#frag' }),
+      { field: 'baseUrl', message: 'Remove the # fragment from the URL.' }
+    );
+    assert.deepEqual(
+      validateSaveDraft({ ...draft, baseUrl: 'http://example.com/x', credential: 'secret', credentialLabel: 'Prod' }),
+      { field: 'baseUrl', message: 'Use https when a Credential is set.' }
+    );
+    for (const key of ['api_key', 'Token', 'X-Amz-Signature', 'subscription-key']) {
+      assert.deepEqual(
+        validateSaveDraft({ ...draft, baseUrl: `https://example.com/x?${key}=v` }),
+        { field: 'baseUrl', message: 'Remove secret query parameters from the URL.' },
+        key
+      );
+    }
+    assert.equal(
+      validateSaveDraft({ ...draft, baseUrl: 'https://example.com/x?sig2=v&page=1', credential: 'secret', credentialLabel: 'Prod' }),
+      null
+    );
   });
 });
