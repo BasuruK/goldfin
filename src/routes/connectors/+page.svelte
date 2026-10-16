@@ -1,5 +1,4 @@
 <script>
-  import { beforeNavigate } from '$app/navigation';
   import { onDestroy, onMount } from 'svelte';
   import { Button, Icon, Section } from '$goldfin/lib/index.js';
   import ConnectorCard from '#lib/connectors/ConnectorCard.svelte';
@@ -11,15 +10,6 @@
     loadConnectorList,
     openAddDialog
   } from '#lib/connectors/store.svelte.js';
-
-  /** @param {URL} url */
-  function isConnectorsPath(url) {
-    return url.pathname.replace(/\/$/, '') === '/connectors';
-  }
-
-  beforeNavigate(({ from }) => {
-    if (from && isConnectorsPath(from.url)) disposeConnectorsPage();
-  });
 
   onMount(() => {
     void loadConnectorList();
