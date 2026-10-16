@@ -6,11 +6,12 @@ import (
 	"time"
 
 	"github.com/BasuruK/goldfin/db/migrations"
+	"github.com/BasuruK/goldfin/internal/testdb"
 	"github.com/pressly/goose/v3/lock"
 )
 
 func TestMigrationLifecycleWithPopulatedTables(t *testing.T) {
-	pool, db := newTestDatabase(t)
+	pool, db := testdb.New(t)
 	provider, err := migrations.NewProvider(db)
 	if err != nil {
 		t.Fatal(err)
@@ -56,7 +57,7 @@ func TestMigrationLifecycleWithPopulatedTables(t *testing.T) {
 }
 
 func TestMigrationLockCancellationAndConcurrentStartup(t *testing.T) {
-	_, db := newTestDatabase(t)
+	_, db := testdb.New(t)
 	provider, err := migrations.NewProvider(db)
 	if err != nil {
 		t.Fatal(err)
