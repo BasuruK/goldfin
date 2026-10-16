@@ -14,7 +14,7 @@ help:
 	@echo ""
 	@echo "  make check    vet, lint, vulnerabilities, workflows, Go/unit tests, svelte-check, knip"
 	@echo "  make generate Regenerate Go storage queries from SQL"
-	@echo "  make up       Start postgres, migrate, api, worker; wait until healthy"
+	@echo "  make up       Start postgres, migrate, api, worker; wait until running/healthy"
 	@echo "  make run      up, then Vite on the host"
 	@echo "  make watch    Rebuild api and worker on Go changes"
 	@echo "  make down     Stop all services"
