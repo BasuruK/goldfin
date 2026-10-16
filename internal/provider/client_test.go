@@ -1,12 +1,17 @@
 package provider
 
 import (
+	"context"
+	"errors"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
 	"net/url"
 	"strings"
+	"syscall"
 	"testing"
+	"time"
 )
 
 func TestBlockedAddr(t *testing.T) {
@@ -38,6 +43,22 @@ func TestBlockedAddr(t *testing.T) {
 		if got := blockedAddr(addr); got != tc.blocked {
 			t.Errorf("%q: blocked=%v, want %v", tc.address, got, tc.blocked)
 		}
+	}
+}
+
+func TestDialPublicBoundsDetachedConnectionWork(t *testing.T) {
+	controlled := false
+	dialer := &net.Dialer{ControlContext: func(ctx context.Context, _, _ string, _ syscall.RawConn) error {
+		controlled = true
+		deadline, ok := ctx.Deadline()
+		if !ok || time.Until(deadline) > 10*time.Second {
+			t.Error("DNS and connection attempts need their own total dial deadline")
+		}
+		return errors.New("fixture stops before any external connection")
+	}}
+	_, err := dialPublic(context.WithoutCancel(t.Context()), dialer, "tcp", "8.8.8.8:443")
+	if err == nil || !controlled {
+		t.Fatalf("socket fixture not reached: %v", err)
 	}
 }
 

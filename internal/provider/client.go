@@ -10,12 +10,14 @@ import (
 	"time"
 )
 
+const dialTimeout = 10 * time.Second
+
 // DefaultHTTPClient is shared by the worker; its owner closes idle connections.
 func DefaultHTTPClient() *http.Client {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	// Environment proxies must not bypass validation of the actual destination.
 	transport.Proxy = nil
-	dialer := &net.Dialer{Timeout: 10 * time.Second}
+	dialer := &net.Dialer{Timeout: dialTimeout}
 	transport.DialContext = func(ctx context.Context, network, address string) (net.Conn, error) {
 		return dialPublic(ctx, dialer, network, address)
 	}
@@ -36,6 +38,9 @@ func DefaultHTTPClient() *http.Client {
 }
 
 func dialPublic(ctx context.Context, dialer *net.Dialer, network, address string) (net.Conn, error) {
+	// Transport detaches dials from requests; bound DNS and all address attempts together.
+	ctx, cancel := context.WithTimeout(ctx, dialTimeout)
+	defer cancel()
 	host, port, err := net.SplitHostPort(address)
 	if err != nil {
 		return nil, err
