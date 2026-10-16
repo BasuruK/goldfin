@@ -1,6 +1,6 @@
 # PR #38 recovery plan
 
-Status: execution authorized on 2026-10-16; validation setup is in progress, followed by the provider-client replacement. Update this file as each task finishes, recording commands, results, and remaining blockers.
+Status: T0/T1 settled; T2 provider-client implementation and required local checks/reviews complete, ready for its replacement PR. Later layers remain queued. Update this file as each task finishes, recording commands, results, and remaining blockers.
 
 ## Objective and sources
 
@@ -100,16 +100,32 @@ Done when #34 acceptance passes on the integrated main and every replacement has
 
 ### T2 implementation ticket — Web Request provider check
 
-**Parent:** #34. **Layer:** provider client only. **Blocked by:** none (T0/T1 settled). **Status:** implemented; full make check and race detector passed; required reviews pending. Branch `feature/basuruk/34-web-request-provider-check`, based on main e5dd58b.
+**Parent:** #34. **Layer:** provider client only. **Blocked by:** none (T0/T1 settled). **Status:** implemented and locally verified; PR publication pending. Branch `feature/basuruk/34-web-request-provider-check`, based on main e5dd58b. Implementation commits: `2b8244b`, `a6e2d7a`.
 
 **Confirmed test seam:** the provider HTTP interface already selected in the plan: local HTTP fixtures observe HEAD, optional Bearer, request identity, status and cancellation; hardened-client tests exercise redirect/address policy. The address predicate has a table-driven test as required by CODING_STANDARDS.md.
 
 - [x] Supply one reusable hardened HTTP client: no environment proxy, validate all resolved destination addresses, connect to the validated address rather than resolving again, same-origin redirects only with a finite hop limit, and a bounded request deadline. Preserve HEAD's HTTP(S) contract and keep DNS/address restrictions enforced for both schemes.
 - [x] A Web Request check sends HEAD to the configured URL/path/query, adds Authorization: Bearer only for a supplied Credential, closes its response, and returns a Reachable finding only for 2xx. HEAD requires no response body; no catalog/body-parsing infrastructure added.
 - [x] The finding carries only bounded HTTP status and elapsed time plus the proven depth. Error strings contain no Credential, raw URL, provider body, or raw transport exception. Cancellation/deadline remain distinguishable.
-- [x] Tests cover successful/failed status, optional auth, malformed URL/headers, blocked destinations, redirect changes/loops, deadline/cancellation, and safe errors. Observed red/green slices for missing checker, absent-Credential header, failed status, unsafe errors, missing deadline, missing client/address predicate, and missing redirect/special-address protections. Ten focused tests pass, including concurrent isolation; race detector and focused lint pass.
+- [x] Tests cover successful/failed status, optional auth, malformed URL/headers, blocked destinations, redirect changes/loops, deadline/cancellation, and safe errors. Observed red/green slices for missing checker, absent-Credential header, failed status, unsafe errors, missing deadline, missing client/address predicate, and missing redirect/special-address protections. A further regression test exposed the detached dial budget and went red/green. Eleven provider tests pass, including concurrent isolation; race detector and full make check pass after the review fix.
 - [x] No database, job runner, API, UI, discovery, or OpenAI implementation in this replacement. No new dependency added.
-- [ ] Pass make check, self-review, code-review and OCR delegation review; record evidence and commit the replacement separately.
+- [x] Pass make check, self-review, code-review and OCR delegation review; record evidence and commit the replacement separately. No UI screenshots/browser checks apply to this provider-only diff; no live provider calls or database migration tests are claimed.
+
+#### Standards
+
+No findings in the independent Standards review of `e5dd58b...2b8244b`. All five changed files were reviewed; the bodyless HEAD finding follows ADR 0012. No actionable code smells reported.
+
+#### Spec
+
+No findings in the independent Spec review of `e5dd58b...2b8244b`. T2's HEAD/auth, safe findings, timeouts, cancellation, destinations, redirects, and resource ownership match the scoped ticket. No later-layer completion claimed.
+
+#### OCR delegation review
+
+OCR v1.13.0 selected `check.go` and `client.go`; host reviewed both against its resolved Go rules. Coverage: 2 reviewable files, 2 reviewed, 0 skipped (100%); TASKS.md was excluded as unsupported extension and both test files by the default path filter. The independent axes reviewed those excluded files too.
+
+One valid medium-severity finding: `client.go` custom DNS lookup/address loop inherited Transport's detached dial context; individual socket timeouts did not bound the whole dial path. Verified against installed Go transport source. Added `TestDialPublicBoundsDetachedConnectionWork`, observed it fail, then added one shared dial deadline in `a6e2d7a`; the socket-control fixture stops before any external connection. Rechecked both production files after the fix. No unresolved findings, rejected findings, or trivial-glue test exemptions.
+
+Review totals: Standards 0; Spec 0; OCR 1 resolved. Final full make check and provider race test passed after the fix. Existing Svelte alias/path sync diagnostics and zizmor offline-mode notice are unchanged from main.
 
 | Failure | Required provider-client behavior / evidence |
 | --- | --- |
