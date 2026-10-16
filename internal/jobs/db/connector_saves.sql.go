@@ -78,10 +78,14 @@ UPDATE connector_save_attempts
 SET state = 'finished', claim_token = NULL, candidate_ciphertext = NULL,
     failure_code = CASE WHEN expires_at <= clock_timestamp() THEN 'expired' ELSE 'attempts_exhausted' END,
     updated_at = clock_timestamp()
-WHERE state IN ('queued', 'running')
-  AND (expires_at <= clock_timestamp()
-       OR (claim_attempts >= $1::integer AND
-           (state = 'queued' OR updated_at <= clock_timestamp() - $2::double precision * interval '1 second')))
+WHERE id IN (
+    SELECT id FROM connector_save_attempts
+    WHERE state IN ('queued', 'running')
+      AND (expires_at <= clock_timestamp()
+           OR (claim_attempts >= $1::integer AND
+               (state = 'queued' OR updated_at <= clock_timestamp() - $2::double precision * interval '1 second')))
+    FOR UPDATE SKIP LOCKED
+)
 `
 
 type ExpireAttemptsParams struct {

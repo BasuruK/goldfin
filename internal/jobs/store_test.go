@@ -332,28 +332,62 @@ func TestConcurrentWorkersCannotShareOrCompleteAClaimTwice(t *testing.T) {
 }
 
 func TestClaimSkipsLockedProposal(t *testing.T) {
-	store, pool := newTestStore(t)
-	first, err := store.Stage(t.Context(), jobs.Proposal{Name: "First", BaseURL: "https://example.com"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	second, err := store.Stage(t.Context(), jobs.Proposal{Name: "Second", BaseURL: "https://example.com"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	blocker, err := pool.Begin(t.Context())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = blocker.Rollback(t.Context()) }()
-	if _, err := blocker.Exec(t.Context(), "SELECT id FROM connector_save_attempts WHERE id = $1 FOR UPDATE", first); err != nil {
-		t.Fatal(err)
-	}
-	ctx, cancel := context.WithTimeout(t.Context(), time.Second)
-	defer cancel()
-	claim, err := store.ClaimNext(ctx)
-	if err != nil || claim.ID != second {
-		t.Fatalf("locked work blocked the queue: %+v, %v", claim, err)
+	for _, tt := range []struct {
+		name, setup, failureCode string
+	}{
+		{name: "queued"},
+		{
+			name: "expired", failureCode: "expired",
+			setup: "UPDATE connector_save_attempts SET expires_at = clock_timestamp() - interval '1 second' WHERE id = $1",
+		},
+		{
+			name: "exhausted", failureCode: "attempts_exhausted",
+			setup: `UPDATE connector_save_attempts SET state = 'running', claim_token = gen_random_uuid()::text,
+				claim_attempts = 5, updated_at = clock_timestamp() - interval '3 minutes' WHERE id = $1`,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			store, pool := newTestStore(t)
+			first, err := store.Stage(t.Context(), jobs.Proposal{Name: "First", BaseURL: "https://example.com"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			second, err := store.Stage(t.Context(), jobs.Proposal{Name: "Second", BaseURL: "https://example.com"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tt.setup != "" {
+				if _, err := pool.Exec(t.Context(), tt.setup, first); err != nil {
+					t.Fatal(err)
+				}
+			}
+			blocker, err := pool.Begin(t.Context())
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = blocker.Rollback(t.Context()) }()
+			if _, err := blocker.Exec(t.Context(), "SELECT id FROM connector_save_attempts WHERE id = $1 FOR UPDATE", first); err != nil {
+				t.Fatal(err)
+			}
+			ctx, cancel := context.WithTimeout(t.Context(), time.Second)
+			defer cancel()
+			claim, err := store.ClaimNext(ctx)
+			if err != nil || claim.ID != second {
+				t.Fatalf("locked work blocked the queue: %+v, %v", claim, err)
+			}
+			if err := blocker.Rollback(t.Context()); err != nil {
+				t.Fatal(err)
+			}
+			if tt.failureCode != "" {
+				if _, err := store.ClaimNext(t.Context()); !errors.Is(err, jobs.ErrNoWork) {
+					t.Fatal(err)
+				}
+				attempt, err := store.Get(t.Context(), first)
+				if err != nil || attempt.State != "finished" || attempt.FailureCode != tt.failureCode {
+					t.Fatalf("unlocked candidate was not cleaned up: %+v, %v", attempt, err)
+				}
+			}
+		})
 	}
 }
 
