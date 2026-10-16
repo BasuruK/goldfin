@@ -1,190 +1,248 @@
-import { finishConnectionCheck, runConnectionCheck } from './connection-check.js';
-import { DEFAULT_PROVIDER_TYPE, defaultBaseUrlFor, defaultNameFor } from './providers.js';
-import { createEmptyConnector, loadConnectors, saveConnectors } from './storage.js';
 import { applyConnectorPatch, beginDiscovery, finishDiscovery, addManualModel, isCatalogEditable } from './models.js';
+import { DEFAULT_PROVIDER_TYPE, defaultBaseUrlFor, defaultNameFor } from './providers.js';
+import { clearLegacyData, createEmptyConnector, hasLegacyData } from './storage.js';
 import { previewModelCatalog } from './model-preview.js';
+import {
+  SaveAttemptError,
+  createSaveAttempt,
+  listConnectors,
+  pollSaveAttempt,
+  validateSaveDraft
+} from './save-attempts.js';
 
 /** @typedef {import('./storage.js').ConnectorRecord} ConnectorRecord */
 /** @typedef {import('./providers.js').ProviderType} ProviderType */
+/** @typedef {import('./save-attempts.js').SavedConnector} SavedConnector */
 
-const PERSIST_DEBOUNCE_MS = 300;
-/** @type {ReturnType<typeof setTimeout> | null} */
-let persistTimer = null;
+const FAILURE_MESSAGES = {
+  unreachable: 'The worker could not reach this endpoint. Check the Base URL, then try again.',
+  timeout: 'The check timed out before the endpoint answered. Try again.'
+};
 
-/** @param {ConnectorRecord[]} list @param {{ immediate?: boolean }} [options] */
-function persist(list, options = {}) {
-  if (options.immediate) {
-    if (persistTimer) {
-      clearTimeout(persistTimer);
-      persistTimer = null;
-    }
-    saveConnectors(list);
-    return;
-  }
-  if (persistTimer) clearTimeout(persistTimer);
-  persistTimer = setTimeout(() => {
-    persistTimer = null;
-    saveConnectors(list);
-  }, PERSIST_DEBOUNCE_MS);
-}
+/** @type {AbortController | null} */
+let saveController = null;
+let saveToken = 0;
+let listToken = 0;
 
-/** @param {ConnectorRecord} record @param {Partial<ConnectorRecord>} patch */
-function touch(record, patch) {
-  return { ...applyConnectorPatch(record, patch), updatedAt: new Date().toISOString() };
-}
-
-/** @param {unknown} value */
-function safeTrim(value) {
-  return typeof value === 'string' ? value.trim() : '';
-}
-
-/** @type {{ connectors: ConnectorRecord[], dialogOpen: boolean, editingId: string | null, adding: boolean }} */
+/**
+ * @type {{
+ *   connectors: SavedConnector[],
+ *   listState: 'idle' | 'loading' | 'loaded' | 'failed',
+ *   listError: string,
+ *   dialogOpen: boolean,
+ *   draft: ConnectorRecord | null,
+ *   saveState: 'idle' | 'queued' | 'running' | 'finished',
+ *   saveError: string,
+ *   saveErrorField: 'name' | 'baseUrl' | 'credential' | 'credentialLabel' | null,
+ *   saveNotice: string,
+ *   legacyPresent: boolean,
+ *   legacyError: string
+ * }}
+ */
 export const connectorStore = $state({
-  connectors: loadConnectors(),
+  connectors: [],
+  listState: 'idle',
+  listError: '',
   dialogOpen: false,
-  editingId: null,
-  adding: false
+  draft: null,
+  saveState: 'idle',
+  saveError: '',
+  saveErrorField: null,
+  saveNotice: '',
+  legacyPresent: hasLegacyData(),
+  legacyError: ''
 });
 
-/** @returns {ConnectorRecord | null} */
-export function editingConnector() {
-  if (!connectorStore.editingId) return null;
-  return connectorStore.connectors.find(c => c.id === connectorStore.editingId) ?? null;
+export async function loadConnectorList() {
+  const token = ++listToken;
+  connectorStore.listState = 'loading';
+  connectorStore.listError = '';
+  try {
+    const connectors = await listConnectors();
+    if (token !== listToken) return;
+    connectorStore.connectors = connectors;
+    connectorStore.listState = 'loaded';
+  } catch (error) {
+    if (token !== listToken) return;
+    connectorStore.listState = 'failed';
+    connectorStore.listError =
+      error instanceof SaveAttemptError ? error.message : 'Could not load Connectors. Try again.';
+  }
 }
 
 export function openAddDialog() {
   const draft = createEmptyConnector(DEFAULT_PROVIDER_TYPE);
   draft.name = defaultNameFor(DEFAULT_PROVIDER_TYPE);
   draft.baseUrl = defaultBaseUrlFor(DEFAULT_PROVIDER_TYPE);
-  connectorStore.connectors = [...connectorStore.connectors, draft];
-  connectorStore.editingId = draft.id;
-  connectorStore.adding = true;
+  connectorStore.draft = draft;
+  connectorStore.saveState = 'idle';
+  connectorStore.saveError = '';
+  connectorStore.saveErrorField = null;
+  connectorStore.saveNotice = '';
   connectorStore.dialogOpen = true;
-  persist(connectorStore.connectors, { immediate: true });
 }
 
-/** @param {string} id */
-export function openEditDialog(id) {
-  connectorStore.editingId = id;
-  connectorStore.adding = false;
-  connectorStore.dialogOpen = true;
+function abortSave() {
+  saveToken += 1;
+  saveController?.abort();
+  saveController = null;
 }
 
 export function closeDialog() {
+  abortSave();
   connectorStore.dialogOpen = false;
-  connectorStore.editingId = null;
-  connectorStore.adding = false;
-  persist(connectorStore.connectors, { immediate: true });
+  connectorStore.draft = null;
+  connectorStore.saveState = 'idle';
+  connectorStore.saveError = '';
+  connectorStore.saveErrorField = null;
 }
 
-/** @param {string} id */
-export function removeDraftIfEmpty(id) {
-  const record = connectorStore.connectors.find(c => c.id === id);
-  if (!record) return;
-  const nameDiffersFromDefault = safeTrim(record.name) !== defaultNameFor(record.providerType);
-  const hasContent =
-    safeTrim(record.apiKey) ||
-    safeTrim(record.baseUrl) !== defaultBaseUrlFor(record.providerType) ||
-    nameDiffersFromDefault;
-  if (!hasContent) {
-    connectorStore.connectors = connectorStore.connectors.filter(c => c.id !== id);
-    persist(connectorStore.connectors, { immediate: true });
+/** Leaving the page disposes in-flight work; late replies cannot mutate state. */
+export function disposeConnectorsPage() {
+  closeDialog();
+  listToken += 1;
+  connectorStore.saveNotice = '';
+}
+
+/** @param {Partial<ConnectorRecord>} patch */
+export function patchDraft(patch) {
+  const draft = connectorStore.draft;
+  if (!draft) return;
+  connectorStore.draft = { ...applyConnectorPatch(draft, patch), updatedAt: new Date().toISOString() };
+  // The draft calls the Credential field `apiKey`; validation calls it `credential`.
+  const errorField = connectorStore.saveErrorField === 'credential' ? 'apiKey' : connectorStore.saveErrorField;
+  if (errorField && errorField in patch) {
+    connectorStore.saveError = '';
+    connectorStore.saveErrorField = null;
   }
 }
 
-/** @param {string} id @param {Partial<ConnectorRecord>} patch @param {{ immediate?: boolean }} [options] */
-export function patchConnector(id, patch, options) {
-  connectorStore.connectors = connectorStore.connectors.map(c =>
-    c.id === id ? touch(c, patch) : c
-  );
-  persist(connectorStore.connectors, options);
-}
-
-/** @param {string} id @param {ProviderType} providerType */
-export function setProviderType(id, providerType) {
-  const current = connectorStore.connectors.find(c => c.id === id);
-  if (!current) return;
-  const wasDefault = current.baseUrl === defaultBaseUrlFor(current.providerType);
-  patchConnector(id, {
+/** @param {ProviderType} providerType */
+export function setDraftProviderType(providerType) {
+  const draft = connectorStore.draft;
+  if (!draft || draft.providerType === providerType) return;
+  const wasDefault = draft.baseUrl === defaultBaseUrlFor(draft.providerType);
+  patchDraft({
     providerType,
-    name: current.name === defaultNameFor(current.providerType) ? defaultNameFor(providerType) : current.name,
-    baseUrl: wasDefault || !safeTrim(current.baseUrl) ? defaultBaseUrlFor(providerType) : current.baseUrl,
-    connectionStatus: 'idle',
-    connectionMessage: ''
+    name: draft.name === defaultNameFor(draft.providerType) ? defaultNameFor(providerType) : draft.name,
+    baseUrl: wasDefault || !draft.baseUrl.trim() ? defaultBaseUrlFor(providerType) : draft.baseUrl
   });
 }
 
-/** @param {string} id */
-export function deleteConnector(id) {
-  connectorStore.connectors = connectorStore.connectors.filter(c => c.id !== id);
-  persist(connectorStore.connectors, { immediate: true });
-  if (connectorStore.editingId === id) {
-    closeDialog();
+export async function saveDraft() {
+  const draft = connectorStore.draft;
+  if (!draft || connectorStore.saveState === 'queued' || connectorStore.saveState === 'running') return;
+  if (draft.providerType !== 'web_request') {
+    connectorStore.saveError = 'Saving is not available for this provider yet. Only Web Request Connectors can be saved.';
+    connectorStore.saveErrorField = null;
+    return;
   }
-}
-
-/** @param {string} id */
-export async function testConnectorById(id) {
-  const record = connectorStore.connectors.find(c => c.id === id);
-  if (!record) return;
-  const requestId = crypto.randomUUID();
-
-  patchConnector(id, { connectionStatus: 'testing', connectionMessage: 'Checking…', checkRequestId: requestId }, {
-    immediate: true
+  const invalid = validateSaveDraft({
+    name: draft.name,
+    providerType: draft.providerType,
+    baseUrl: draft.baseUrl,
+    credential: draft.apiKey,
+    credentialLabel: draft.credentialLabel
   });
-  /** @type {import('./connection-check.js').CheckResult} */
-  let result;
+  if (invalid) {
+    connectorStore.saveError = invalid.message;
+    connectorStore.saveErrorField = invalid.field;
+    return;
+  }
+
+  const token = ++saveToken;
+  const controller = new AbortController();
+  saveController = controller;
+  connectorStore.saveState = 'queued';
+  connectorStore.saveError = '';
+  connectorStore.saveErrorField = null;
   try {
-    result = await runConnectionCheck({
-      baseUrl: record.baseUrl,
-      apiKey: record.apiKey,
-      providerType: record.providerType
+    const created = await createSaveAttempt(
+      {
+        name: draft.name,
+        providerType: draft.providerType,
+        baseUrl: draft.baseUrl,
+        credential: draft.apiKey,
+        credentialLabel: draft.credentialLabel
+      },
+      { signal: controller.signal }
+    );
+    if (token !== saveToken) return;
+    const finished = await pollSaveAttempt(created.id, {
+      signal: controller.signal,
+      onUpdate: attempt => {
+        if (token === saveToken) connectorStore.saveState = attempt.state;
+      }
     });
-  } catch {
-    result = {
-      status: 'failed',
-      message: 'Could not run the connection check. Try again.',
-      field: null
-    };
+    if (token !== saveToken) return;
+    connectorStore.saveState = 'finished';
+    if (finished.finding) {
+      connectorStore.saveNotice =
+        `Reachable (${finished.finding.httpStatus}, ${finished.finding.latencyMs}ms). ${draft.name.trim()} is saved.`;
+      // Close before refreshing: no window where the committed draft looks editable.
+      closeDialog();
+      await loadConnectorList();
+    } else {
+      // A failed check keeps the draft editable so it can be corrected and retried.
+      connectorStore.saveState = 'idle';
+      const code = finished.failureCode ?? '';
+      connectorStore.saveError = Object.hasOwn(FAILURE_MESSAGES, code)
+        ? FAILURE_MESSAGES[/** @type {keyof typeof FAILURE_MESSAGES} */ (code)]
+        : 'The check failed. Review the Connector details, then try again.';
+    }
+  } catch (error) {
+    if (token !== saveToken || (error instanceof Error && error.name === 'AbortError')) return;
+    connectorStore.saveState = 'idle';
+    connectorStore.saveError =
+      error instanceof SaveAttemptError ? error.message : 'Could not save the Connector. Try again.';
+  } finally {
+    if (saveController === controller) saveController = null;
   }
-  const current = connectorStore.connectors.find(c => c.id === id);
-  const finished = finishConnectionCheck(current, requestId, result, new Date().toISOString());
-  if (finished && finished !== current) patchConnector(id, finished, { immediate: true });
 }
 
-/** @param {string} id */
-export async function previewModelsById(id) {
-  const record = connectorStore.connectors.find(c => c.id === id);
-  if (!record) return;
-  const loading = beginDiscovery(record);
-  patchConnector(id, loading, { immediate: true });
+export function clearLegacyConnectors() {
+  if (!clearLegacyData()) {
+    connectorStore.legacyError = 'Could not clear the legacy data. Try again.';
+    return;
+  }
+  connectorStore.legacyPresent = hasLegacyData();
+  connectorStore.legacyError = connectorStore.legacyPresent
+    ? 'Could not clear the legacy data. Try again.'
+    : '';
+}
+
+export async function previewDraftModels() {
+  const draft = connectorStore.draft;
+  if (!draft) return;
+  const loading = beginDiscovery(draft);
+  connectorStore.draft = loading;
   /** @type {import('./models.js').CatalogResult} */
   let result;
   try {
-    result = await previewModelCatalog(record.providerType);
+    result = await previewModelCatalog(draft.providerType);
   } catch {
     result = { state: 'failed', message: 'Could not load the preview. Try again.' };
   }
-  const current = connectorStore.connectors.find(c => c.id === id);
-  if (!current) return;
+  const current = connectorStore.draft;
+  if (!current || current.id !== draft.id) return;
   const finished = finishDiscovery(current, loading.discoveryRevision, result);
-  if (finished !== current) patchConnector(id, finished, { immediate: true });
+  if (finished !== current) connectorStore.draft = finished;
 }
 
-/** @param {string} id @param {string} modelId @param {boolean} enabled */
-export function setModelEnabled(id, modelId, enabled) {
-  const record = connectorStore.connectors.find(c => c.id === id);
-  if (!record || !isCatalogEditable(record)) return;
-  patchConnector(id, {
-    models: (record.models ?? []).map(model => model.id === modelId ? { ...model, enabled } : model)
-  });
+/** @param {string} modelId @param {boolean} enabled */
+export function setDraftModelEnabled(modelId, enabled) {
+  const draft = connectorStore.draft;
+  if (!draft || !isCatalogEditable(draft)) return;
+  connectorStore.draft = {
+    ...draft,
+    models: (draft.models ?? []).map(model => (model.id === modelId ? { ...model, enabled } : model))
+  };
 }
 
-/** @param {string} id @param {string} value */
-export function addModelById(id, value) {
-  const record = connectorStore.connectors.find(c => c.id === id);
-  if (!record || record.catalogState === 'loading') return;
-  const next = addManualModel(record, value);
-  if (next === record) return;
-  patchConnector(id, next);
+/** @param {string} value */
+export function addDraftModel(value) {
+  const draft = connectorStore.draft;
+  if (!draft || draft.catalogState === 'loading') return;
+  const next = addManualModel(draft, value);
+  if (next !== draft) connectorStore.draft = next;
 }

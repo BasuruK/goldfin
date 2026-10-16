@@ -4,3 +4,6 @@ reviews:
   pre_merge_checks:
     docstrings:
       mode: "off" # conflicts with the self-documenting-code policy
+  path_instructions:
+    - path: "tests/**"
+      instructions: "Report correctness bugs only. Skip maintainability, style, and documentation findings on test code and test helpers."

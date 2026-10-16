@@ -5,26 +5,21 @@
     Button,
     LoadingButton,
     DialogHeader,
-    Icon,
     Input,
     Select
   } from '$goldfin/lib/index.js';
-  import DeleteConnectorConfirm from './DeleteConnectorConfirm.svelte';
   import ModelPanel from './ModelPanel.svelte';
   import {
     closeDialog,
     connectorStore,
-    editingConnector,
-    patchConnector,
-    previewModelsById,
-    removeDraftIfEmpty,
-    setProviderType,
-    testConnectorById
+    patchDraft,
+    previewDraftModels,
+    saveDraft,
+    setDraftProviderType
   } from './store.svelte.js';
-  import { connectionFailureField } from './connection-check.js';
   import { DEFAULT_PROVIDER_TYPE, PROVIDER_SELECT_ITEMS, providerByType } from './providers.js';
 
-  const record = $derived(editingConnector());
+  const record = $derived(connectorStore.draft);
   const provider = $derived(record ? providerByType(record.providerType) : null);
 
   /** @type {import('./providers.js').ProviderType} */
@@ -36,16 +31,12 @@
 
   $effect(() => {
     if (!record || providerType === record.providerType) return;
-    setProviderType(record.id, providerType);
+    setDraftProviderType(providerType);
   });
 
   /** @param {boolean} next */
   function onOpenChange(next) {
-    if (!next) {
-      const id = connectorStore.editingId;
-      closeDialog();
-      if (id) removeDraftIfEmpty(id);
-    }
+    if (!next) closeDialog();
   }
 
   /** @param {string} field @param {Event} event */
@@ -53,48 +44,30 @@
     if (!record) return;
     const target = event.currentTarget;
     if (!(target instanceof HTMLInputElement)) return;
-    patchConnector(record.id, { [field]: target.value });
+    patchDraft({ [field]: target.value });
   }
 
-  const testing = $derived(record?.connectionStatus === 'testing');
+  const saving = $derived(connectorStore.saveState === 'queued' || connectorStore.saveState === 'running');
+  const fieldsDisabled = $derived(saving);
+  const saveUnavailable = $derived(record !== null && record.providerType !== 'web_request');
   const showModels = $derived(
     (record?.catalogState ?? 'idle') !== 'idle' || (record?.models?.length ?? 0) > 0
   );
 
-  const failedConnectionMessage = $derived(
-    record?.connectionStatus === 'failed' && record.connectionMessage ? record.connectionMessage : ''
-  );
-
-  const baseUrlFieldError = $derived(
-    failedConnectionMessage && connectionFailureField(failedConnectionMessage) === 'baseUrl'
-      ? failedConnectionMessage
-      : ''
-  );
-
-  const apiKeyFieldError = $derived(
-    failedConnectionMessage && connectionFailureField(failedConnectionMessage) === 'apiKey'
-      ? failedConnectionMessage
-      : ''
-  );
-
-  const generalConnectionError = $derived(
-    failedConnectionMessage && connectionFailureField(failedConnectionMessage) === null
-      ? failedConnectionMessage
-      : ''
-  );
-
-  const apiKeyFieldMessage = $derived.by(() => {
-    if (!record?.connectionMessage) return '';
-    if (record.connectionStatus === 'ok') {
-      let msg = record.connectionMessage;
-      if (record.lastCheckedAt) {
-        msg += ` · ${new Date(record.lastCheckedAt).toLocaleTimeString()}`;
-      }
-      return msg;
-    }
-    if (record.connectionStatus === 'testing') return record.connectionMessage;
+  const saveStatus = $derived.by(() => {
+    if (connectorStore.saveState === 'queued') return 'Queued — waiting for a worker to run the check…';
+    if (connectorStore.saveState === 'running') return 'Checking — the worker is calling the endpoint…';
     return '';
   });
+
+  /** @param {'name' | 'baseUrl' | 'credential' | 'credentialLabel'} field */
+  function fieldError(field) {
+    return connectorStore.saveErrorField === field ? connectorStore.saveError : '';
+  }
+
+  const generalSaveError = $derived(
+    connectorStore.saveError && !connectorStore.saveErrorField ? connectorStore.saveError : ''
+  );
 </script>
 
 <Primitive.Root open={connectorStore.dialogOpen} onOpenChange={onOpenChange}>
@@ -106,25 +79,24 @@
         <DialogHeader
           parts={Primitive}
           title={record.name?.trim() ? record.name : `Connect to ${provider.label}`}
-          description="API Key and base URL are saved as you type."
+          description="Nothing is stored until you Save and a worker check succeeds."
           icon={provider.icon}
           close
-        >
-          {#snippet actions()}
-            <DeleteConnectorConfirm connector={record} iconTrigger trigger="Delete connector" />
-          {/snippet}
-        </DialogHeader>
+        />
         <DialogBody>
           <p id="connector-dialog-desc" class="sr-only">
-            Configure an LLM or HTTP Connector. Values auto-save to this device.
+            Configure an LLM or HTTP Connector. Choose Save to stage the Connector for a worker
+            check; Cancel discards the draft.
           </p>
           <div class="connector-form">
-            <Select label="Provider" items={PROVIDER_SELECT_ITEMS} bind:value={providerType} />
+            <Select label="Provider" items={PROVIDER_SELECT_ITEMS} bind:value={providerType} disabled={fieldsDisabled} />
             <Input
               label="Name"
               value={record.name}
               oninput={(/** @type {Event} */ e) => fieldInput('name', e)}
               placeholder={provider.label}
+              disabled={fieldsDisabled}
+              error={fieldError('name')}
             />
             <Input
               label="Base URL"
@@ -134,7 +106,8 @@
               type="url"
               autocomplete="off"
               spellcheck="false"
-              error={baseUrlFieldError}
+              disabled={fieldsDisabled}
+              error={fieldError('baseUrl')}
             />
             <Input
               label="API Key"
@@ -145,33 +118,54 @@
               autocomplete="off"
               placeholder={record.providerType === 'web_request' ? 'Optional' : 'sk-…'}
               description={record.providerType === 'web_request' ? 'Optional for public endpoints.' : ''}
-              error={apiKeyFieldError}
-              message={apiKeyFieldMessage}
+              disabled={fieldsDisabled}
+              error={fieldError('credential')}
             />
-            {#if generalConnectionError}
-              <p class="connector-connection-error" role="alert">{generalConnectionError}</p>
+            {#if record.apiKey}
+              <Input
+                label="Credential label"
+                inlineMessage
+                value={record.credentialLabel}
+                oninput={(/** @type {Event} */ e) => fieldInput('credentialLabel', e)}
+                autocomplete="off"
+                placeholder="e.g. Production key"
+                disabled={fieldsDisabled}
+                error={fieldError('credentialLabel')}
+              />
+            {/if}
+            {#if saveUnavailable}
+              <p class="connector-save-note">
+                Saving is not available for {provider.label} yet. Only Web Request Connectors can
+                be saved; the model preview below stays simulated.
+              </p>
+            {/if}
+            {#if saveStatus}
+              <p class="connector-save-status" role="status">{saveStatus}</p>
+            {/if}
+            {#if generalSaveError}
+              <p class="connector-connection-error" role="alert">{generalSaveError}</p>
             {/if}
           </div>
         </DialogBody>
         <div class="modal-foot connector-dialog-foot">
           <div class="connector-test-wrap">
-            <LoadingButton
-              type="button"
-              busy={testing}
-              idle="Test"
-              working="Testing…"
-              onclick={() => testConnectorById(record.id)}
-            >
-              <Icon name="play" size={16} />
-              Test
-            </LoadingButton>
-            <Button type="button" disabled={record.catalogState === 'loading'} onclick={() => previewModelsById(record.id)}>
+            <Button type="button" disabled={record.catalogState === 'loading' || fieldsDisabled} onclick={() => previewDraftModels()}>
               Preview models
             </Button>
           </div>
           <div class="modal-foot-actions connector-dialog-actions">
-            <Primitive.Close class="btn primary" type="button">Done</Primitive.Close>
-            <Primitive.Close class="btn" type="button">Close</Primitive.Close>
+            <Button type="button" onclick={closeDialog}>Cancel</Button>
+            <LoadingButton
+              type="button"
+              variant="primary"
+              busy={saving}
+              idle="Save"
+              working={connectorStore.saveState === 'queued' ? 'Queued…' : 'Checking…'}
+              disabled={saveUnavailable}
+              onclick={() => saveDraft()}
+            >
+              Save
+            </LoadingButton>
           </div>
         </div>
         </div>
@@ -223,6 +217,14 @@
     margin: 0;
     font: 500 13px Urbanist, system-ui, sans-serif;
     color: var(--bad, #e85d5d);
+  }
+
+  .connector-save-note,
+  .connector-save-status {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--ufg2);
   }
 
   .connector-dialog-foot {

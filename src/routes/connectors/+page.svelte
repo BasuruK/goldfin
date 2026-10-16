@@ -1,8 +1,23 @@
 <script>
+  import { onDestroy, onMount } from 'svelte';
   import { Button, Icon, Section } from '$goldfin/lib/index.js';
   import ConnectorCard from '#lib/connectors/ConnectorCard.svelte';
   import ConnectorDialog from '#lib/connectors/ConnectorDialog.svelte';
-  import { connectorStore, openAddDialog } from '#lib/connectors/store.svelte.js';
+  import {
+    clearLegacyConnectors,
+    connectorStore,
+    disposeConnectorsPage,
+    loadConnectorList,
+    openAddDialog
+  } from '#lib/connectors/store.svelte.js';
+
+  onMount(() => {
+    void loadConnectorList();
+  });
+
+  onDestroy(() => {
+    disposeConnectorsPage();
+  });
 </script>
 
 <svelte:head>
@@ -13,8 +28,8 @@
   <header class="connectors-head od-field">
     <h1 class="page-title">Connectors</h1>
     <p class="page-lead">
-      Registered LLM and HTTP endpoints. Each value you enter is saved on this device until the API
-      ships.
+      Registered LLM and HTTP endpoints. A Connector appears here only after a worker check
+      succeeds.
     </p>
   </header>
 
@@ -25,11 +40,38 @@
     </Button>
   </div>
 
-  {#if connectorStore.connectors.length === 0}
+  {#if connectorStore.saveNotice}
+    <p class="note" role="status">{connectorStore.saveNotice}</p>
+  {/if}
+
+  {#if connectorStore.legacyPresent}
+    <Section title="Legacy on-device Connectors" id="connectors-legacy">
+      <p class="note">
+        Earlier versions stored Connectors, including plaintext Credentials, in this browser.
+        They were not migrated. Clear the legacy data, then add each Connector again so the
+        worker can check it.
+      </p>
+      {#if connectorStore.legacyError}
+        <p class="note" role="alert">{connectorStore.legacyError}</p>
+      {/if}
+      <Button type="button" onclick={clearLegacyConnectors}>Clear legacy data</Button>
+    </Section>
+  {/if}
+
+  {#if connectorStore.listState === 'loading' || connectorStore.listState === 'idle'}
+    <Section title="Connectors" id="connectors-loading">
+      <p class="note" role="status">Loading Connectors…</p>
+    </Section>
+  {:else if connectorStore.listState === 'failed'}
+    <Section title="Connectors unavailable" id="connectors-failed">
+      <p class="note" role="alert">{connectorStore.listError}</p>
+      <Button type="button" onclick={() => loadConnectorList()}>Retry</Button>
+    </Section>
+  {:else if connectorStore.connectors.length === 0}
     <Section title="No connectors yet" id="connectors-empty">
       <p class="note">
-        Add an OpenAI, Azure, OpenAI-compatible, or custom Web Request endpoint. You can run a
-        connection check from the dialog; a full Connector check will run on the worker later.
+        Add a Web Request endpoint. Saving runs a worker check first; only a successful check
+        adds the Connector here. Other providers cannot be saved yet.
       </p>
     </Section>
   {:else}

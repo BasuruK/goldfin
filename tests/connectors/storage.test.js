@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { describe, it, beforeEach, afterEach } from 'node:test';
-import { loadConnectors, saveConnectors } from '../../src/lib/connectors/storage.js';
+import { clearLegacyData, createEmptyConnector, hasLegacyData } from '../../src/lib/connectors/storage.js';
 
 const STORAGE_KEY = 'goldfin.connectors.v1';
 
-describe('loadConnectors', () => {
+describe('legacy Connector data', () => {
   /** @type {Storage} */
   let memory;
 
@@ -37,38 +37,35 @@ describe('loadConnectors', () => {
     Reflect.deleteProperty(globalThis, 'localStorage');
   });
 
-  it('drops malformed entries and clears transient states', () => {
-    memory.setItem(
-      STORAGE_KEY,
-      JSON.stringify([
-        {
-          id: 'good',
-          providerType: 'openai',
-          name: 'OpenAI',
-          baseUrl: 'https://api.openai.com/v1',
-          apiKey: '',
-          connectionStatus: 'testing',
-          connectionMessage: 'Checking…',
-          catalogState: 'loading',
-          catalogMessage: '',
-          models: [],
-          discoveryRevision: 0,
-          updatedAt: '2026-01-01T00:00:00.000Z'
-        },
-        { providerType: 'openai' },
-        null
-      ])
-    );
-    const loaded = loadConnectors();
-    assert.equal(loaded.length, 1);
-    assert.equal(loaded[0].connectionStatus, 'idle');
-    assert.equal(loaded[0].catalogState, 'idle');
-    assert.equal(loaded[0].checkRequestId, null);
-    assert.equal(loaded[0].name, 'OpenAI');
+  it('detects legacy data without reading it as Connectors', () => {
+    assert.equal(hasLegacyData(), false);
+    memory.setItem(STORAGE_KEY, '[{"apiKey":"plaintext"}]');
+    assert.equal(hasLegacyData(), true);
   });
 
-  it('returns empty when storage is corrupt', () => {
-    memory.setItem(STORAGE_KEY, '{not json');
-    assert.deepEqual(loadConnectors(), []);
+  it('clears only the legacy key and reports success', () => {
+    memory.setItem(STORAGE_KEY, '[]');
+    memory.setItem('goldfin.theme', 'dark');
+    assert.equal(clearLegacyData(), true);
+    assert.equal(hasLegacyData(), false);
+    assert.equal(memory.getItem('goldfin.theme'), 'dark');
+    assert.equal(clearLegacyData(), true);
+  });
+
+  it('is safe when storage is unavailable', () => {
+    Reflect.deleteProperty(globalThis, 'localStorage');
+    assert.equal(hasLegacyData(), false);
+    assert.equal(clearLegacyData(), false);
+  });
+});
+
+describe('createEmptyConnector', () => {
+  it('creates an in-memory draft with an empty Credential and label', () => {
+    const draft = createEmptyConnector('web_request');
+    assert.equal(draft.providerType, 'web_request');
+    assert.equal(draft.apiKey, '');
+    assert.equal(draft.credentialLabel, '');
+    assert.deepEqual(draft.models, []);
+    assert.equal(draft.catalogState, 'idle');
   });
 });

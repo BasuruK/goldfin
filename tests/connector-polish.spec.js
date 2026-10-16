@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { boxOf } from './support.js';
+import { boxOf, mockConnectorApi, selectProvider } from './support.js';
 
 test('Integrations opens and closes through intermediate sizes and keyboard activation is instant', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
@@ -46,26 +46,13 @@ test('menu items never shrink while pressed', async ({ page }) => {
   }
 });
 
-test('Delete is hidden in Add and appears when configuring an added Connector', async ({ page }) => {
-  await page.goto('/connectors/');
-  await page.getByRole('button', { name: 'Add connector', exact: true }).click();
-  const dialog = page.getByRole('dialog');
-  await expect(dialog.getByRole('button', { name: 'Delete connector', exact: true })).toHaveCount(0);
-  // A pristine draft is dropped on close; give it content so it is kept.
-  await dialog.getByLabel('API Key', { exact: true }).fill('test-key-not-real');
-  await dialog.getByRole('button', { name: 'Done', exact: true }).click();
-  await page.getByRole('button', { name: 'Configure', exact: true }).click();
-  await expect(dialog.getByRole('button', { name: 'Delete connector', exact: true })).toBeVisible();
-});
-
-for (const providerType of ['openai', 'azure', 'openai_compatible', 'web_request']) {
-  test(`custom models are available for ${providerType} and survive refresh`, async ({ page }) => {
-    await page.addInitScript(type => localStorage.setItem('goldfin.connectors.v1', JSON.stringify([{
-      id: 'custom', providerType: type, name: 'Custom connection', baseUrl: 'https://example.com/v1', apiKey: '', connectionStatus: 'idle', models: []
-    }])), providerType);
+for (const providerLabel of ['OpenAI', 'Azure', 'OpenAI Compatible', 'Web Request']) {
+  test(`custom models are available for ${providerLabel} and survive refresh`, async ({ page }) => {
+    await mockConnectorApi(page);
     await page.goto('/connectors/');
-    await page.getByRole('button', { name: 'Configure', exact: true }).click();
+    await page.getByRole('button', { name: 'Add connector', exact: true }).click();
     const dialog = page.getByRole('dialog');
+    await selectProvider(dialog, providerLabel);
     await dialog.getByRole('button', { name: 'Preview models', exact: true }).click();
     const entry = dialog.getByLabel('Model ID', { exact: true });
     await entry.fill('custom-model');
@@ -81,20 +68,23 @@ for (const providerType of ['openai', 'azure', 'openai_compatible', 'web_request
 }
 
 test('model table puts names before small toggles and scrolls without growing the panel', async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem('goldfin.connectors.v1', JSON.stringify([{
-    id: 'many', providerType: 'openai', name: 'Many models', baseUrl: 'https://example.com', apiKey: '',
-    connectionStatus: 'idle', catalogState: 'ready',
-    models: Array.from({ length: 60 }, (_, index) => ({ id: `model-${index}`, enabled: false, source: 'manual' }))
-  }])));
+  await mockConnectorApi(page);
   await page.goto('/connectors/');
-  await page.getByRole('button', { name: 'Configure', exact: true }).click();
+  await page.getByRole('button', { name: 'Add connector', exact: true }).click();
+  const draftDialog = page.getByRole('dialog');
+  await draftDialog.getByRole('button', { name: 'Preview models', exact: true }).click();
+  const entry = draftDialog.getByLabel('Model ID', { exact: true });
+  for (let index = 0; index < 60; index++) {
+    await entry.fill(`model-${index}`);
+    await entry.press('Enter');
+  }
   await expect.poll(() => page.getByRole('dialog').evaluate(node =>
     node.getAnimations().every(animation => animation.playState !== 'running')
   )).toBe(true);
   const table = page.getByRole('table', { name: 'Models', exact: true });
   const row = table.getByRole('row').nth(1);
   const name = await boxOf(row.getByRole('rowheader'));
-  const toggle = row.getByRole('switch', { name: 'model-0', exact: true });
+  const toggle = row.getByRole('switch').first();
   const toggleBox = await boxOf(toggle);
   expect(name.x).toBeLessThan(toggleBox.x);
   expect(toggleBox.width).toBe(28);
@@ -113,6 +103,7 @@ for (const theme of ['light', 'dark']) {
       await page.setViewportSize(viewport);
       await page.emulateMedia({ reducedMotion: 'reduce' });
       await page.addInitScript(value => localStorage.setItem('goldfin.theme', value), theme);
+      await mockConnectorApi(page);
       await page.goto('/connectors/');
       if (viewport.width < 768) await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
       const parentBox = await boxOf(page.getByRole('button', { name: 'Integrations', exact: true }));
@@ -135,7 +126,6 @@ for (const theme of ['light', 'dark']) {
       if (viewport.width < 768) await page.getByRole('link', { name: 'Connectors', exact: true }).click();
       await page.getByRole('button', { name: 'Add connector', exact: true }).click();
       const dialog = page.getByRole('dialog');
-      await dialog.getByRole('button', { name: 'Test', exact: true }).click();
       await dialog.getByRole('button', { name: 'Preview models', exact: true }).click();
       await expect(dialog.getByRole('button', { name: 'Add model ID', exact: true })).toHaveCount(0);
       await expect(dialog.getByText('Sample and unverified IDs cannot be used in a Run.', { exact: true })).toHaveCount(0);
@@ -148,9 +138,9 @@ for (const theme of ['light', 'dark']) {
       await entry.fill('custom-model');
       await entry.press('Enter');
       await expect(dialog.getByRole('switch', { name: 'custom-model', exact: true })).toHaveCount(1);
-      const fieldBox = await boxOf(dialog.getByLabel('API Key', { exact: true }));
+      const formBox0 = await boxOf(dialog.locator('.connector-form'));
       const footerBox = await boxOf(dialog.locator('.connector-dialog-foot'));
-      expect(footerBox.y - (fieldBox.y + fieldBox.height)).toBeLessThanOrEqual(24);
+      expect(footerBox.y - (formBox0.y + formBox0.height)).toBeLessThanOrEqual(24);
       const formBox = await boxOf(dialog.locator('.connector-form-panel'));
       const modelsBox = await boxOf(dialog.locator('.model-panel'));
       if (viewport.width >= 768) {
