@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { boxOf } from './support.js';
+import { boxOf, mockConnectorApi, selectProvider } from './support.js';
 
 test('Integrations expands without navigation and opens Connectors from the rail', async ({ page }) => {
   await page.goto('/');
@@ -20,12 +20,13 @@ test('Integrations expands without navigation and opens Connectors from the rail
   await expect(group).toHaveAttribute('aria-expanded', 'true');
 });
 
-test('model preview starts disabled, saves toggles, and blocks them after connection changes', async ({ page }) => {
+test('model preview starts disabled, toggles in the draft, and blocks after connection changes', async ({ page }) => {
   /** @type {string[]} */
   const outbound = [];
   page.on('request', request => {
     if (request.url().includes('api.openai.com')) outbound.push(request.url());
   });
+  await mockConnectorApi(page);
   await page.goto('/connectors/');
   await page.getByRole('button', { name: 'Add connector', exact: true }).click();
   const dialog = page.getByRole('dialog');
@@ -36,12 +37,6 @@ test('model preview starts disabled, saves toggles, and blocks them after connec
   await expect(model).toHaveAttribute('aria-checked', 'false');
   await model.click();
   await expect(model).toHaveAttribute('aria-checked', 'true');
-  // A pristine draft is dropped on close; give it content so it is kept.
-  await dialog.getByLabel('API Key', { exact: true }).fill('sk-test');
-  await dialog.getByRole('button', { name: 'Done', exact: true }).click();
-  await page.reload();
-  await page.getByRole('button', { name: 'Configure', exact: true }).click();
-  await expect(model).toHaveAttribute('aria-checked', 'true');
   await dialog.getByLabel('Base URL', { exact: true }).fill('https://changed.example/v1');
   await expect(model).toBeDisabled();
   await dialog.getByRole('button', { name: 'Refresh preview', exact: true }).click();
@@ -51,12 +46,11 @@ test('model preview starts disabled, saves toggles, and blocks them after connec
 });
 
 test('unsupported discovery allows explicit unverified manual IDs', async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem('goldfin.connectors.v1', JSON.stringify([{
-    id: 'manual', providerType: 'web_request', name: 'Custom gateway', baseUrl: 'https://example.com', apiKey: '', connectionStatus: 'idle', models: []
-  }])));
+  await mockConnectorApi(page);
   await page.goto('/connectors/');
-  await page.getByRole('button', { name: 'Configure', exact: true }).click();
+  await page.getByRole('button', { name: 'Add connector', exact: true }).click();
   const dialog = page.getByRole('dialog');
+  await selectProvider(dialog, 'Web Request');
   await dialog.getByRole('button', { name: 'Preview models', exact: true }).click();
   await dialog.getByLabel('Model ID', { exact: true }).fill('custom-model');
   await dialog.getByLabel('Model ID', { exact: true }).press('Enter');
@@ -66,6 +60,7 @@ test('unsupported discovery allows explicit unverified manual IDs', async ({ pag
 
 test('model panel reveals through intermediate frames when motion is allowed', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await mockConnectorApi(page);
   await page.goto('/connectors/');
   await page.getByRole('button', { name: 'Add connector', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Preview models', exact: true })).toBeVisible();
@@ -90,6 +85,7 @@ for (const viewport of [{ width: 1280, height: 800 }, { width: 375, height: 720 
   test(`model panel fits ${viewport.width}px with reduced motion and keyboard access`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await page.emulateMedia({ reducedMotion: 'reduce' });
+    await mockConnectorApi(page);
     await page.goto('/connectors/');
     await page.getByRole('button', { name: 'Add connector', exact: true }).click();
     const dialog = page.getByRole('dialog');

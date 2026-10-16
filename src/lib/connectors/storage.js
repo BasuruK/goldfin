@@ -1,13 +1,17 @@
-import { DEFAULT_PROVIDER_TYPE, isProviderType } from './providers.js';
+import { DEFAULT_PROVIDER_TYPE } from './providers.js';
 
+/**
+ * Legacy on-device Connector storage (pre-worker UI). Nothing reads these records
+ * as Connectors anymore (ADR 0012): the key is only detected so the page can offer
+ * the explicit reset, and cleared by that action. Drafts below live in memory only.
+ */
 const STORAGE_KEY = 'goldfin.connectors.v1';
 
 /**
  * @typedef {import('./providers.js').ProviderType} ProviderType
- * @typedef {import('./connection-check.js').ConnectionStatus} ConnectionStatus
  *
- * Persisted Connector list for the v1 client-only UI. `apiKey` is stored in plaintext
- * in `localStorage` on this device until worker-backed Credential storage ships (ADR 0005).
+ * In-memory Connector draft for the dialog. `apiKey` holds the draft Credential and
+ * exists only until Save sends it to the API; it is never persisted (ADR 0005).
  *
  * @typedef {{
  *   id: string,
@@ -15,7 +19,8 @@ const STORAGE_KEY = 'goldfin.connectors.v1';
  *   name: string,
  *   baseUrl: string,
  *   apiKey: string,
- *   connectionStatus: ConnectionStatus,
+ *   credentialLabel: string,
+ *   connectionStatus: 'idle' | 'testing' | 'ok' | 'failed',
  *   connectionMessage: string,
  *   checkRequestId: string | null,
  *   lastCheckedAt: string | null,
@@ -27,86 +32,24 @@ const STORAGE_KEY = 'goldfin.connectors.v1';
  * }} ConnectorRecord
  */
 
-/** @param {unknown} raw */
-function normalizeConnector(raw) {
-  if (!raw || typeof raw !== 'object') return null;
-  const entry = /** @type {Record<string, unknown>} */ (raw);
-  if (typeof entry.id !== 'string' || !entry.id) return null;
-
-  const providerType = isProviderType(entry.providerType) ? entry.providerType : DEFAULT_PROVIDER_TYPE;
-
-  /** @type {ConnectionStatus} */
-  let connectionStatus =
-    entry.connectionStatus === 'ok' || entry.connectionStatus === 'failed' ? entry.connectionStatus : 'idle';
-  if (entry.connectionStatus === 'testing') connectionStatus = 'idle';
-
-  /** @type {ConnectorRecord['catalogState']} */
-  let catalogState = 'idle';
-  if (
-    entry.catalogState === 'ready' ||
-    entry.catalogState === 'unsupported' ||
-    entry.catalogState === 'failed'
-  ) {
-    catalogState = entry.catalogState;
-  }
-
-  const models = Array.isArray(entry.models)
-    ? entry.models
-        .filter(
-          model =>
-            model &&
-            typeof model === 'object' &&
-            typeof model.id === 'string' &&
-            model.id &&
-            (model.source === 'sample' || model.source === 'manual' || model.source === 'discovered')
-        )
-        .map(model => ({
-          id: model.id,
-          enabled: Boolean(model.enabled),
-          source: model.source,
-          ...(model.verified === true ? { verified: true } : {})
-        }))
-    : [];
-
-  return {
-    id: entry.id,
-    providerType,
-    name: typeof entry.name === 'string' ? entry.name : '',
-    baseUrl: typeof entry.baseUrl === 'string' ? entry.baseUrl : '',
-    apiKey: typeof entry.apiKey === 'string' ? entry.apiKey : '',
-    connectionStatus,
-    connectionMessage: typeof entry.connectionMessage === 'string' ? entry.connectionMessage : '',
-    checkRequestId: null,
-    lastCheckedAt: typeof entry.lastCheckedAt === 'string' ? entry.lastCheckedAt : null,
-    updatedAt: typeof entry.updatedAt === 'string' ? entry.updatedAt : new Date().toISOString(),
-    models,
-    catalogState,
-    catalogMessage: typeof entry.catalogMessage === 'string' ? entry.catalogMessage : '',
-    discoveryRevision: typeof entry.discoveryRevision === 'number' ? entry.discoveryRevision : 0
-  };
-}
-
-/** @returns {ConnectorRecord[]} */
-export function loadConnectors() {
-  if (typeof localStorage === 'undefined') return [];
+/** @returns {boolean} */
+export function hasLegacyData() {
+  if (typeof localStorage === 'undefined') return false;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.map(normalizeConnector).filter(record => record !== null);
+    return localStorage.getItem(STORAGE_KEY) !== null;
   } catch {
-    return [];
+    return false;
   }
 }
 
-/** @param {ConnectorRecord[]} connectors */
-export function saveConnectors(connectors) {
-  if (typeof localStorage === 'undefined') return;
+/** @returns {boolean} whether storage was available to clear */
+export function clearLegacyData() {
+  if (typeof localStorage === 'undefined') return false;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(connectors));
-  } catch (error) {
-    console.warn('Failed to persist connectors to localStorage', error);
+    localStorage.removeItem(STORAGE_KEY);
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -114,7 +57,7 @@ export function saveConnectors(connectors) {
  * @param {ProviderType} providerType
  * @returns {ConnectorRecord}
  */
-export function createEmptyConnector(providerType) {
+export function createEmptyConnector(providerType = DEFAULT_PROVIDER_TYPE) {
   const now = new Date().toISOString();
   return {
     id: crypto.randomUUID(),
@@ -122,6 +65,7 @@ export function createEmptyConnector(providerType) {
     name: '',
     baseUrl: '',
     apiKey: '',
+    credentialLabel: '',
     connectionStatus: 'idle',
     connectionMessage: '',
     checkRequestId: null,

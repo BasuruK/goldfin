@@ -1,7 +1,7 @@
 <script>
   import { Button, Input, Switch } from '$goldfin/lib/index.js';
   import { isCatalogEditable } from './models.js';
-  import { addModelById, previewModelsById, setModelEnabled } from './store.svelte.js';
+  import { addDraftModel, previewDraftModels, setDraftModelEnabled } from './store.svelte.js';
 
   /** @type {{ record: import('./storage.js').ConnectorRecord }} */
   let { record } = $props();
@@ -13,7 +13,7 @@
   /** @param {Event} event */
   function addModel(event) {
     event.preventDefault();
-    addModelById(record.id, manualId);
+    addDraftModel(manualId);
     manualId = '';
   }
 </script>
@@ -39,7 +39,7 @@
           </th>
           <td class="model-toggle-cell">
             <Switch size="sm" label={model.id} checked={model.enabled} disabled={!editable}
-                    onCheckedChange={(/** @type {boolean} */ checked) => setModelEnabled(record.id, model.id, checked)} />
+                    onCheckedChange={(/** @type {boolean} */ checked) => setDraftModelEnabled(model.id, checked)} />
           </td>
         </tr>
       {:else}
@@ -52,7 +52,7 @@
     <Input label="Model ID" bind:value={manualId} placeholder="Type an ID, then press Enter" disabled={record.catalogState === 'loading'} />
   </form>
   <footer class="model-panel-foot">
-    <Button type="button" disabled={record.catalogState === 'loading'} onclick={() => previewModelsById(record.id)}>Refresh preview</Button>
+    <Button type="button" disabled={record.catalogState === 'loading'} onclick={() => previewDraftModels()}>Refresh preview</Button>
   </footer>
 </section>
 
