@@ -14,12 +14,12 @@ help:
 	@echo ""
 	@echo "  make check    vet, lint, vulnerabilities, workflows, Go/unit tests, svelte-check, knip"
 	@echo "  make generate Regenerate Go storage queries from SQL"
-	@echo "  make up       Start postgres, migrate, api; wait until healthy"
+	@echo "  make up       Start postgres, migrate, api, worker; wait until running/healthy"
 	@echo "  make run      up, then Vite on the host"
-	@echo "  make watch    Rebuild api on Go changes"
+	@echo "  make watch    Rebuild api and worker on Go changes"
 	@echo "  make down     Stop all services"
 	@echo "  make migrate  Apply migrations"
-	@echo "  make logs     Follow api logs"
+	@echo "  make logs     Follow api and worker logs"
 
 check:
 	$(SQLC) diff
@@ -38,7 +38,7 @@ generate:
 	$(SQLC) generate
 
 up:
-	docker compose up -d --build --wait api
+	docker compose up -d --build --wait api worker
 
 run: up
 	pnpm dev
@@ -53,4 +53,4 @@ migrate:
 	docker compose run --rm migrate
 
 logs:
-	docker compose logs -f api
+	docker compose logs -f api worker
