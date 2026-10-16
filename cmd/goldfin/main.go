@@ -15,6 +15,8 @@ import (
 	"time"
 
 	"github.com/BasuruK/goldfin/db/migrations"
+	"github.com/BasuruK/goldfin/internal/api"
+	"github.com/BasuruK/goldfin/internal/jobs"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
@@ -106,14 +108,31 @@ func runMigrate(ctx context.Context) error {
 // runAPI serves until ctx is cancelled. The listener exists before Serve starts, so a cancel that
 // lands early is harmless: Shutdown makes Serve close it and return ErrServerClosed.
 func runAPI(ctx context.Context, addr string) error {
+	if ctx.Err() != nil {
+		return nil
+	}
+	pool, key, err := openDatabase(ctx)
+	if err != nil {
+		if ctx.Err() != nil {
+			return nil
+		}
+		return err
+	}
+	defer pool.Close()
+	store, err := jobs.NewStore(pool, key)
+	if err != nil {
+		return err
+	}
 	mux := http.NewServeMux()
 	registerAPIRoutes(mux)
+	mux.Handle("/api/", api.NewHandler(store))
 	srv := &http.Server{
 		Handler:           mux,
 		ReadHeaderTimeout: readHeaderTimeout,
 		ReadTimeout:       readTimeout,
 		WriteTimeout:      writeTimeout,
 		IdleTimeout:       idleTimeout,
+		BaseContext:       func(net.Listener) context.Context { return ctx },
 	}
 	ln, err := (&net.ListenConfig{}).Listen(ctx, "tcp", addr)
 	if err != nil {
@@ -135,6 +154,8 @@ func runAPI(ctx context.Context, addr string) error {
 	shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), shutdownTimeout)
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
+		_ = srv.Close()
+		<-errCh
 		return err
 	}
 	if err := <-errCh; !errors.Is(err, http.ErrServerClosed) {
