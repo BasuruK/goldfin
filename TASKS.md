@@ -1,6 +1,6 @@
 # PR #38 recovery plan
 
-Status: T0/T1 settled; T2 provider-client implementation and required local checks/reviews complete, ready for its replacement PR. Later layers remain queued. Update this file as each task finishes, recording commands, results, and remaining blockers.
+Status: T0/T1 settled; T2 is published as draft [PR #44](https://github.com/BasuruK/goldfin/pull/44), with local checks/reviews complete and CI pending. It is not merged; later layers remain queued. Update this file as each task finishes, recording commands, results, and remaining blockers.
 
 ## Objective and sources
 
@@ -100,7 +100,7 @@ Done when #34 acceptance passes on the integrated main and every replacement has
 
 ### T2 implementation ticket — Web Request provider check
 
-**Parent:** #34. **Layer:** provider client only. **Blocked by:** none (T0/T1 settled). **Status:** implemented and locally verified; PR publication pending. Branch `feature/basuruk/34-web-request-provider-check`, based on main e5dd58b. Implementation commits: `2b8244b`, `a6e2d7a`.
+**Parent:** #34. **Layer:** provider client only. **Blocked by:** none (T0/T1 settled). **Status:** implemented and locally verified; draft [PR #44](https://github.com/BasuruK/goldfin/pull/44), CI pending, not merged. Branch `feature/basuruk/34-web-request-provider-check`, based on main e5dd58b. Implementation commits: `2b8244b`, `a6e2d7a`.
 
 **Confirmed test seam:** the provider HTTP interface already selected in the plan: local HTTP fixtures observe HEAD, optional Bearer, request identity, status and cancellation; hardened-client tests exercise redirect/address policy. The address predicate has a table-driven test as required by CODING_STANDARDS.md.
 
@@ -217,3 +217,4 @@ Apply these expectations to Web Request HEAD and later OpenAI completion checks,
 - 2026-10-16: User accepted the newer checked-Save sequence, single-layer replacement PRs, and disposable-database resets. Finalized the extraction plan and first replacement tranche. Design acceptance and implementation remain future tasks; no further scope decision is needed to preserve this plan.
 - 2026-10-16: User authorized proceeding and removed the OpenDesign handoff requirement. Installed release golangci-lint v2.14.0 into the per-user goldfin-tools cache after SHA-256 verification. Started full main validation; initial lint reports formatting on three existing Go files, under investigation before replacement work. Docker client exists but the local Docker engine is not running; no database reset has occurred.
 - 2026-10-16: Main's full gate passed after local-only Go LF normalization (Git source unchanged). Preserved #38 at backup/pr38-before-replacements-20261016; started the T2 branch from e5dd58b. Implemented only the provider-client seam through red/green slices. Ten provider tests, race detector, focused lint, and full make check passed. Checked special-address policy against IANA's [IPv4](https://www.iana.org/assignments/iana-ipv4-special-registry/) and [IPv6](https://www.iana.org/assignments/iana-ipv6-special-registry/) registries; policy remains conservative for transition/reserved ranges. Review evidence follows after formal review.
+- 2026-10-16: Completed independent Standards/Spec review (0 findings each) and host OCR review (2/2 production files; dial-budget finding fixed in a separate regression-tested commit). Final 11-test provider suite, race detector, and full make check passed after the fix. Published draft replacement PR #44 and linked it to this T3 thread. No #38 changes, main merge, database reset, or later-layer implementation performed. Next replacement is T3 storage/jobs; it remains separate from this PR.
