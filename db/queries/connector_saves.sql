@@ -11,11 +11,12 @@ SELECT sqlc.arg(name), sqlc.arg(base_url), NULLIF(sqlc.arg(credential_label)::te
        sqlc.narg(candidate_ciphertext), c.id, sqlc.arg(base_revision)::bigint,
        clock_timestamp() + sqlc.arg(ttl_seconds)::double precision * interval '1 second'
 FROM connectors c WHERE c.id = sqlc.arg(connector_id)
+  AND c.revision = sqlc.arg(base_revision)::bigint
   AND (sqlc.narg(candidate_ciphertext)::bytea IS NOT NULL OR c.base_url = sqlc.arg(base_url))
 RETURNING id;
 
--- name: ConnectorExists :one
-SELECT EXISTS (SELECT 1 FROM connectors WHERE id = sqlc.arg(id));
+-- name: GetConnectorRevision :one
+SELECT revision FROM connectors WHERE id = sqlc.arg(id);
 
 -- name: GetAttempt :one
 SELECT id, state,

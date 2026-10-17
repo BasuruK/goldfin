@@ -11,11 +11,15 @@ ALTER TABLE connector_save_attempts DROP CONSTRAINT connector_save_attempts_fail
 ALTER TABLE connector_save_attempts ADD CONSTRAINT connector_save_attempts_failure_code_check
     CHECK (failure_code IN ('unreachable', 'timeout', 'expired', 'attempts_exhausted', 'stale'));
 
+CREATE INDEX connector_save_attempts_target_connector_id ON connector_save_attempts (target_connector_id)
+    WHERE target_connector_id IS NOT NULL;
+
 CREATE UNIQUE INDEX credential_generations_one_active ON credential_generations (connector_id)
     WHERE state = 'active';
 
 -- +goose Down
 DROP INDEX credential_generations_one_active;
+DROP INDEX connector_save_attempts_target_connector_id;
 
 -- Edit attempts would read as creates once their target is gone, so drop them first.
 DELETE FROM connector_save_attempts WHERE target_connector_id IS NOT NULL;

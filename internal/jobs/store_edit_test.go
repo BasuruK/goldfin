@@ -229,6 +229,19 @@ func TestChangingTheBaseURLRequiresReplacingTheCredential(t *testing.T) {
 	}
 }
 
+func TestEditAlreadyStaleWhenStagedIsRejectedBeforeAnyCheck(t *testing.T) {
+	store, pool := newTestStore(t)
+	c := createConnector(t, store, jobs.Proposal{Name: "N", BaseURL: "https://example.com", Credential: "kept-secret", CredentialLabel: "Kept"})
+	_, err := store.StageEdit(t.Context(), jobs.EditProposal{ConnectorID: c.ID, BaseRevision: c.Revision + 1, Name: "N2", BaseURL: "https://example.com"})
+	if !errors.Is(err, jobs.ErrStale) {
+		t.Fatalf("stale base revision at stage: %v", err)
+	}
+	var attempts int
+	if err := pool.QueryRow(t.Context(), "SELECT count(*) FROM connector_save_attempts WHERE target_connector_id IS NOT NULL").Scan(&attempts); err != nil || attempts != 0 {
+		t.Fatalf("stale edit was queued for a check: %d, %v", attempts, err)
+	}
+}
+
 func TestClaimNeverCarriesTheActiveCredentialToAnotherURL(t *testing.T) {
 	store, pool := newTestStore(t)
 	c := createConnector(t, store, jobs.Proposal{Name: "N", BaseURL: "https://example.com", Credential: "kept-secret", CredentialLabel: "Kept"})

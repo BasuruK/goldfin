@@ -111,17 +111,6 @@ func (q *Queries) ClaimNext(ctx context.Context, arg ClaimNextParams) (ClaimNext
 	return i, err
 }
 
-const connectorExists = `-- name: ConnectorExists :one
-SELECT EXISTS (SELECT 1 FROM connectors WHERE id = $1)
-`
-
-func (q *Queries) ConnectorExists(ctx context.Context, id string) (bool, error) {
-	row := q.db.QueryRow(ctx, connectorExists, id)
-	var exists bool
-	err := row.Scan(&exists)
-	return exists, err
-}
-
 const createConnector = `-- name: CreateConnector :one
 INSERT INTO connectors (name, base_url) VALUES ($1, $2) RETURNING id
 `
@@ -260,6 +249,17 @@ func (q *Queries) GetAttempt(ctx context.Context, id string) (GetAttemptRow, err
 		&i.FailureCode,
 	)
 	return i, err
+}
+
+const getConnectorRevision = `-- name: GetConnectorRevision :one
+SELECT revision FROM connectors WHERE id = $1
+`
+
+func (q *Queries) GetConnectorRevision(ctx context.Context, id string) (int64, error) {
+	row := q.db.QueryRow(ctx, getConnectorRevision, id)
+	var revision int64
+	err := row.Scan(&revision)
+	return revision, err
 }
 
 const listConnectors = `-- name: ListConnectors :many
@@ -404,6 +404,7 @@ SELECT $1, $2, NULLIF($3::text, ''),
        $4, c.id, $5::bigint,
        clock_timestamp() + $6::double precision * interval '1 second'
 FROM connectors c WHERE c.id = $7
+  AND c.revision = $5::bigint
   AND ($4::bytea IS NOT NULL OR c.base_url = $2)
 RETURNING id
 `
