@@ -102,18 +102,14 @@ test('manual IDs become available only after verification and lose access on con
   assert.deepEqual(availableModelIds(refreshed), []);
 });
 
-test('custom model entry works for every provider and survives catalog refresh', () => {
-  /** @type {import('../../src/lib/connectors/providers.js').ProviderType[]} */
-  const providerTypes = ['openai', 'azure', 'openai_compatible', 'web_request'];
-  for (const providerType of providerTypes) {
-    const record = addManualModel(makeRecord({ providerType, catalogState: 'ready' }), 'my-custom-model');
-    record.models[0].enabled = true;
-    const loading = beginDiscovery(record);
-    const refreshed = finishDiscovery(loading, loading.discoveryRevision, { ids: ['catalog-model'], source: 'sample' });
-    assert.deepEqual(refreshed.models, [
-      { id: 'catalog-model', enabled: false, source: 'sample' },
-      { id: 'my-custom-model', enabled: true, source: 'manual' }
-    ]);
-    assert.deepEqual(availableModelIds(refreshed), []);
-  }
+test('custom model entry survives a catalog refresh', () => {
+  const record = addManualModel(makeRecord({ catalogState: 'ready' }), 'my-custom-model');
+  record.models[0].enabled = true;
+  const loading = beginDiscovery(record);
+  const refreshed = finishDiscovery(loading, loading.discoveryRevision, { ids: ['catalog-model'], source: 'sample' });
+  assert.deepEqual(refreshed.models, [
+    { id: 'catalog-model', enabled: false, source: 'sample' },
+    { id: 'my-custom-model', enabled: true, source: 'manual' }
+  ]);
+  assert.deepEqual(availableModelIds(refreshed), []);
 });

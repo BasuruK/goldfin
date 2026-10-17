@@ -3,14 +3,15 @@
 .env.*
 !.env.example
 node_modules/
+.pnpm-store/
 .svelte-kit/
 /build/
+goldfin/
 
-.cursor/
 
 # local agent runtime artefacts (canvas assets etc.)
 .mavis/
-.serena/
+.serena
 
 prototypes/UI improvement discussion.zip
 
@@ -25,3 +26,6 @@ prototypes/UI improvement discussion.zip
 # Impeccable live sessions (config under .impeccable/live/config.json is committed)
 .impeccable/live/sessions/
 .impeccable/live/inject-journal.json
+
+.commandcode
+.cursor
