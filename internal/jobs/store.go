@@ -96,7 +96,8 @@ func (s *Store) Stage(ctx context.Context, in Proposal) (string, error) {
 	})
 }
 
-// StageEdit writes only an encrypted edit proposal for an existing Connector.
+// StageEdit writes only an encrypted edit proposal for an existing Connector. Changing the
+// base URL requires a replacement Credential, so an active one is never sent to a new host.
 func (s *Store) StageEdit(ctx context.Context, in EditProposal) (string, error) {
 	encrypted, err := s.seal(in.Name, in.BaseURL, in.CredentialLabel, in.Credential)
 	if err != nil {
@@ -107,6 +108,14 @@ func (s *Store) StageEdit(ctx context.Context, in EditProposal) (string, error) 
 		CredentialLabel: in.CredentialLabel, CandidateCiphertext: encrypted, TtlSeconds: AttemptTTL.Seconds(),
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
+		// The insert matches no row for a missing Connector, or for a new URL that would reuse the active Credential.
+		exists, existsErr := s.queries.ConnectorExists(ctx, in.ConnectorID)
+		if existsErr != nil {
+			return "", existsErr
+		}
+		if exists {
+			return "", ErrInvalidProposal
+		}
 		return "", ErrNotFound
 	}
 	return id, err

@@ -50,7 +50,7 @@ func TestMetadataOnlyEditKeepsTheCredentialGeneration(t *testing.T) {
 		Credential: rand.Text(), CredentialLabel: "Fixture label",
 	})
 	id, err := store.StageEdit(t.Context(), jobs.EditProposal{
-		ConnectorID: before.ID, BaseRevision: before.Revision, Name: "Renamed", BaseURL: "https://example.com/v2",
+		ConnectorID: before.ID, BaseRevision: before.Revision, Name: "Renamed", BaseURL: "https://example.com/check",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -59,7 +59,7 @@ func TestMetadataOnlyEditKeepsTheCredentialGeneration(t *testing.T) {
 		t.Fatal("staging an edit changed active data")
 	}
 	claim, err := store.ClaimNext(t.Context())
-	if err != nil || claim.ID != id || claim.BaseURL != "https://example.com/v2" {
+	if err != nil || claim.ID != id || claim.BaseURL != "https://example.com/check" {
 		t.Fatalf("claim edit: %+v, %v", claim, err)
 	}
 	if err := store.Complete(t.Context(), id, claim.Token, 200, 5*time.Millisecond); err != nil {
@@ -74,7 +74,7 @@ func TestMetadataOnlyEditKeepsTheCredentialGeneration(t *testing.T) {
 		t.Fatalf("list: %+v, %v", connectors, err)
 	}
 	after := connectors[0]
-	if after.Name != "Renamed" || after.BaseURL != "https://example.com/v2" || after.Revision != before.Revision+1 {
+	if after.Name != "Renamed" || after.BaseURL != "https://example.com/check" || after.Revision != before.Revision+1 {
 		t.Fatalf("edit not applied: %+v", after)
 	}
 	if after.CredentialLabel != before.CredentialLabel || !after.CredentialSetAt.Equal(*before.CredentialSetAt) {
@@ -209,12 +209,54 @@ func TestUnchangedCredentialIsCarriedToTheWorkerWithoutCopying(t *testing.T) {
 	}
 }
 
+func TestChangingTheBaseURLRequiresReplacingTheCredential(t *testing.T) {
+	store, pool := newTestStore(t)
+	c := createConnector(t, store, jobs.Proposal{Name: "N", BaseURL: "https://example.com", Credential: "kept-secret", CredentialLabel: "Kept"})
+	_, err := store.StageEdit(t.Context(), jobs.EditProposal{ConnectorID: c.ID, BaseRevision: c.Revision, Name: "N", BaseURL: "https://elsewhere.example"})
+	if !errors.Is(err, jobs.ErrInvalidProposal) {
+		t.Fatalf("URL change without a replacement Credential: %v", err)
+	}
+	var attempts int
+	if err := pool.QueryRow(t.Context(), "SELECT count(*) FROM connector_save_attempts WHERE target_connector_id IS NOT NULL").Scan(&attempts); err != nil || attempts != 0 {
+		t.Fatalf("rejected edit was staged: %d, %v", attempts, err)
+	}
+	// A replacement Credential is the owner's explicit choice to send a secret to the new URL.
+	if _, err := store.StageEdit(t.Context(), jobs.EditProposal{
+		ConnectorID: c.ID, BaseRevision: c.Revision, Name: "N", BaseURL: "https://elsewhere.example",
+		Credential: "new-secret", CredentialLabel: "New",
+	}); err != nil {
+		t.Fatalf("URL change with a replacement Credential: %v", err)
+	}
+}
+
+func TestClaimNeverCarriesTheActiveCredentialToAnotherURL(t *testing.T) {
+	store, pool := newTestStore(t)
+	c := createConnector(t, store, jobs.Proposal{Name: "N", BaseURL: "https://example.com", Credential: "kept-secret", CredentialLabel: "Kept"})
+	// Staging rejects this, so insert it directly to prove the claim itself is safe.
+	if _, err := pool.Exec(t.Context(),
+		`INSERT INTO connector_save_attempts (name, base_url, target_connector_id, base_revision, expires_at)
+		 VALUES ('N', 'https://elsewhere.example', $1, $2, now() + interval '1 minute')`, c.ID, c.Revision); err != nil {
+		t.Fatal(err)
+	}
+	claim, err := store.ClaimNext(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if claim.Ciphertext != nil {
+		t.Fatal("claim carried the active Credential to a different URL")
+	}
+}
+
 func TestStaleEditsFinishStaleAndNeverOverwriteTheNewerConfiguration(t *testing.T) {
 	store, pool := newTestStore(t)
 	c := createConnector(t, store, jobs.Proposal{Name: "Original", BaseURL: "https://example.com", Credential: "first-secret", CredentialLabel: "First"})
 	stage := func(name, credential, label string) string {
+		url := "https://example.com" // an edit keeping the Credential cannot move to another URL
+		if credential != "" {
+			url += "/" + name
+		}
 		id, err := store.StageEdit(t.Context(), jobs.EditProposal{
-			ConnectorID: c.ID, BaseRevision: c.Revision, Name: name, BaseURL: "https://example.com/" + name,
+			ConnectorID: c.ID, BaseRevision: c.Revision, Name: name, BaseURL: url,
 			Credential: credential, CredentialLabel: label,
 		})
 		if err != nil {

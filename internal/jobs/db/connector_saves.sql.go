@@ -77,7 +77,7 @@ RETURNING a.id, a.name, a.base_url, COALESCE(a.credential_label, '')::text AS cr
           COALESCE(a.candidate_ciphertext, (
               SELECT g.ciphertext FROM connectors c
               JOIN credential_generations g ON g.id = c.credential_generation_id
-              WHERE c.id = a.target_connector_id)) AS candidate_ciphertext,
+              WHERE c.id = a.target_connector_id AND c.base_url = a.base_url)) AS candidate_ciphertext,
           COALESCE(a.claim_token, '')::text AS claim_token, a.claim_attempts
 `
 
@@ -109,6 +109,17 @@ func (q *Queries) ClaimNext(ctx context.Context, arg ClaimNextParams) (ClaimNext
 		&i.ClaimAttempts,
 	)
 	return i, err
+}
+
+const connectorExists = `-- name: ConnectorExists :one
+SELECT EXISTS (SELECT 1 FROM connectors WHERE id = $1)
+`
+
+func (q *Queries) ConnectorExists(ctx context.Context, id string) (bool, error) {
+	row := q.db.QueryRow(ctx, connectorExists, id)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
 }
 
 const createConnector = `-- name: CreateConnector :one
@@ -393,6 +404,7 @@ SELECT $1, $2, NULLIF($3::text, ''),
        $4, c.id, $5::bigint,
        clock_timestamp() + $6::double precision * interval '1 second'
 FROM connectors c WHERE c.id = $7
+  AND ($4::bytea IS NOT NULL OR c.base_url = $2)
 RETURNING id
 `
 

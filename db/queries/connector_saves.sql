@@ -11,7 +11,11 @@ SELECT sqlc.arg(name), sqlc.arg(base_url), NULLIF(sqlc.arg(credential_label)::te
        sqlc.narg(candidate_ciphertext), c.id, sqlc.arg(base_revision)::bigint,
        clock_timestamp() + sqlc.arg(ttl_seconds)::double precision * interval '1 second'
 FROM connectors c WHERE c.id = sqlc.arg(connector_id)
+  AND (sqlc.narg(candidate_ciphertext)::bytea IS NOT NULL OR c.base_url = sqlc.arg(base_url))
 RETURNING id;
+
+-- name: ConnectorExists :one
+SELECT EXISTS (SELECT 1 FROM connectors WHERE id = sqlc.arg(id));
 
 -- name: GetAttempt :one
 SELECT id, state,
@@ -59,7 +63,7 @@ RETURNING a.id, a.name, a.base_url, COALESCE(a.credential_label, '')::text AS cr
           COALESCE(a.candidate_ciphertext, (
               SELECT g.ciphertext FROM connectors c
               JOIN credential_generations g ON g.id = c.credential_generation_id
-              WHERE c.id = a.target_connector_id)) AS candidate_ciphertext,
+              WHERE c.id = a.target_connector_id AND c.base_url = a.base_url)) AS candidate_ciphertext,
           COALESCE(a.claim_token, '')::text AS claim_token, a.claim_attempts;
 
 -- name: LockClaim :one
