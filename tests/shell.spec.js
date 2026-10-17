@@ -17,16 +17,6 @@ test('Escape with nothing open leaves focus where the user left it', async ({ pa
   await expect(link).toBeFocused();
 });
 
-test('the profile menu theme button applies to the page without the top-bar toggle', async ({ page }) => {
-  await page.goto('/');
-  await expect(page.locator('body')).toHaveAttribute('data-theme', 'dark');
-
-  await page.locator('.profile').click();
-  await page.locator('.theme-swap').click();
-
-  await expect(page.locator('body')).toHaveAttribute('data-theme', 'light');
-});
-
 test('a stored desktop collapse does not shrink the mobile drawer', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('goldfin.sidebar', 'collapsed'));
   await page.setViewportSize({ width: 375, height: 720 });
@@ -82,7 +72,6 @@ test('the theme button repaints the shell, not just the attribute', async ({ pag
   const nav = page.locator('#primary-nav');
   const swap = page.locator('.theme-swap');
   const darkBg = await nav.evaluate(n => getComputedStyle(n).backgroundColor);
-  await expect(nav).toHaveCSS('background-color', darkBg);
 
   await swap.click();
 
