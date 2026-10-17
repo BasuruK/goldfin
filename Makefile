@@ -1,7 +1,13 @@
 # Local dev. Requires: docker, go, pnpm, and a repo-root `.env` (cp .env.example .env).
 # Checks also require golangci-lint, govulncheck, zizmor and gitleaks (CI installs pinned versions).
 # `make check` fails unless TEST_DATABASE_URL points to a disposable *_test or *_tests database.
-# See TASKS.md, "T3 implementation ticket", for its isolated Docker setup and cleanup commands.
+# Isolated test database (tmpfs, loopback-only, nothing persists; stop it to clean up):
+#   docker run --rm -d --name goldfin-tests -p 127.0.0.1::5432 --tmpfs /var/lib/postgresql/data \
+#     -e POSTGRES_USER=goldfin_test -e POSTGRES_DB=goldfin_test -e POSTGRES_HOST_AUTH_METHOD=trust \
+#     postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+#   port=$(docker inspect goldfin-tests --format '{{(index (index .NetworkSettings.Ports "5432/tcp") 0).HostPort}}')
+#   export TEST_DATABASE_URL="postgres://goldfin_test@127.0.0.1:$port/goldfin_test?sslmode=disable"
+#   make check; docker stop goldfin-tests
 
 SQLC = go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
 
