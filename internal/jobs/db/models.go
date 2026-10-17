@@ -16,6 +16,7 @@ type Connector struct {
 	CredentialGenerationID pgtype.Text
 	CreatedAt              pgtype.Timestamptz
 	UpdatedAt              pgtype.Timestamptz
+	Revision               int64
 }
 
 type ConnectorSaveAttempt struct {
@@ -35,6 +36,8 @@ type ConnectorSaveAttempt struct {
 	CreatedAt           pgtype.Timestamptz
 	UpdatedAt           pgtype.Timestamptz
 	ExpiresAt           pgtype.Timestamptz
+	TargetConnectorID   pgtype.Text
+	BaseRevision        pgtype.Int8
 }
 
 type CredentialGeneration struct {

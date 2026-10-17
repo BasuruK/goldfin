@@ -4,6 +4,20 @@ VALUES (sqlc.arg(name), sqlc.arg(base_url), NULLIF(sqlc.arg(credential_label)::t
         sqlc.narg(candidate_ciphertext), clock_timestamp() + sqlc.arg(ttl_seconds)::double precision * interval '1 second')
 RETURNING id;
 
+-- name: StageEditAttempt :one
+INSERT INTO connector_save_attempts (name, base_url, credential_label, candidate_ciphertext,
+                                     target_connector_id, base_revision, expires_at)
+SELECT sqlc.arg(name), sqlc.arg(base_url), NULLIF(sqlc.arg(credential_label)::text, ''),
+       sqlc.narg(candidate_ciphertext), c.id, sqlc.arg(base_revision)::bigint,
+       clock_timestamp() + sqlc.arg(ttl_seconds)::double precision * interval '1 second'
+FROM connectors c WHERE c.id = sqlc.arg(connector_id)
+  AND c.revision = sqlc.arg(base_revision)::bigint
+  AND (sqlc.narg(candidate_ciphertext)::bytea IS NOT NULL OR c.base_url = sqlc.arg(base_url))
+RETURNING id;
+
+-- name: GetConnectorRevision :one
+SELECT revision FROM connectors WHERE id = sqlc.arg(id);
+
 -- name: GetAttempt :one
 SELECT id, state,
        COALESCE(connector_id, '')::text AS connector_id,
@@ -14,7 +28,7 @@ SELECT id, state,
 FROM connector_save_attempts WHERE id = sqlc.arg(id);
 
 -- name: ListConnectors :many
-SELECT c.id, c.name, c.provider_type, c.base_url,
+SELECT c.id, c.name, c.provider_type, c.base_url, c.revision,
        COALESCE(g.label, '')::text AS credential_label, g.set_at AS credential_set_at
 FROM connectors c
 LEFT JOIN credential_generations g ON g.id = c.credential_generation_id
@@ -47,10 +61,15 @@ SET state = 'running', claim_token = gen_random_uuid()::text,
     claim_attempts = a.claim_attempts + 1, updated_at = clock_timestamp()
 FROM next WHERE a.id = next.id
 RETURNING a.id, a.name, a.base_url, COALESCE(a.credential_label, '')::text AS credential_label,
-          a.candidate_ciphertext, COALESCE(a.claim_token, '')::text AS claim_token, a.claim_attempts;
+          COALESCE(a.candidate_ciphertext, (
+              SELECT g.ciphertext FROM connectors c
+              JOIN credential_generations g ON g.id = c.credential_generation_id
+              WHERE c.id = a.target_connector_id AND c.base_url = a.base_url)) AS candidate_ciphertext,
+          COALESCE(a.claim_token, '')::text AS claim_token, a.claim_attempts;
 
 -- name: LockClaim :one
-SELECT name, base_url, COALESCE(credential_label, '')::text AS credential_label, candidate_ciphertext
+SELECT name, base_url, COALESCE(credential_label, '')::text AS credential_label, candidate_ciphertext,
+       COALESCE(target_connector_id, '')::text AS target_connector_id, COALESCE(base_revision, 0)::bigint AS base_revision
 FROM connector_save_attempts
 WHERE id = sqlc.arg(id) AND state = 'running' AND claim_token = sqlc.arg(token)::text
   AND expires_at > clock_timestamp()
@@ -60,7 +79,7 @@ FOR UPDATE;
 -- name: CreateConnector :one
 INSERT INTO connectors (name, base_url) VALUES (sqlc.arg(name), sqlc.arg(base_url)) RETURNING id;
 
--- name: SetInitialCredential :execrows
+-- name: AttachCredential :execrows
 WITH generation AS (
     INSERT INTO credential_generations (connector_id, label, ciphertext)
     VALUES (sqlc.arg(connector_id), sqlc.arg(label), sqlc.arg(ciphertext))
@@ -68,6 +87,15 @@ WITH generation AS (
 )
 UPDATE connectors c SET credential_generation_id = g.id, updated_at = clock_timestamp()
 FROM generation g WHERE c.id = g.connector_id;
+
+-- name: ApplyConnectorEdit :execrows
+UPDATE connectors
+SET name = sqlc.arg(name), base_url = sqlc.arg(base_url), revision = revision + 1, updated_at = clock_timestamp()
+WHERE id = sqlc.arg(id) AND revision = sqlc.arg(base_revision)::bigint;
+
+-- name: SupersedeActiveCredential :exec
+UPDATE credential_generations SET state = 'superseded'
+WHERE connector_id = sqlc.arg(connector_id) AND state = 'active';
 
 -- name: FinishSuccess :execrows
 UPDATE connector_save_attempts

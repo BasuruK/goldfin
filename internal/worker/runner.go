@@ -88,7 +88,8 @@ func runOne(parent context.Context, store *jobs.Store, box *secretbox.Box, check
 	} else {
 		err = store.Complete(finishCtx, claim.ID, claim.Token, finding.HTTPStatus, finding.Latency)
 	}
-	if err != nil && !errors.Is(err, jobs.ErrClaimLost) {
+	// ErrStale is a settled outcome: Complete already finished the attempt as stale.
+	if err != nil && !errors.Is(err, jobs.ErrClaimLost) && !errors.Is(err, jobs.ErrStale) {
 		if parent.Err() != nil {
 			return true, nil
 		}

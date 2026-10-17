@@ -28,12 +28,22 @@ var (
 	ErrNoWork          = errors.New("no pending Connector Save attempt")
 	ErrClaimLost       = errors.New("Connector Save claim no longer held")
 	ErrInvalidFinding  = errors.New("invalid Reachable finding")
+	// ErrStale reports an edit whose base revision no longer matches the active Connector.
+	ErrStale = errors.New("Connector changed since the edit was proposed")
 )
 
 // Proposal is an immutable Web Request create proposal once staged.
 type Proposal struct {
 	Name, BaseURL, CredentialLabel string
 	Credential                     string `json:"-"`
+}
+
+// EditProposal is an immutable edit of one active Connector once staged. An empty
+// Credential keeps the active generation; a supplied one requires a label and replaces it.
+type EditProposal struct {
+	ConnectorID, Name, BaseURL, CredentialLabel string
+	BaseRevision                                int64
+	Credential                                  string `json:"-"`
 }
 
 // Attempt exposes safe polling metadata, never ciphertext or a claim token.
@@ -46,6 +56,7 @@ type Attempt struct {
 // Connector contains active metadata, with no value-derived Credential details.
 type Connector struct {
 	ID, Name, ProviderType, BaseURL, CredentialLabel string
+	Revision                                         int64
 	CredentialSetAt                                  *time.Time
 }
 
@@ -75,23 +86,53 @@ func NewStore(pool *pgxpool.Pool, key []byte) (*Store, error) {
 
 // Stage writes only an encrypted proposal and returns its polling handle.
 func (s *Store) Stage(ctx context.Context, in Proposal) (string, error) {
-	if strings.TrimSpace(in.Name) == "" || strings.TrimSpace(in.BaseURL) == "" ||
-		(in.Credential != "" && strings.TrimSpace(in.CredentialLabel) == "") ||
-		(in.Credential == "" && in.CredentialLabel != "") {
-		return "", ErrInvalidProposal
-	}
-	var encrypted []byte
-	if in.Credential != "" {
-		var err error
-		encrypted, err = s.box.Encrypt([]byte(in.Credential))
-		if err != nil {
-			return "", err
-		}
+	encrypted, err := s.seal(in.Name, in.BaseURL, in.CredentialLabel, in.Credential)
+	if err != nil {
+		return "", err
 	}
 	return s.queries.StageAttempt(ctx, jobsdb.StageAttemptParams{
 		Name: in.Name, BaseUrl: in.BaseURL, CredentialLabel: in.CredentialLabel,
 		CandidateCiphertext: encrypted, TtlSeconds: AttemptTTL.Seconds(),
 	})
+}
+
+// StageEdit writes only an encrypted edit proposal for an existing Connector. Changing the
+// base URL requires a replacement Credential, so an active one is never sent to a new host.
+func (s *Store) StageEdit(ctx context.Context, in EditProposal) (string, error) {
+	encrypted, err := s.seal(in.Name, in.BaseURL, in.CredentialLabel, in.Credential)
+	if err != nil {
+		return "", err
+	}
+	id, err := s.queries.StageEditAttempt(ctx, jobsdb.StageEditAttemptParams{
+		ConnectorID: in.ConnectorID, BaseRevision: in.BaseRevision, Name: in.Name, BaseUrl: in.BaseURL,
+		CredentialLabel: in.CredentialLabel, CandidateCiphertext: encrypted, TtlSeconds: AttemptTTL.Seconds(),
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		// No row means a missing Connector, a stale base revision, or a new URL that would reuse the active Credential.
+		revision, revErr := s.queries.GetConnectorRevision(ctx, in.ConnectorID)
+		switch {
+		case errors.Is(revErr, pgx.ErrNoRows):
+			return "", ErrNotFound
+		case revErr != nil:
+			return "", revErr
+		case revision != in.BaseRevision:
+			return "", ErrStale
+		}
+		return "", ErrInvalidProposal
+	}
+	return id, err
+}
+
+// seal validates a proposal and encrypts its optional Credential candidate.
+func (s *Store) seal(name, baseURL, label, credential string) ([]byte, error) {
+	if strings.TrimSpace(name) == "" || strings.TrimSpace(baseURL) == "" ||
+		(credential != "" && strings.TrimSpace(label) == "") || (credential == "" && label != "") {
+		return nil, ErrInvalidProposal
+	}
+	if credential == "" {
+		return nil, nil
+	}
+	return s.box.Encrypt([]byte(credential))
 }
 
 // Get reads the public state of a Save attempt.
@@ -119,7 +160,7 @@ func (s *Store) ListConnectors(ctx context.Context) ([]Connector, error) {
 	for _, row := range rows {
 		connector := Connector{
 			ID: row.ID, Name: row.Name, ProviderType: row.ProviderType,
-			BaseURL: row.BaseUrl, CredentialLabel: row.CredentialLabel,
+			BaseURL: row.BaseUrl, CredentialLabel: row.CredentialLabel, Revision: row.Revision,
 		}
 		if row.CredentialSetAt.Valid {
 			setAt := row.CredentialSetAt.Time
@@ -158,12 +199,14 @@ func (s *Store) ClaimNext(ctx context.Context) (Claim, error) {
 }
 
 // Complete commits only the original proposal held by a current, unexpired claim.
+// An edit whose base revision is no longer current finishes as stale and returns ErrStale.
 func (s *Store) Complete(ctx context.Context, id, token string, httpStatus int, latency time.Duration) error {
 	if httpStatus < 200 || httpStatus >= 300 || latency < 0 {
 		return ErrInvalidFinding
 	}
 	status := int16(httpStatus)
-	return pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
+	stale := false
+	err := pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
 		q := s.queries.WithTx(tx)
 		proposal, err := q.LockClaim(ctx, jobsdb.LockClaimParams{ID: id, Token: token, LeaseSeconds: LeaseDuration.Seconds()})
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -172,19 +215,35 @@ func (s *Store) Complete(ctx context.Context, id, token string, httpStatus int, 
 		if err != nil {
 			return err
 		}
-		connectorID, err := q.CreateConnector(ctx, jobsdb.CreateConnectorParams{Name: proposal.Name, BaseUrl: proposal.BaseUrl})
-		if err != nil {
-			return err
-		}
-		if proposal.CandidateCiphertext != nil {
-			n, err := q.SetInitialCredential(ctx, jobsdb.SetInitialCredentialParams{
-				ConnectorID: connectorID, Label: proposal.CredentialLabel, Ciphertext: proposal.CandidateCiphertext,
+		connectorID := proposal.TargetConnectorID
+		if connectorID == "" {
+			connectorID, err = q.CreateConnector(ctx, jobsdb.CreateConnectorParams{Name: proposal.Name, BaseUrl: proposal.BaseUrl})
+			if err != nil {
+				return err
+			}
+			if proposal.CandidateCiphertext != nil {
+				if err := s.attachCredential(ctx, q, connectorID, proposal.CredentialLabel, proposal.CandidateCiphertext); err != nil {
+					return err
+				}
+			}
+		} else {
+			n, err := q.ApplyConnectorEdit(ctx, jobsdb.ApplyConnectorEditParams{
+				ID: connectorID, BaseRevision: proposal.BaseRevision, Name: proposal.Name, BaseUrl: proposal.BaseUrl,
 			})
 			if err != nil {
 				return err
 			}
 			if n != 1 {
-				return errors.New("initial Credential was not attached to one Connector")
+				stale = true
+				return s.finishStale(ctx, q, id, token)
+			}
+			if proposal.CandidateCiphertext != nil {
+				if err := q.SupersedeActiveCredential(ctx, connectorID); err != nil {
+					return err
+				}
+				if err := s.attachCredential(ctx, q, connectorID, proposal.CredentialLabel, proposal.CandidateCiphertext); err != nil {
+					return err
+				}
 			}
 		}
 		n, err := q.FinishSuccess(ctx, jobsdb.FinishSuccessParams{
@@ -199,6 +258,36 @@ func (s *Store) Complete(ctx context.Context, id, token string, httpStatus int, 
 		}
 		return nil
 	})
+	if err == nil && stale {
+		return ErrStale
+	}
+	return err
+}
+
+// attachCredential appends an active generation and points its Connector at it.
+func (s *Store) attachCredential(ctx context.Context, q *jobsdb.Queries, connectorID, label string, ciphertext []byte) error {
+	n, err := q.AttachCredential(ctx, jobsdb.AttachCredentialParams{ConnectorID: connectorID, Label: label, Ciphertext: ciphertext})
+	if err != nil {
+		return err
+	}
+	if n != 1 {
+		return errors.New("generation was not attached to one Connector")
+	}
+	return nil
+}
+
+// finishStale terminalizes the held attempt so its candidate cannot be reused.
+func (s *Store) finishStale(ctx context.Context, q *jobsdb.Queries, id, token string) error {
+	n, err := q.FinishFailure(ctx, jobsdb.FinishFailureParams{
+		ID: id, Token: token, FailureCode: "stale", LeaseSeconds: LeaseDuration.Seconds(),
+	})
+	if err != nil {
+		return err
+	}
+	if n != 1 {
+		return ErrClaimLost
+	}
+	return nil
 }
 
 // Fail clears a held candidate without creating active data or storing raw errors.

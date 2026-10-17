@@ -11,6 +11,56 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const applyConnectorEdit = `-- name: ApplyConnectorEdit :execrows
+UPDATE connectors
+SET name = $1, base_url = $2, revision = revision + 1, updated_at = clock_timestamp()
+WHERE id = $3 AND revision = $4::bigint
+`
+
+type ApplyConnectorEditParams struct {
+	Name         string
+	BaseUrl      string
+	ID           string
+	BaseRevision int64
+}
+
+func (q *Queries) ApplyConnectorEdit(ctx context.Context, arg ApplyConnectorEditParams) (int64, error) {
+	result, err := q.db.Exec(ctx, applyConnectorEdit,
+		arg.Name,
+		arg.BaseUrl,
+		arg.ID,
+		arg.BaseRevision,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const attachCredential = `-- name: AttachCredential :execrows
+WITH generation AS (
+    INSERT INTO credential_generations (connector_id, label, ciphertext)
+    VALUES ($1, $2, $3)
+    RETURNING id, connector_id
+)
+UPDATE connectors c SET credential_generation_id = g.id, updated_at = clock_timestamp()
+FROM generation g WHERE c.id = g.connector_id
+`
+
+type AttachCredentialParams struct {
+	ConnectorID string
+	Label       string
+	Ciphertext  []byte
+}
+
+func (q *Queries) AttachCredential(ctx context.Context, arg AttachCredentialParams) (int64, error) {
+	result, err := q.db.Exec(ctx, attachCredential, arg.ConnectorID, arg.Label, arg.Ciphertext)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const claimNext = `-- name: ClaimNext :one
 WITH next AS (
     SELECT id FROM connector_save_attempts
@@ -24,7 +74,11 @@ SET state = 'running', claim_token = gen_random_uuid()::text,
     claim_attempts = a.claim_attempts + 1, updated_at = clock_timestamp()
 FROM next WHERE a.id = next.id
 RETURNING a.id, a.name, a.base_url, COALESCE(a.credential_label, '')::text AS credential_label,
-          a.candidate_ciphertext, COALESCE(a.claim_token, '')::text AS claim_token, a.claim_attempts
+          COALESCE(a.candidate_ciphertext, (
+              SELECT g.ciphertext FROM connectors c
+              JOIN credential_generations g ON g.id = c.credential_generation_id
+              WHERE c.id = a.target_connector_id AND c.base_url = a.base_url)) AS candidate_ciphertext,
+          COALESCE(a.claim_token, '')::text AS claim_token, a.claim_attempts
 `
 
 type ClaimNextParams struct {
@@ -197,8 +251,19 @@ func (q *Queries) GetAttempt(ctx context.Context, id string) (GetAttemptRow, err
 	return i, err
 }
 
+const getConnectorRevision = `-- name: GetConnectorRevision :one
+SELECT revision FROM connectors WHERE id = $1
+`
+
+func (q *Queries) GetConnectorRevision(ctx context.Context, id string) (int64, error) {
+	row := q.db.QueryRow(ctx, getConnectorRevision, id)
+	var revision int64
+	err := row.Scan(&revision)
+	return revision, err
+}
+
 const listConnectors = `-- name: ListConnectors :many
-SELECT c.id, c.name, c.provider_type, c.base_url,
+SELECT c.id, c.name, c.provider_type, c.base_url, c.revision,
        COALESCE(g.label, '')::text AS credential_label, g.set_at AS credential_set_at
 FROM connectors c
 LEFT JOIN credential_generations g ON g.id = c.credential_generation_id
@@ -210,6 +275,7 @@ type ListConnectorsRow struct {
 	Name            string
 	ProviderType    string
 	BaseUrl         string
+	Revision        int64
 	CredentialLabel string
 	CredentialSetAt pgtype.Timestamptz
 }
@@ -228,6 +294,7 @@ func (q *Queries) ListConnectors(ctx context.Context) ([]ListConnectorsRow, erro
 			&i.Name,
 			&i.ProviderType,
 			&i.BaseUrl,
+			&i.Revision,
 			&i.CredentialLabel,
 			&i.CredentialSetAt,
 		); err != nil {
@@ -242,7 +309,8 @@ func (q *Queries) ListConnectors(ctx context.Context) ([]ListConnectorsRow, erro
 }
 
 const lockClaim = `-- name: LockClaim :one
-SELECT name, base_url, COALESCE(credential_label, '')::text AS credential_label, candidate_ciphertext
+SELECT name, base_url, COALESCE(credential_label, '')::text AS credential_label, candidate_ciphertext,
+       COALESCE(target_connector_id, '')::text AS target_connector_id, COALESCE(base_revision, 0)::bigint AS base_revision
 FROM connector_save_attempts
 WHERE id = $1 AND state = 'running' AND claim_token = $2::text
   AND expires_at > clock_timestamp()
@@ -261,6 +329,8 @@ type LockClaimRow struct {
 	BaseUrl             string
 	CredentialLabel     string
 	CandidateCiphertext []byte
+	TargetConnectorID   string
+	BaseRevision        int64
 }
 
 func (q *Queries) LockClaim(ctx context.Context, arg LockClaimParams) (LockClaimRow, error) {
@@ -271,6 +341,8 @@ func (q *Queries) LockClaim(ctx context.Context, arg LockClaimParams) (LockClaim
 		&i.BaseUrl,
 		&i.CredentialLabel,
 		&i.CandidateCiphertext,
+		&i.TargetConnectorID,
+		&i.BaseRevision,
 	)
 	return i, err
 }
@@ -291,30 +363,6 @@ type ReleaseClaimParams struct {
 
 func (q *Queries) ReleaseClaim(ctx context.Context, arg ReleaseClaimParams) (int64, error) {
 	result, err := q.db.Exec(ctx, releaseClaim, arg.ID, arg.Token, arg.LeaseSeconds)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
-
-const setInitialCredential = `-- name: SetInitialCredential :execrows
-WITH generation AS (
-    INSERT INTO credential_generations (connector_id, label, ciphertext)
-    VALUES ($1, $2, $3)
-    RETURNING id, connector_id
-)
-UPDATE connectors c SET credential_generation_id = g.id, updated_at = clock_timestamp()
-FROM generation g WHERE c.id = g.connector_id
-`
-
-type SetInitialCredentialParams struct {
-	ConnectorID string
-	Label       string
-	Ciphertext  []byte
-}
-
-func (q *Queries) SetInitialCredential(ctx context.Context, arg SetInitialCredentialParams) (int64, error) {
-	result, err := q.db.Exec(ctx, setInitialCredential, arg.ConnectorID, arg.Label, arg.Ciphertext)
 	if err != nil {
 		return 0, err
 	}
@@ -347,4 +395,51 @@ func (q *Queries) StageAttempt(ctx context.Context, arg StageAttemptParams) (str
 	var id string
 	err := row.Scan(&id)
 	return id, err
+}
+
+const stageEditAttempt = `-- name: StageEditAttempt :one
+INSERT INTO connector_save_attempts (name, base_url, credential_label, candidate_ciphertext,
+                                     target_connector_id, base_revision, expires_at)
+SELECT $1, $2, NULLIF($3::text, ''),
+       $4, c.id, $5::bigint,
+       clock_timestamp() + $6::double precision * interval '1 second'
+FROM connectors c WHERE c.id = $7
+  AND c.revision = $5::bigint
+  AND ($4::bytea IS NOT NULL OR c.base_url = $2)
+RETURNING id
+`
+
+type StageEditAttemptParams struct {
+	Name                string
+	BaseUrl             string
+	CredentialLabel     string
+	CandidateCiphertext []byte
+	BaseRevision        int64
+	TtlSeconds          float64
+	ConnectorID         string
+}
+
+func (q *Queries) StageEditAttempt(ctx context.Context, arg StageEditAttemptParams) (string, error) {
+	row := q.db.QueryRow(ctx, stageEditAttempt,
+		arg.Name,
+		arg.BaseUrl,
+		arg.CredentialLabel,
+		arg.CandidateCiphertext,
+		arg.BaseRevision,
+		arg.TtlSeconds,
+		arg.ConnectorID,
+	)
+	var id string
+	err := row.Scan(&id)
+	return id, err
+}
+
+const supersedeActiveCredential = `-- name: SupersedeActiveCredential :exec
+UPDATE credential_generations SET state = 'superseded'
+WHERE connector_id = $1 AND state = 'active'
+`
+
+func (q *Queries) SupersedeActiveCredential(ctx context.Context, connectorID string) error {
+	_, err := q.db.Exec(ctx, supersedeActiveCredential, connectorID)
+	return err
 }
