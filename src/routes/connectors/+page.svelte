@@ -1,4 +1,5 @@
 <script>
+  import { beforeNavigate } from '$app/navigation';
   import { onDestroy, onMount } from 'svelte';
   import { Button, Icon, Section } from '$goldfin/lib/index.js';
   import ConnectorCard from '#lib/connectors/ConnectorCard.svelte';
@@ -11,8 +12,25 @@
     openAddDialog
   } from '#lib/connectors/store.svelte.js';
 
+  beforeNavigate(() => {
+    disposeConnectorsPage();
+  });
+
   onMount(() => {
     void loadConnectorList();
+    const onPageHide = () => disposeConnectorsPage();
+    /** @param {PageTransitionEvent} event */
+    const onPageShow = event => {
+      if (!event.persisted) return;
+      disposeConnectorsPage();
+      void loadConnectorList();
+    };
+    window.addEventListener('pagehide', onPageHide);
+    window.addEventListener('pageshow', onPageShow);
+    return () => {
+      window.removeEventListener('pagehide', onPageHide);
+      window.removeEventListener('pageshow', onPageShow);
+    };
   });
 
   onDestroy(() => {

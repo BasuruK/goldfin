@@ -13,8 +13,13 @@ import (
 
 const applyConnectorEdit = `-- name: ApplyConnectorEdit :execrows
 UPDATE connectors
-SET name = $1, base_url = $2, revision = revision + 1, updated_at = clock_timestamp()
-WHERE id = $3 AND revision = $4::bigint
+SET
+    name = $1,
+    base_url = $2,
+    revision = revision + 1,
+    updated_at = clock_timestamp()
+WHERE id = $3
+  AND revision = $4::bigint
 `
 
 type ApplyConnectorEditParams struct {
@@ -43,8 +48,12 @@ WITH generation AS (
     VALUES ($1, $2, $3)
     RETURNING id, connector_id
 )
-UPDATE connectors c SET credential_generation_id = g.id, updated_at = clock_timestamp()
-FROM generation g WHERE c.id = g.connector_id
+UPDATE connectors c
+SET
+    credential_generation_id = g.id,
+    updated_at = clock_timestamp()
+FROM generation g
+WHERE c.id = g.connector_id
 `
 
 type AttachCredentialParams struct {
@@ -63,22 +72,47 @@ func (q *Queries) AttachCredential(ctx context.Context, arg AttachCredentialPara
 
 const claimNext = `-- name: ClaimNext :one
 WITH next AS (
-    SELECT id FROM connector_save_attempts
-    WHERE claim_attempts < $1::integer AND expires_at > clock_timestamp()
-      AND (state = 'queued' OR (state = 'running'
-           AND updated_at <= clock_timestamp() - $2::double precision * interval '1 second'))
-    ORDER BY created_at, id LIMIT 1 FOR UPDATE SKIP LOCKED
+    SELECT id
+    FROM connector_save_attempts
+    WHERE claim_attempts < $1::integer
+      AND expires_at > clock_timestamp()
+      AND (
+          state = 'queued'
+          OR (
+              state = 'running'
+              AND updated_at <= clock_timestamp()
+                  - $2::double precision * interval '1 second'
+          )
+      )
+    ORDER BY created_at, id
+    LIMIT 1
+    FOR UPDATE SKIP LOCKED
 )
 UPDATE connector_save_attempts a
-SET state = 'running', claim_token = gen_random_uuid()::text,
-    claim_attempts = a.claim_attempts + 1, updated_at = clock_timestamp()
-FROM next WHERE a.id = next.id
-RETURNING a.id, a.name, a.base_url, COALESCE(a.credential_label, '')::text AS credential_label,
-          COALESCE(a.candidate_ciphertext, (
-              SELECT g.ciphertext FROM connectors c
-              JOIN credential_generations g ON g.id = c.credential_generation_id
-              WHERE c.id = a.target_connector_id AND c.base_url = a.base_url)) AS candidate_ciphertext,
-          COALESCE(a.claim_token, '')::text AS claim_token, a.claim_attempts
+SET
+    state = 'running',
+    claim_token = gen_random_uuid()::text,
+    claim_attempts = a.claim_attempts + 1,
+    updated_at = clock_timestamp()
+FROM next
+WHERE a.id = next.id
+RETURNING
+    a.id,
+    a.name,
+    a.base_url,
+    COALESCE(a.credential_label, '')::text AS credential_label,
+    COALESCE(
+        a.candidate_ciphertext,
+        (
+            SELECT g.ciphertext
+            FROM connectors c
+            JOIN credential_generations g ON g.id = c.credential_generation_id
+            WHERE c.id = a.target_connector_id
+              AND c.base_url = a.base_url
+        )
+    ) AS candidate_ciphertext,
+    COALESCE(a.claim_token, '')::text AS claim_token,
+    a.claim_attempts
 `
 
 type ClaimNextParams struct {
@@ -112,7 +146,10 @@ func (q *Queries) ClaimNext(ctx context.Context, arg ClaimNextParams) (ClaimNext
 }
 
 const createConnector = `-- name: CreateConnector :one
-INSERT INTO connectors (name, base_url) VALUES ($1, $2) RETURNING id
+
+INSERT INTO connectors (name, base_url)
+VALUES ($1, $2)
+RETURNING id
 `
 
 type CreateConnectorParams struct {
@@ -120,6 +157,9 @@ type CreateConnectorParams struct {
 	BaseUrl string
 }
 
+// =============================================================================
+// Connector mutations
+// =============================================================================
 func (q *Queries) CreateConnector(ctx context.Context, arg CreateConnectorParams) (string, error) {
 	row := q.db.QueryRow(ctx, createConnector, arg.Name, arg.BaseUrl)
 	var id string
@@ -128,16 +168,32 @@ func (q *Queries) CreateConnector(ctx context.Context, arg CreateConnectorParams
 }
 
 const expireAttempts = `-- name: ExpireAttempts :exec
+
 UPDATE connector_save_attempts
-SET state = 'finished', claim_token = NULL, candidate_ciphertext = NULL,
-    failure_code = CASE WHEN expires_at <= clock_timestamp() THEN 'expired' ELSE 'attempts_exhausted' END,
+SET
+    state = 'finished',
+    claim_token = NULL,
+    candidate_ciphertext = NULL,
+    failure_code = CASE
+        WHEN expires_at <= clock_timestamp() THEN 'expired'
+        ELSE 'attempts_exhausted'
+    END,
     updated_at = clock_timestamp()
 WHERE id IN (
-    SELECT id FROM connector_save_attempts
+    SELECT id
+    FROM connector_save_attempts
     WHERE state IN ('queued', 'running')
-      AND (expires_at <= clock_timestamp()
-           OR (claim_attempts >= $1::integer AND
-               (state = 'queued' OR updated_at <= clock_timestamp() - $2::double precision * interval '1 second')))
+      AND (
+          expires_at <= clock_timestamp()
+          OR (
+              claim_attempts >= $1::integer
+              AND (
+                  state = 'queued'
+                  OR updated_at <= clock_timestamp()
+                      - $2::double precision * interval '1 second'
+              )
+          )
+      )
     FOR UPDATE SKIP LOCKED
 )
 `
@@ -147,6 +203,9 @@ type ExpireAttemptsParams struct {
 	LeaseSeconds float64
 }
 
+// =============================================================================
+// Worker claim lifecycle
+// =============================================================================
 func (q *Queries) ExpireAttempts(ctx context.Context, arg ExpireAttemptsParams) error {
 	_, err := q.db.Exec(ctx, expireAttempts, arg.MaxClaims, arg.LeaseSeconds)
 	return err
@@ -154,11 +213,18 @@ func (q *Queries) ExpireAttempts(ctx context.Context, arg ExpireAttemptsParams) 
 
 const finishFailure = `-- name: FinishFailure :execrows
 UPDATE connector_save_attempts
-SET state = 'finished', claim_token = NULL, candidate_ciphertext = NULL,
-    failure_code = $1::text, updated_at = clock_timestamp()
-WHERE id = $2 AND state = 'running' AND claim_token = $3::text
+SET
+    state = 'finished',
+    claim_token = NULL,
+    candidate_ciphertext = NULL,
+    failure_code = $1::text,
+    updated_at = clock_timestamp()
+WHERE id = $2
+  AND state = 'running'
+  AND claim_token = $3::text
   AND expires_at > clock_timestamp()
-  AND updated_at > clock_timestamp() - $4::double precision * interval '1 second'
+  AND updated_at > clock_timestamp()
+      - $4::double precision * interval '1 second'
 `
 
 type FinishFailureParams struct {
@@ -182,14 +248,23 @@ func (q *Queries) FinishFailure(ctx context.Context, arg FinishFailureParams) (i
 }
 
 const finishSuccess = `-- name: FinishSuccess :execrows
+
 UPDATE connector_save_attempts
-SET state = 'finished', claim_token = NULL, candidate_ciphertext = NULL,
-    connector_id = $1::text, finding_kind = 'reachable',
-    http_status = $2::smallint, latency_ms = $3::bigint,
+SET
+    state = 'finished',
+    claim_token = NULL,
+    candidate_ciphertext = NULL,
+    connector_id = $1::text,
+    finding_kind = 'reachable',
+    http_status = $2::smallint,
+    latency_ms = $3::bigint,
     updated_at = clock_timestamp()
-WHERE id = $4 AND state = 'running' AND claim_token = $5::text
+WHERE id = $4
+  AND state = 'running'
+  AND claim_token = $5::text
   AND expires_at > clock_timestamp()
-  AND updated_at > clock_timestamp() - $6::double precision * interval '1 second'
+  AND updated_at > clock_timestamp()
+      - $6::double precision * interval '1 second'
 `
 
 type FinishSuccessParams struct {
@@ -201,6 +276,9 @@ type FinishSuccessParams struct {
 	LeaseSeconds float64
 }
 
+// =============================================================================
+// Finish / release attempts
+// =============================================================================
 func (q *Queries) FinishSuccess(ctx context.Context, arg FinishSuccessParams) (int64, error) {
 	result, err := q.db.Exec(ctx, finishSuccess,
 		arg.ConnectorID,
@@ -217,13 +295,16 @@ func (q *Queries) FinishSuccess(ctx context.Context, arg FinishSuccessParams) (i
 }
 
 const getAttempt = `-- name: GetAttempt :one
-SELECT id, state,
-       COALESCE(connector_id, '')::text AS connector_id,
-       COALESCE(finding_kind, '')::text AS finding_kind,
-       COALESCE(http_status, 0)::smallint AS http_status,
-       COALESCE(latency_ms, 0)::bigint AS latency_ms,
-       COALESCE(failure_code, '')::text AS failure_code
-FROM connector_save_attempts WHERE id = $1
+SELECT
+    id,
+    state,
+    COALESCE(connector_id, '')::text AS connector_id,
+    COALESCE(finding_kind, '')::text AS finding_kind,
+    COALESCE(http_status, 0)::smallint AS http_status,
+    COALESCE(latency_ms, 0)::bigint AS latency_ms,
+    COALESCE(failure_code, '')::text AS failure_code
+FROM connector_save_attempts
+WHERE id = $1
 `
 
 type GetAttemptRow struct {
@@ -252,9 +333,15 @@ func (q *Queries) GetAttempt(ctx context.Context, id string) (GetAttemptRow, err
 }
 
 const getConnectorRevision = `-- name: GetConnectorRevision :one
-SELECT revision FROM connectors WHERE id = $1
+
+SELECT revision
+FROM connectors
+WHERE id = $1
 `
 
+// =============================================================================
+// Reads
+// =============================================================================
 func (q *Queries) GetConnectorRevision(ctx context.Context, id string) (int64, error) {
 	row := q.db.QueryRow(ctx, getConnectorRevision, id)
 	var revision int64
@@ -263,8 +350,14 @@ func (q *Queries) GetConnectorRevision(ctx context.Context, id string) (int64, e
 }
 
 const listConnectors = `-- name: ListConnectors :many
-SELECT c.id, c.name, c.provider_type, c.base_url, c.revision,
-       COALESCE(g.label, '')::text AS credential_label, g.set_at AS credential_set_at
+SELECT
+    c.id,
+    c.name,
+    c.provider_type,
+    c.base_url,
+    c.revision,
+    COALESCE(g.label, '')::text AS credential_label,
+    g.set_at AS credential_set_at
 FROM connectors c
 LEFT JOIN credential_generations g ON g.id = c.credential_generation_id
 ORDER BY c.created_at, c.id
@@ -309,12 +402,20 @@ func (q *Queries) ListConnectors(ctx context.Context) ([]ListConnectorsRow, erro
 }
 
 const lockClaim = `-- name: LockClaim :one
-SELECT name, base_url, COALESCE(credential_label, '')::text AS credential_label, candidate_ciphertext,
-       COALESCE(target_connector_id, '')::text AS target_connector_id, COALESCE(base_revision, 0)::bigint AS base_revision
+SELECT
+    name,
+    base_url,
+    COALESCE(credential_label, '')::text AS credential_label,
+    candidate_ciphertext,
+    COALESCE(target_connector_id, '')::text AS target_connector_id,
+    COALESCE(base_revision, 0)::bigint AS base_revision
 FROM connector_save_attempts
-WHERE id = $1 AND state = 'running' AND claim_token = $2::text
+WHERE id = $1
+  AND state = 'running'
+  AND claim_token = $2::text
   AND expires_at > clock_timestamp()
-  AND updated_at > clock_timestamp() - $3::double precision * interval '1 second'
+  AND updated_at > clock_timestamp()
+      - $3::double precision * interval '1 second'
 FOR UPDATE
 `
 
@@ -349,10 +450,16 @@ func (q *Queries) LockClaim(ctx context.Context, arg LockClaimParams) (LockClaim
 
 const releaseClaim = `-- name: ReleaseClaim :execrows
 UPDATE connector_save_attempts
-SET state = 'queued', claim_token = NULL, updated_at = clock_timestamp()
-WHERE id = $1 AND state = 'running' AND claim_token = $2::text
+SET
+    state = 'queued',
+    claim_token = NULL,
+    updated_at = clock_timestamp()
+WHERE id = $1
+  AND state = 'running'
+  AND claim_token = $2::text
   AND expires_at > clock_timestamp()
-  AND updated_at > clock_timestamp() - $3::double precision * interval '1 second'
+  AND updated_at > clock_timestamp()
+      - $3::double precision * interval '1 second'
 `
 
 type ReleaseClaimParams struct {
@@ -370,9 +477,21 @@ func (q *Queries) ReleaseClaim(ctx context.Context, arg ReleaseClaimParams) (int
 }
 
 const stageAttempt = `-- name: StageAttempt :one
-INSERT INTO connector_save_attempts (name, base_url, credential_label, candidate_ciphertext, expires_at)
-VALUES ($1, $2, NULLIF($3::text, ''),
-        $4, clock_timestamp() + $5::double precision * interval '1 second')
+
+INSERT INTO connector_save_attempts (
+    name,
+    base_url,
+    credential_label,
+    candidate_ciphertext,
+    expires_at
+)
+VALUES (
+    $1,
+    $2,
+    NULLIF($3::text, ''),
+    $4,
+    clock_timestamp() + $5::double precision * interval '1 second'
+)
 RETURNING id
 `
 
@@ -384,6 +503,9 @@ type StageAttemptParams struct {
 	TtlSeconds          float64
 }
 
+// =============================================================================
+// Staging attempts
+// =============================================================================
 func (q *Queries) StageAttempt(ctx context.Context, arg StageAttemptParams) (string, error) {
 	row := q.db.QueryRow(ctx, stageAttempt,
 		arg.Name,
@@ -398,14 +520,30 @@ func (q *Queries) StageAttempt(ctx context.Context, arg StageAttemptParams) (str
 }
 
 const stageEditAttempt = `-- name: StageEditAttempt :one
-INSERT INTO connector_save_attempts (name, base_url, credential_label, candidate_ciphertext,
-                                     target_connector_id, base_revision, expires_at)
-SELECT $1, $2, NULLIF($3::text, ''),
-       $4, c.id, $5::bigint,
-       clock_timestamp() + $6::double precision * interval '1 second'
-FROM connectors c WHERE c.id = $7
+INSERT INTO connector_save_attempts (
+    name,
+    base_url,
+    credential_label,
+    candidate_ciphertext,
+    target_connector_id,
+    base_revision,
+    expires_at
+)
+SELECT
+    $1,
+    $2,
+    NULLIF($3::text, ''),
+    $4,
+    c.id,
+    $5::bigint,
+    clock_timestamp() + $6::double precision * interval '1 second'
+FROM connectors c
+WHERE c.id = $7
   AND c.revision = $5::bigint
-  AND ($4::bytea IS NOT NULL OR c.base_url = $2)
+  AND (
+      $4::bytea IS NOT NULL
+      OR c.base_url = $2
+  )
 RETURNING id
 `
 
@@ -435,8 +573,10 @@ func (q *Queries) StageEditAttempt(ctx context.Context, arg StageEditAttemptPara
 }
 
 const supersedeActiveCredential = `-- name: SupersedeActiveCredential :exec
-UPDATE credential_generations SET state = 'superseded'
-WHERE connector_id = $1 AND state = 'active'
+UPDATE credential_generations
+SET state = 'superseded'
+WHERE connector_id = $1
+  AND state = 'active'
 `
 
 func (q *Queries) SupersedeActiveCredential(ctx context.Context, connectorID string) error {

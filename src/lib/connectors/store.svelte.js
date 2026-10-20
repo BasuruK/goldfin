@@ -23,6 +23,8 @@ const FAILURE_MESSAGES = {
 let saveController = null;
 let saveToken = 0;
 let listToken = 0;
+/** Bumped when the Connectors route is left; late Save replies must not touch UI. */
+let connectorsPageGen = 0;
 
 /**
  * @type {{
@@ -99,6 +101,7 @@ export function closeDialog() {
 
 /** Leaving the page disposes in-flight work; late replies cannot mutate state. */
 export function disposeConnectorsPage() {
+  connectorsPageGen += 1;
   closeDialog();
   listToken += 1;
   connectorStore.saveNotice = '';
@@ -151,6 +154,7 @@ export async function saveDraft() {
   }
 
   const token = ++saveToken;
+  const pageGen = connectorsPageGen;
   const controller = new AbortController();
   saveController = controller;
   connectorStore.saveState = 'queued';
@@ -176,13 +180,17 @@ export async function saveDraft() {
     });
     if (token !== saveToken) return;
     if (finished.finding) {
-      if (token !== saveToken) return;
+      if (token !== saveToken || pageGen !== connectorsPageGen) return;
       connectorStore.saveState = 'finished';
       connectorStore.saveNotice =
         `Reachable (${finished.finding.httpStatus}, ${finished.finding.latencyMs}ms). ${draft.name.trim()} is saved.`;
       // Close before refreshing: no window where the committed draft looks editable.
       closeDialog();
       await loadConnectorList();
+      if (pageGen !== connectorsPageGen) {
+        connectorStore.saveNotice = '';
+        return;
+      }
     } else {
       if (token !== saveToken) return;
       // A failed check keeps the draft editable so it can be corrected and retried.
