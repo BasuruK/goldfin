@@ -1,36 +1,17 @@
 <script>
-  import { beforeNavigate } from '$app/navigation';
   import { onDestroy, onMount } from 'svelte';
   import { Button, Icon, Section } from '$goldfin/lib/index.js';
   import ConnectorCard from '#lib/connectors/ConnectorCard.svelte';
   import ConnectorDialog from '#lib/connectors/ConnectorDialog.svelte';
   import {
-    clearLegacyConnectors,
     connectorStore,
     disposeConnectorsPage,
     loadConnectorList,
     openAddDialog
   } from '#lib/connectors/store.svelte.js';
 
-  beforeNavigate(() => {
-    disposeConnectorsPage();
-  });
-
   onMount(() => {
     void loadConnectorList();
-    const onPageHide = () => disposeConnectorsPage();
-    /** @param {PageTransitionEvent} event */
-    const onPageShow = event => {
-      if (!event.persisted) return;
-      disposeConnectorsPage();
-      void loadConnectorList();
-    };
-    window.addEventListener('pagehide', onPageHide);
-    window.addEventListener('pageshow', onPageShow);
-    return () => {
-      window.removeEventListener('pagehide', onPageHide);
-      window.removeEventListener('pageshow', onPageShow);
-    };
   });
 
   onDestroy(() => {
@@ -46,8 +27,7 @@
   <header class="connectors-head od-field">
     <h1 class="page-title">Connectors</h1>
     <p class="page-lead">
-      Registered LLM and HTTP endpoints. A Connector appears here only after a worker check
-      succeeds.
+      Registered LLM and HTTP endpoints.
     </p>
   </header>
 
@@ -62,20 +42,6 @@
     <p class="note" role="status">{connectorStore.saveNotice}</p>
   {/if}
 
-  {#if connectorStore.legacyPresent}
-    <Section title="Legacy on-device Connectors" id="connectors-legacy">
-      <p class="note">
-        Earlier versions stored Connectors, including plaintext Credentials, in this browser.
-        They were not migrated. Clear the legacy data, then add each Connector again so the
-        worker can check it.
-      </p>
-      {#if connectorStore.legacyError}
-        <p class="note" role="alert">{connectorStore.legacyError}</p>
-      {/if}
-      <Button type="button" onclick={clearLegacyConnectors}>Clear legacy data</Button>
-    </Section>
-  {/if}
-
   {#if connectorStore.listState === 'loading' || connectorStore.listState === 'idle'}
     <Section title="Connectors" id="connectors-loading">
       <p class="note" role="status">Loading Connectors…</p>
@@ -88,8 +54,7 @@
   {:else if connectorStore.connectors.length === 0}
     <Section title="No connectors yet" id="connectors-empty">
       <p class="note">
-        Add a Web Request endpoint. Saving runs a worker check first; only a successful check
-        adds the Connector here. Other providers cannot be saved yet.
+        Add a Web Request endpoint. Other providers cannot be saved yet.
       </p>
     </Section>
   {:else}

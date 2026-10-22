@@ -1,4 +1,4 @@
-// Package secretbox encrypts Credentials at rest. Only the worker decrypts them.
+// Package secretbox encrypts Credentials at rest. The API encrypts and never decrypts (ADR 0013).
 package secretbox
 
 import (
@@ -36,7 +36,7 @@ func (b *Box) Encrypt(plain []byte) ([]byte, error) {
 	return b.aead.Seal(nonce, nonce, plain, nil), nil
 }
 
-// Decrypt authenticates before returning plaintext; production callers are worker-only.
+// Decrypt authenticates before returning plaintext; only the code that makes the outbound call may use it.
 func (b *Box) Decrypt(encrypted []byte) ([]byte, error) {
 	nonceSize := b.aead.NonceSize()
 	if len(encrypted) < nonceSize {

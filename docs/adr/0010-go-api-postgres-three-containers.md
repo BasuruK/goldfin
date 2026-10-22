@@ -1,5 +1,7 @@
 # Go API, Postgres, and three containers in one image
 
+> **Amended** by [ADR 0013](0013-walking-skeleton-synchronous-saves.md): the deployment is **two containers** (`web`, `api`) until a Run must survive an `api` deploy or the API listens beyond loopback/internal. The `worker` subcommand is removed. The "Connector check is an asynchronous job" consequence is void; there is no save-time check. Go, Postgres, goose, nginx and one binary stand. `sqlc` is removed until queries outgrow plain `pgx`.
+
 [Issue #4](https://github.com/BasuruK/goldfin/issues/4) settled Laravel over SQLite. Both are
 replaced. The API layer is **Go**, the database is **Postgres**, and the product deploys as
 **three containers from one image**: `web` (nginx + the static SvelteKit build), `api` (the

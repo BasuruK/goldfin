@@ -8,7 +8,7 @@ web
 
 ## Stack
 
-SvelteKit 3 with `adapter-static` and Vite 8 for the UI (`Goldfin_Components` consumed from source). Go API binary with three container roles (`web`, `api`, `worker`), Postgres (goose migrations, sqlc queries), and RustFS for Document bytes. Target topology is settled in ADR 0010; backend and worker paths are largely ahead of the current UI slice.
+SvelteKit 3 with `adapter-static` and Vite 8 for the UI (`Goldfin_Components` consumed from source). Go API binary with two container roles (`web`, `api`), Postgres (goose migrations, plain `pgx` queries), and RustFS for Document bytes. Topology is ADR 0010 as amended by ADR 0013; the Pipeline (OCR → LLM → Verdict) is the next slice.
 
 ## Users
 
@@ -32,9 +32,9 @@ Current UI work follows design artefacts (`DESIGN.md`, OpenDesign handoffs) and 
 
 ## Capabilities and Constraints
 
-- **Connectors**: Registered `ocr`, `llm`, and `fused` configurations; Credentials are separate entities, never returned to the client; Connector checks run on the worker as queued jobs with findings, not bare pass/fail.
+- **Connectors**: Registered `ocr`, `llm`, and `fused` configurations; Credentials are encrypted at rest and never returned to the client; a save is one synchronous request with no save-time check yet (ADR 0013).
 - **Runs**: Copy Connector definitions at start; re-attempts are new Runs, not repairs (ADR 0008).
-- **API boundary**: The `api` container does not make outbound calls or decrypt Credentials; the worker does (ADR 0005, 0010).
+- **API boundary**: The `api` encrypts Credentials and never decrypts one (ADR 0005, 0013).
 - **Frontend**: Static SvelteKit; nginx proxies `/api` so the browser avoids CORS.
 - **v1 gaps (explicit)**: Credential encryption and `{{credential}}` interpolation are decided but not fully implemented; Connector UI may use local persistence until the API lands.
 

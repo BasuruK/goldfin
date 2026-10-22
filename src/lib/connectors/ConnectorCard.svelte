@@ -2,7 +2,7 @@
   import { Icon } from '$goldfin/lib/index.js';
   import { providerByType } from './providers.js';
 
-  /** @type {{ connector: import('./save-attempts.js').SavedConnector }} */
+  /** @type {{ connector: import('./api.js').SavedConnector }} */
   let { connector } = $props();
 
   const provider = $derived(providerByType(/** @type {import('./providers.js').ProviderType} */ (connector.providerType)));
