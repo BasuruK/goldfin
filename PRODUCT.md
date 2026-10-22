@@ -20,23 +20,26 @@ Goldfin evaluates whether a system prompt and Connector setup reliably extract d
 
 Success means defensible comparison between prompt versions and Connector configurations, with Runs that remain interpretable after Connectors or Credentials change.
 
+**v1** (ADR 0014) is the first step toward that: the operator builds a Workflow of OCR, LLM and REST Connectors, runs it over one Document, and reads what each node extracted. There is no scoring and no stored history. The v1 shape is `prototypes/ocr only workflow/ocr-playground.html`. Datasets come in v2, and scoring after that.
+
 ## Positioning
 
 Goldfin does not rescue the model. If a change makes the model more likely to succeed, the product is grading its own homework. The differentiator is honest attribution: which Stage lost the value, on the customer’s own Connectors and documents, with Connector definitions snapshotted per Run so later edits cannot rewrite history.
 
 ## Operating Context
 
-Operators bring their own LLM and OCR endpoints via Connectors (including fused gateways). Workflows center on Connector setup, Dataset ingest, Prompt versioning, Run execution, and comparison—not on Goldfin-hosted models. Terminology is fixed in `GLOSSARY.md`; ADRs in `docs/adr/` are binding for agents and implementers.
+Operators bring their own LLM and OCR endpoints via Connectors (including fused gateways). The work centers on Connector setup, Prompt versioning and Workflows in v1, then Dataset ingest, Run execution and comparison, never on Goldfin-hosted models. Terminology is fixed in `GLOSSARY.md`; ADRs in `docs/adr/` are binding for agents and implementers.
 
 Current UI work follows design artefacts (`DESIGN.md`, OpenDesign handoffs) and ships one feature seam at a time (e.g. Connector screen before Runs).
 
 ## Capabilities and Constraints
 
 - **Connectors**: Registered `ocr`, `llm`, and `fused` configurations; Credentials are encrypted at rest and never returned to the client; a save is one synchronous request with no save-time check yet (ADR 0013).
-- **Runs**: Copy Connector definitions at start; re-attempts are new Runs, not repairs (ADR 0008).
+- **Workflows & Probes (v1)**: Any acyclic graph of Connector nodes over one Document; output is shown, not stored (ADR 0014).
+- **Runs (v2+)**: Copy Connector definitions at start; re-attempts are new Runs, not repairs (ADR 0008).
 - **API boundary**: The `api` encrypts Credentials and never decrypts one (ADR 0005, 0013).
 - **Frontend**: Static SvelteKit; nginx proxies `/api` so the browser avoids CORS.
-- **v1 gaps (explicit)**: Credential encryption and `{{credential}}` interpolation are decided but not fully implemented; Connector UI may use local persistence until the API lands.
+- **v1 gaps (explicit)**: `{{credential}}` interpolation and the REST connector's request template are decided but not built; the Workflow executor and Prompt versions are not built yet.
 
 ## Brand Commitments
 

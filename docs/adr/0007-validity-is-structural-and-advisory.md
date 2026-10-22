@@ -1,5 +1,7 @@
 # Validity asks whether a value is a legal instance of its type, and never touches the score
 
+> **Deferred** by [ADR 0014](0014-v1-is-a-workflow-playground-without-scoring.md): v1 has no scoring. This decision stands for when scoring starts, after the v2 Dataset; nothing in v1 implements it.
+
 #3 kept Normalization and validity deliberately apart, on the assumption that validity
 was out of scope. It is not out of scope: a hallucinated IBAN is not a near-miss, it is a
 plausible-looking string that a payments system will reject downstream. This ADR admits

@@ -29,7 +29,7 @@ These are expensive or impossible to add after the fact, so they hold now:
 - **Never in cleartext transport or a URL**: a Credential requires `https`, and credential-shaped query parameters are refused.
 - **Never left in browser storage**: the legacy `localStorage` store is cleared on every load, without a prompt.
 - **Run snapshot and frozen Verdicts** ([ADR 0008](0008-a-re-attempt-is-a-new-run.md), [ADR 0002](0002-declare-formats-never-infer.md)):
-  built with the first Run as an INSERT-only Run row, never on the save path.
+  built with the first stored Run as an INSERT-only Run row, never on the save path. [ADR 0014](0014-v1-is-a-workflow-playground-without-scoring.md) defers both, because v1 stores no execution.
 
 ## Deferred, with triggers
 

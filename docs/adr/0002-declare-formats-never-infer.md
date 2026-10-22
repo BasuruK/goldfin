@@ -1,5 +1,7 @@
 # Declare formats, never infer them
 
+> **Deferred** by [ADR 0014](0014-v1-is-a-workflow-playground-without-scoring.md): v1 has no scoring. This decision stands for when scoring starts, after the v2 Dataset; nothing in v1 implements it.
+
 A Financial document is formatted, not typed. The same date is `14/03/2025`, `14.03.2025` and `2025-03-14`; the same amount is `1,234.56`, `1.234,56` and `EUR 1.234,56`. When a Normalization chain cannot parse a value unambiguously, Goldfin refuses to guess and the Field's Verdict is `unparseable`. The manifest declares the format, or the value is not scored.
 
 ## Context
