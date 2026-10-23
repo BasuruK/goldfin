@@ -1,4 +1,4 @@
-import { CONNECTORS_PATH, SAVE_ATTEMPTS_PATH } from '../src/lib/connectors/save-attempts.js';
+import { CONNECTORS_PATH } from '../src/lib/connectors/api.js';
 
 /**
  * The element's bounding box; throws when it has none, so a test fails at the lookup.
@@ -11,85 +11,35 @@ export async function boxOf(locator) {
 }
 
 /**
- * Intercepts the checked-Save API so specs never need a live server. `attempts` are
- * returned in order for successive polls (the last one repeats), all under the first
- * attempt's id; polling any other handle is recorded in `state.unexpectedPolls` and
- * answered 500 (assert it stays empty). When a poll returns a finished attempt with
- * a finding whose `connectorId` equals `savedOnSuccess.id`, that Connector joins
- * the list. `failPollAfter` aborts every poll after that many polls, for
- * transport-failure specs. Unexpected HTTP verbs get a 405.
+ * Intercepts the Connector API so specs never need a live server. A POST is recorded in
+ * `state.posts` and answered 201 with the saved Connector, which then joins the list;
+ * `reject` answers it with that status and message instead. `saveDelayMs` holds the POST
+ * reply back, for late-reply specs.
  * @param {import('@playwright/test').Page} page
  * @param {object} [options]
- * @param {import('../src/lib/connectors/save-attempts.js').SavedConnector[]} [options.saved]
- * @param {import('../src/lib/connectors/save-attempts.js').SaveAttempt[]} [options.attempts]
- * @param {import('../src/lib/connectors/save-attempts.js').SavedConnector} [options.savedOnSuccess]
- * @param {number} [options.pollDelayMs]
- * @param {number} [options.failPollAfter]
+ * @param {import('../src/lib/connectors/api.js').SavedConnector[]} [options.saved]
+ * @param {{ status: number, message: string }} [options.reject]
+ * @param {number} [options.saveDelayMs]
  */
 export async function mockConnectorApi(page, options = {}) {
-  if (options.attempts && options.attempts.length === 0) {
-    throw new Error('mockConnectorApi: attempts must not be empty');
-  }
   const state = {
     connectors: [...(options.saved ?? [])],
-    /** @type {Record<string, unknown>[]} */
-    posts: [],
-    polls: 0,
-    /** @type {string[]} */
-    unexpectedPolls: []
+    /** @type {Record<string, string>[]} */
+    posts: []
   };
-  /** @type {import('../src/lib/connectors/save-attempts.js').SaveAttempt[]} */
-  const attempts = [...(options.attempts ?? [{ id: 'attempt-1', state: 'finished', finding: { kind: 'reachable', httpStatus: 200, latencyMs: 42 } }])];
-  const attemptId = attempts[0].id;
-
-  /**
-   * Answers 405 and returns false for any other verb, so each handler states its
-   * verb contract once. Throwing inside a handler would leave the request hanging.
-   * @param {import('@playwright/test').Route} route
-   * @param {string} method
-   */
-  async function allowMethod(route, method) {
-    if (route.request().method() === method) return true;
-    await route.fulfill({ status: 405, json: { message: 'Method not allowed.' } });
-    return false;
-  }
-
-  await page.route(`**${SAVE_ATTEMPTS_PATH}/*`, async route => {
-    if (!(await allowMethod(route, 'GET'))) return;
-    if (options.pollDelayMs) await new Promise(resolve => setTimeout(resolve, options.pollDelayMs));
-    const requestedId = decodeURIComponent(new URL(route.request().url()).pathname.split('/').pop() ?? '');
-    if (requestedId !== attemptId) {
-      state.unexpectedPolls.push(requestedId);
-      return route.fulfill({ status: 500, json: { message: `Unexpected attempt handle "${requestedId}".` } });
-    }
-    state.polls += 1;
-    if (options.failPollAfter !== undefined && state.polls > options.failPollAfter) {
-      return route.abort();
-    }
-    // Non-empty by construction: the setup guard rejects an empty `attempts`.
-    const next = /** @type {import('../src/lib/connectors/save-attempts.js').SaveAttempt} */ (
-      attempts.length > 1 ? attempts.shift() : attempts[0]
-    );
-    if (next.state === 'finished' && next.finding && options.savedOnSuccess && next.connectorId === options.savedOnSuccess.id) {
-      const saved = options.savedOnSuccess;
-      if (!state.connectors.some(entry => entry.id === saved.id)) {
-        state.connectors = [...state.connectors, saved];
-      }
-    }
-    await route.fulfill({ json: next });
-  });
-  await page.route(`**${SAVE_ATTEMPTS_PATH}`, async route => {
-    if (!(await allowMethod(route, 'POST'))) return;
-    try {
-      state.posts.push(JSON.parse(route.request().postData() ?? '{}'));
-    } catch {
-      return route.fulfill({ status: 400, json: { message: 'Expected a JSON body.' } });
-    }
-    await route.fulfill({ status: 202, json: { id: attemptId, state: 'queued' } });
-  });
   await page.route(`**${CONNECTORS_PATH}`, async route => {
-    if (!(await allowMethod(route, 'GET'))) return;
-    await route.fulfill({ json: { connectors: state.connectors } });
+    const request = route.request();
+    if (request.method() === 'GET') return route.fulfill({ json: { connectors: state.connectors } });
+    if (request.method() !== 'POST') return route.fulfill({ status: 405, json: { message: 'Method not allowed.' } });
+    const body = /** @type {Record<string, string>} */ (JSON.parse(request.postData() ?? '{}'));
+    state.posts.push(body);
+    if (options.saveDelayMs) await new Promise(resolve => setTimeout(resolve, options.saveDelayMs));
+    if (options.reject) return route.fulfill({ status: options.reject.status, json: { message: options.reject.message } });
+    /** @type {import('../src/lib/connectors/api.js').SavedConnector} */
+    const saved = { id: `c${state.posts.length}`, name: body.name, providerType: body.providerType, baseUrl: body.baseUrl };
+    if (body.credentialLabel) saved.credentialLabel = body.credentialLabel;
+    state.connectors = [...state.connectors, saved];
+    await route.fulfill({ status: 201, json: saved });
   });
   return state;
 }

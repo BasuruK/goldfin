@@ -1,5 +1,7 @@
 # Goldfin does not rescue the model
 
+> **Scope** ([ADR 0014](0014-v1-is-a-workflow-playground-without-scoring.md)): v1 has no scoring, but the rule holds for every v1 Probe. No output schema, no format reminder, and no retry of a malformed or cut-off answer. A cut-off answer is shown as extracted, labelled with how it stopped.
+
 A Run scores the customer's Prompt version against their production deployment, so Goldfin never lends the model help the customer will not have: it sends no output schema, appends no format reminder, never retries a malformed answer, never falls back to the Judge for a value that will not normalize, and never infers an undeclared format. Every one of those five is a real rescue, and every one of them would make the score a measurement of Goldfin rather than of the prompt.
 
 ## Considered options

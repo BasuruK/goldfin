@@ -50,22 +50,5 @@ services:
         - { path: ./go.sum, action: rebuild }
         - { path: ./Dockerfile.dev, action: rebuild }
 
-  worker:
-    build: { context: ., dockerfile: Dockerfile.dev }
-    command: ["worker"]
-    environment:
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
-      APP_KEY: ${APP_KEY:?set in .env}
-    depends_on:
-      migrate: { condition: service_completed_successfully }
-    develop:
-      watch:
-        - { path: ./cmd, action: rebuild }
-        - { path: ./db, action: rebuild }
-        - { path: ./internal, action: rebuild }
-        - { path: ./go.mod, action: rebuild }
-        - { path: ./go.sum, action: rebuild }
-        - { path: ./Dockerfile.dev, action: rebuild }
-
 volumes:
   goldfin-pgdata:

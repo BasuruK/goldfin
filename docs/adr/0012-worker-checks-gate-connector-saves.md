@@ -1,5 +1,7 @@
 # Worker checks gate Connector saves
 
+> **Superseded** by [ADR 0013](0013-walking-skeleton-synchronous-saves.md): a Connector save is one synchronous `INSERT` with no save-time check and no worker. The staged-attempt schema, polling contract, and edit fences described below were removed. ADR 0013 lists each one with the trigger that brings it back.
+
 The Connector UI is finished and accepted before backend implementation. The first
 backend slice delivers checked Connector saves in local development, with host access
 restricted to loopback. [Issue #31](https://github.com/BasuruK/goldfin/issues/31) remains

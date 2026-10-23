@@ -47,18 +47,12 @@
     patchDraft({ [field]: target.value });
   }
 
-  const saving = $derived(connectorStore.saveState === 'queued' || connectorStore.saveState === 'running');
+  const saving = $derived(connectorStore.saving);
   const fieldsDisabled = $derived(saving);
   const saveUnavailable = $derived(record !== null && record.providerType !== 'web_request');
   const showModels = $derived(
     (record?.catalogState ?? 'idle') !== 'idle' || (record?.models?.length ?? 0) > 0
   );
-
-  const saveStatus = $derived.by(() => {
-    if (connectorStore.saveState === 'queued') return 'Queued — waiting for a worker to run the check…';
-    if (connectorStore.saveState === 'running') return 'Checking — the worker is calling the endpoint…';
-    return '';
-  });
 
   /** @param {'name' | 'baseUrl' | 'credential' | 'credentialLabel'} field */
   function fieldError(field) {
@@ -79,14 +73,14 @@
         <DialogHeader
           parts={Primitive}
           title={record.name?.trim() ? record.name : `Connect to ${provider.label}`}
-          description="Nothing is stored until you Save and a worker check succeeds."
+          description="Nothing is stored until you Save."
           icon={provider.icon}
           close
         />
         <DialogBody>
           <p id="connector-dialog-desc" class="sr-only">
-            Configure an LLM or HTTP Connector. Choose Save to stage the Connector for a worker
-            check; Cancel discards the draft.
+            Configure an LLM or HTTP Connector. Choose Save to store the Connector; Cancel
+            discards the draft.
           </p>
           <div class="connector-form">
             <Select label="Provider" items={PROVIDER_SELECT_ITEMS} bind:value={providerType} disabled={fieldsDisabled} />
@@ -139,9 +133,6 @@
                 be saved; the model preview below stays simulated.
               </p>
             {/if}
-            {#if saveStatus}
-              <p class="connector-save-status" role="status">{saveStatus}</p>
-            {/if}
             {#if generalSaveError}
               <p class="connector-connection-error" role="alert">{generalSaveError}</p>
             {/if}
@@ -160,7 +151,7 @@
               variant="primary"
               busy={saving}
               idle="Save"
-              working={connectorStore.saveState === 'queued' ? 'Queued…' : 'Checking…'}
+              working="Saving…"
               disabled={saveUnavailable}
               onclick={() => saveDraft()}
             >
@@ -219,8 +210,7 @@
     color: var(--bad, #e85d5d);
   }
 
-  .connector-save-note,
-  .connector-save-status {
+  .connector-save-note {
     margin: 0;
     font-size: 13px;
     line-height: 1.6;

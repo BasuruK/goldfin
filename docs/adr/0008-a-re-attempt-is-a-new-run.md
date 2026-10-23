@@ -1,5 +1,7 @@
 # A re-attempt is a new Run, and a Run copies the Connector definition it used
 
+> **Deferred** by [ADR 0014](0014-v1-is-a-workflow-playground-without-scoring.md): v1 stores nothing about an execution, so there is no Run or Connector snapshot yet. This decision stands for v2 Dataset Runs.
+
 A Document that fails is terminal, and a Connector fault is the single most likely
 reason. A customer whose OCR gateway times out on 2 of 50 documents fixes the gateway
 and has no route to a score that reflects the fix. Worse, the fault is invisible in the

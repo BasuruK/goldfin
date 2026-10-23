@@ -1,5 +1,7 @@
 # The Judge decides, abstains, or is wrong, and never returns a number
 
+> **Deferred** by [ADR 0014](0014-v1-is-a-workflow-playground-without-scoring.md): v1 has no scoring. This decision stands for when scoring starts, after the v2 Dataset; nothing in v1 implements it.
+
 The Judge is the only probabilistic component Goldfin ships, in a product sold to
 regulated buyers. This ADR fixes what it may return, what it may not, what it costs, and
 what happens when the customer does not believe it.

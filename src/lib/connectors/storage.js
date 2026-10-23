@@ -1,9 +1,8 @@
 import { DEFAULT_PROVIDER_TYPE } from './providers.js';
 
 /**
- * Legacy on-device Connector storage (pre-worker UI). Nothing reads these records
- * as Connectors anymore (ADR 0012): the key is only detected so the page can offer
- * the explicit reset, and cleared by that action. Drafts below live in memory only.
+ * Key of the pre-API on-device Connector store, which held plaintext Credentials.
+ * Nothing reads it; it is only cleared (ADR 0013). Drafts below live in memory only.
  */
 const STORAGE_KEY = 'goldfin.connectors.v1';
 
@@ -32,24 +31,12 @@ const STORAGE_KEY = 'goldfin.connectors.v1';
  * }} ConnectorRecord
  */
 
-/** @returns {boolean} */
-export function hasLegacyData() {
-  if (typeof localStorage === 'undefined') return false;
+/** Clears the legacy store on every load; the Credentials in it must not stay at rest. */
+export function clearLegacyConnectors() {
   try {
-    return localStorage.getItem(STORAGE_KEY) !== null;
+    globalThis.localStorage?.removeItem(STORAGE_KEY);
   } catch {
-    return false;
-  }
-}
-
-/** @returns {boolean} whether storage was available to clear */
-export function clearLegacyData() {
-  if (typeof localStorage === 'undefined') return false;
-  try {
-    localStorage.removeItem(STORAGE_KEY);
-    return true;
-  } catch {
-    return false;
+    // Storage is unavailable, so there is nothing to clear.
   }
 }
 

@@ -2,12 +2,14 @@
 
 Goldfin evaluates a financial organization's system prompt for document field extraction. It runs a pipeline (OCR, then LLM extraction) over a customer-built dataset and produces scores that say which stage lost the value.
 
+**v1 scope** ([ADR 0014](docs/adr/0014-v1-is-a-workflow-playground-without-scoring.md)): the operator runs one Document through a **Workflow** and reads what it extracted. Every v1 execution is a **Probe**. The scoring terms below (Field, Match, Verdict, Coverage, Judge, Attribution) and Run, Dataset and Comparison are decided but deferred: Dataset in v2, scoring after it.
+
 ## Language
 
 ### What gets measured
 
 **Pipeline**:
-The full OCR-then-LLM path a document travels through. The unit Goldfin scores.
+The full OCR-then-LLM path a document travels through. The unit Goldfin scores. Deferred with scoring; in v1 the operator builds a Workflow.
 _Avoid_: Flow, Chain, Pipeline run
 
 **Stage**:
@@ -89,7 +91,7 @@ The system prompt being evaluated. Versions are immutable; a new version is a ne
 _Avoid_: Template, System message, Instruction
 
 **Prompt version**:
-One immutable revision of a Prompt. Runs point at a version, never at a mutable Prompt.
+One immutable revision of a Prompt. Saving a Prompt appends one; it never rewrites. Runs point at a version, never at a mutable Prompt.
 _Avoid_: Revision, Version, Iteration
 
 **Run**:
@@ -100,8 +102,12 @@ _Avoid_: Evaluation, Test run, Experiment, Job
 The diff between two Runs. A first-class question, not a report Goldfin happens to print.
 _Avoid_: Diff, Delta, Regression report
 
+**Workflow**:
+A saved directed acyclic graph of nodes, each a Connector (plus a Prompt for an LLM node), that one Document flows through. Cycles are refused. Any shape is allowed, including several LLM nodes in sequence; the two-Stage Pipeline is one particular Workflow.
+_Avoid_: Flow, Graph, Chain, Pipeline (for a user-built graph)
+
 **Probe**:
-One call to one Connector with one system prompt and one Document, returning the raw result and nothing else: no Field, no Match, no Verdict, no Coverage, so no denominator and nothing to compare. It answers *does this parse, what did it cost, what came back*, which is a different question from *is v2 better than v1* and is answered by a Run. A Probe's output **never becomes a Verdict**: it was run by a person, against a prompt they were still editing, and promoting it to a score is Goldfin grading its own homework.
+One execution of a Workflow over one Document, returning what each node extracted and nothing else. It is all of v1, and nothing about it is stored: no Field, no Match, no Verdict, no Coverage, so no denominator and nothing to compare. It answers *does this parse, what did it cost, what came back*, which is a different question from *is v2 better than v1* and is answered by a Run. A Probe's output **never becomes a Verdict**: it was run by a person, against a prompt they were still editing, and promoting it to a score is Goldfin grading its own homework.
 _Avoid_: Test, Try it, Quick run, Smoke test
 
 ### Talking to the outside
@@ -111,7 +117,7 @@ A registered, reusable configuration for reaching an external service, in one of
 _Avoid_: Integration, Adapter, Provider, Endpoint
 
 **REST connector**:
-A Connector that calls an arbitrary endpoint: method, URL, auth, request body, and the path to the text in the response. How a customer reaches the OCR service their internal platform team fronts, and the shape a `fused` Connector takes.
+A Connector that calls an arbitrary endpoint: method, URL, auth, request body, and the path to the text in the response. How a customer reaches the OCR service their internal platform team fronts, and the shape a `fused` Connector takes. In a Workflow a REST node takes the Document, as an OCR node does, unless its definition says otherwise.
 _Avoid_: HTTP connector, Custom endpoint, Webhook
 
 **LLM connector**:
@@ -127,7 +133,7 @@ One immutable revision of a Credential. Rotation appends one and marks the previ
 _Avoid_: Version, Revision, Key version, Credential version
 
 **Connector check**:
-A single outbound call that confirms a Connector's own parameters (base URL, Credential, model id) and it returns a **finding rather than a boolean**, because the three kinds are verifiable to three different depths. An `llm` check makes a minimal completion and so can confirm all three. An `ocr` check confirms only what that provider offers a cheap way to confirm. A `fused` check confirms **almost nothing**: a gateway that answers a POST with 200 and `{"error":"invalid key"}` in the body is an ordinary shape, so a status code proves the port is open and says nothing at all about the configuration. **A finding names what was proven, and a check that proves less never renders as a pass.** It is executed by the worker, so it is a queued job rather than a request, and it returns no response body.
+A single outbound call that confirms a Connector's own parameters (base URL, Credential, model id) and it returns a **finding rather than a boolean**, because the three kinds are verifiable to three different depths. An `llm` check makes a minimal completion and so can confirm all three. An `ocr` check confirms only what that provider offers a cheap way to confirm. A `fused` check confirms **almost nothing**: a gateway that answers a POST with 200 and `{"error":"invalid key"}` in the body is an ordinary shape, so a status code proves the port is open and says nothing at all about the configuration. **A finding names what was proven, and a check that proves less never renders as a pass.** It returns no response body. No check runs at save time yet ([ADR 0013](docs/adr/0013-walking-skeleton-synchronous-saves.md)); a broken Connector is found by its first Run.
 _Avoid_: Test, Test connection, Ping, Health check
 
 **Attestable**:

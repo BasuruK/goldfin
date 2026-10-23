@@ -1,5 +1,7 @@
 # A blank cell is an assertion
 
+> **Deferred** by [ADR 0014](0014-v1-is-a-workflow-playground-without-scoring.md): v1 has no scoring. This decision stands for when scoring starts, after the v2 Dataset; nothing in v1 implements it.
+
 #2 made `required` annotation-side, meaning the Manifest must supply a value for every Document, which implies a Field declared `required=false` may have none. A blank Manifest cell is the customer's **claim that the Document carries no such value**, not a gap in the annotation, and it is scored like any other Ground truth. An absent Extraction against it is a `match`, which is what makes "the prompt did not invent a beneficiary" a thing the score can reward; anything the model emits is a `wrong` carrying a `ground_truth_absent` condition on the Verdict. Against an absent Ground truth the Field's declared type is **not consulted at all**, since there is nothing to normalize toward, with one exception: `""` on a `text` Field says the same thing absence does, and so matches it.
 
 `required` is what keeps this honest, and it is now two-state and load-bearing. `required=true` is a promise that every Document has a value; `required=false` is the customer saying absence is intended. A `required` Field with a blank cell for any Document is a self-contradicting Manifest, and it fails at ingest. It cannot be scored, because `missing` describes the Pipeline returning nothing and here the Manifest actively asserted something.

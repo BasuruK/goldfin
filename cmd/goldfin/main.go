@@ -1,4 +1,4 @@
-// Local dev entrypoint (api / worker / migrate / healthcheck).
+// Local dev entrypoint (api / migrate / healthcheck).
 package main
 
 import (
@@ -16,7 +16,7 @@ import (
 
 	"github.com/BasuruK/goldfin/db/migrations"
 	"github.com/BasuruK/goldfin/internal/api"
-	"github.com/BasuruK/goldfin/internal/jobs"
+	"github.com/BasuruK/goldfin/internal/secretbox"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
@@ -39,8 +39,6 @@ func run(args []string) error {
 	switch sub {
 	case "api":
 		return runAPI(ctx, addr)
-	case "worker":
-		return runWorker(ctx)
 	case "migrate":
 		return runMigrate(ctx)
 	case "healthcheck":
@@ -50,12 +48,12 @@ func run(args []string) error {
 }
 
 func subcommand(args []string) (string, error) {
-	const usage = "usage: goldfin <api|worker|migrate|healthcheck>"
+	const usage = "usage: goldfin <api|migrate|healthcheck>"
 	if len(args) != 2 {
 		return "", errors.New(usage)
 	}
 	switch args[1] {
-	case "api", "worker", "migrate", "healthcheck":
+	case "api", "migrate", "healthcheck":
 		return args[1], nil
 	default:
 		return "", fmt.Errorf("unknown subcommand: %s", args[1])
@@ -119,13 +117,13 @@ func runAPI(ctx context.Context, addr string) error {
 		return err
 	}
 	defer pool.Close()
-	store, err := jobs.NewStore(pool, key)
+	box, err := secretbox.New(key)
 	if err != nil {
 		return err
 	}
 	mux := http.NewServeMux()
 	registerAPIRoutes(mux)
-	mux.Handle("/api/", api.NewHandler(store))
+	mux.Handle("/api/", api.NewHandler(pool, box))
 	srv := &http.Server{
 		Handler:           mux,
 		ReadHeaderTimeout: readHeaderTimeout,

@@ -1,30 +1,14 @@
 import { applyConnectorPatch, beginDiscovery, finishDiscovery, addManualModel, isCatalogEditable } from './models.js';
 import { DEFAULT_PROVIDER_TYPE, defaultBaseUrlFor, defaultNameFor } from './providers.js';
-import { clearLegacyData, createEmptyConnector, hasLegacyData } from './storage.js';
+import { clearLegacyConnectors, createEmptyConnector } from './storage.js';
 import { previewModelCatalog } from './model-preview.js';
-import {
-  SaveAttemptError,
-  createSaveAttempt,
-  listConnectors,
-  pollSaveAttempt,
-  validateSaveDraft
-} from './save-attempts.js';
+import { ApiError, createConnector, listConnectors, validateDraft } from './api.js';
 
 /** @typedef {import('./storage.js').ConnectorRecord} ConnectorRecord */
 /** @typedef {import('./providers.js').ProviderType} ProviderType */
-/** @typedef {import('./save-attempts.js').SavedConnector} SavedConnector */
+/** @typedef {import('./api.js').SavedConnector} SavedConnector */
 
-const FAILURE_MESSAGES = {
-  unreachable: 'The worker could not reach this endpoint. Check the Base URL, then try again.',
-  timeout: 'The check timed out before the endpoint answered. Try again.'
-};
-
-/** @type {AbortController | null} */
-let saveController = null;
-let saveToken = 0;
-let listToken = 0;
-/** Bumped when the Connectors route is left; late Save replies must not touch UI. */
-let connectorsPageGen = 0;
+clearLegacyConnectors();
 
 /**
  * @type {{
@@ -33,12 +17,10 @@ let connectorsPageGen = 0;
  *   listError: string,
  *   dialogOpen: boolean,
  *   draft: ConnectorRecord | null,
- *   saveState: 'idle' | 'queued' | 'running' | 'finished',
+ *   saving: boolean,
  *   saveError: string,
  *   saveErrorField: 'name' | 'baseUrl' | 'credential' | 'credentialLabel' | null,
- *   saveNotice: string,
- *   legacyPresent: boolean,
- *   legacyError: string
+ *   saveNotice: string
  * }}
  */
 export const connectorStore = $state({
@@ -47,28 +29,21 @@ export const connectorStore = $state({
   listError: '',
   dialogOpen: false,
   draft: null,
-  saveState: 'idle',
+  saving: false,
   saveError: '',
   saveErrorField: null,
-  saveNotice: '',
-  legacyPresent: hasLegacyData(),
-  legacyError: ''
+  saveNotice: ''
 });
 
 export async function loadConnectorList() {
-  const token = ++listToken;
   connectorStore.listState = 'loading';
   connectorStore.listError = '';
   try {
-    const connectors = await listConnectors();
-    if (token !== listToken) return;
-    connectorStore.connectors = connectors;
+    connectorStore.connectors = await listConnectors();
     connectorStore.listState = 'loaded';
   } catch (error) {
-    if (token !== listToken) return;
     connectorStore.listState = 'failed';
-    connectorStore.listError =
-      error instanceof SaveAttemptError ? error.message : 'Could not load Connectors. Try again.';
+    connectorStore.listError = error instanceof ApiError ? error.message : 'Could not load Connectors. Try again.';
   }
 }
 
@@ -77,33 +52,24 @@ export function openAddDialog() {
   draft.name = defaultNameFor(DEFAULT_PROVIDER_TYPE);
   draft.baseUrl = defaultBaseUrlFor(DEFAULT_PROVIDER_TYPE);
   connectorStore.draft = draft;
-  connectorStore.saveState = 'idle';
+  connectorStore.saving = false;
   connectorStore.saveError = '';
   connectorStore.saveErrorField = null;
   connectorStore.saveNotice = '';
   connectorStore.dialogOpen = true;
 }
 
-function abortSave() {
-  saveToken += 1;
-  saveController?.abort();
-  saveController = null;
-}
-
 export function closeDialog() {
-  abortSave();
   connectorStore.dialogOpen = false;
   connectorStore.draft = null;
-  connectorStore.saveState = 'idle';
+  connectorStore.saving = false;
   connectorStore.saveError = '';
   connectorStore.saveErrorField = null;
 }
 
-/** Leaving the page disposes in-flight work; late replies cannot mutate state. */
+/** Leaving the page drops the draft and the notice. */
 export function disposeConnectorsPage() {
-  connectorsPageGen += 1;
   closeDialog();
-  listToken += 1;
   connectorStore.saveNotice = '';
 }
 
@@ -134,91 +100,42 @@ export function setDraftProviderType(providerType) {
 
 export async function saveDraft() {
   const draft = connectorStore.draft;
-  if (!draft || connectorStore.saveState === 'queued' || connectorStore.saveState === 'running') return;
+  if (!draft || connectorStore.saving) return;
   if (draft.providerType !== 'web_request') {
     connectorStore.saveError = 'Saving is not available for this provider yet. Only Web Request Connectors can be saved.';
     connectorStore.saveErrorField = null;
     return;
   }
-  const invalid = validateSaveDraft({
+  const request = {
     name: draft.name,
     providerType: draft.providerType,
     baseUrl: draft.baseUrl,
     credential: draft.apiKey,
     credentialLabel: draft.credentialLabel
-  });
+  };
+  const invalid = validateDraft(request);
   if (invalid) {
     connectorStore.saveError = invalid.message;
     connectorStore.saveErrorField = invalid.field;
     return;
   }
-
-  const token = ++saveToken;
-  const pageGen = connectorsPageGen;
-  const controller = new AbortController();
-  saveController = controller;
-  connectorStore.saveState = 'queued';
+  connectorStore.saving = true;
   connectorStore.saveError = '';
   connectorStore.saveErrorField = null;
+  // A reply that lands after Cancel must not touch a dialog reopened for another draft.
+  const stillOpen = () => connectorStore.draft?.id === draft.id;
   try {
-    const created = await createSaveAttempt(
-      {
-        name: draft.name,
-        providerType: draft.providerType,
-        baseUrl: draft.baseUrl,
-        credential: draft.apiKey,
-        credentialLabel: draft.credentialLabel
-      },
-      { signal: controller.signal }
-    );
-    if (token !== saveToken) return;
-    const finished = await pollSaveAttempt(created.id, {
-      signal: controller.signal,
-      onUpdate: attempt => {
-        if (token === saveToken) connectorStore.saveState = attempt.state;
-      }
-    });
-    if (token !== saveToken) return;
-    if (finished.finding) {
-      if (token !== saveToken || pageGen !== connectorsPageGen) return;
-      connectorStore.saveState = 'finished';
-      connectorStore.saveNotice =
-        `Reachable (${finished.finding.httpStatus}, ${finished.finding.latencyMs}ms). ${draft.name.trim()} is saved.`;
-      // Close before refreshing: no window where the committed draft looks editable.
-      closeDialog();
-      await loadConnectorList();
-      if (pageGen !== connectorsPageGen) {
-        connectorStore.saveNotice = '';
-        return;
-      }
-    } else {
-      if (token !== saveToken) return;
-      // A failed check keeps the draft editable so it can be corrected and retried.
-      connectorStore.saveState = 'idle';
-      const code = finished.failureCode ?? '';
-      connectorStore.saveError = Object.hasOwn(FAILURE_MESSAGES, code)
-        ? FAILURE_MESSAGES[/** @type {keyof typeof FAILURE_MESSAGES} */ (code)]
-        : 'The check failed. Review the Connector details, then try again.';
-    }
+    const saved = await createConnector(request);
+    // The Connector exists either way, so it is listed even if the dialog was cancelled.
+    connectorStore.connectors = [...connectorStore.connectors, saved];
+    if (!stillOpen()) return;
+    closeDialog();
+    connectorStore.saveNotice = `${saved.name} is saved.`;
   } catch (error) {
-    if (token !== saveToken || (error instanceof Error && error.name === 'AbortError')) return;
-    connectorStore.saveState = 'idle';
-    connectorStore.saveError =
-      error instanceof SaveAttemptError ? error.message : 'Could not save the Connector. Try again.';
-  } finally {
-    if (saveController === controller) saveController = null;
+    if (!stillOpen()) return;
+    connectorStore.saving = false;
+    connectorStore.saveError = error instanceof ApiError ? error.message : 'Could not save the Connector. Try again.';
   }
-}
-
-export function clearLegacyConnectors() {
-  if (!clearLegacyData()) {
-    connectorStore.legacyError = 'Could not clear the legacy data. Try again.';
-    return;
-  }
-  connectorStore.legacyPresent = hasLegacyData();
-  connectorStore.legacyError = connectorStore.legacyPresent
-    ? 'Could not clear the legacy data. Try again.'
-    : '';
 }
 
 export async function previewDraftModels() {

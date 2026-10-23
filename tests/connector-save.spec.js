@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { mockConnectorApi, selectProvider } from './support.js';
 
 const savedConnector = {
-  id: 'c1',
+  id: 'c9',
   name: 'Gateway',
   providerType: 'web_request',
   baseUrl: 'https://example.com/extract',
@@ -17,15 +17,8 @@ async function openWebRequestDraft(page) {
   return dialog;
 }
 
-test('a successful Save polls to Reachable and lists the checked Connector', async ({ page }) => {
-  const api = await mockConnectorApi(page, {
-    attempts: [
-      { id: 'attempt-1', state: 'queued' },
-      { id: 'attempt-1', state: 'running' },
-      { id: 'attempt-1', state: 'finished', connectorId: 'c1', finding: { kind: 'reachable', httpStatus: 200, latencyMs: 42 } }
-    ],
-    savedOnSuccess: savedConnector
-  });
+test('a successful Save lists the Connector and it survives a reload', async ({ page }) => {
+  const api = await mockConnectorApi(page);
   await page.goto('/connectors/');
   const dialog = await openWebRequestDraft(page);
   await dialog.getByLabel('Name', { exact: true }).fill('Gateway');
@@ -34,9 +27,7 @@ test('a successful Save polls to Reachable and lists the checked Connector', asy
   await dialog.getByLabel('Credential label', { exact: true }).fill('Prod key');
   await dialog.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(dialog).toBeHidden();
-  expect(api.polls).toBe(3);
-  expect(api.unexpectedPolls).toEqual([]);
-  await expect(page.getByText(/Reachable \(200, 42ms\)\. Gateway is saved\./)).toBeVisible();
+  await expect(page.getByText('Gateway is saved.', { exact: true })).toBeVisible();
   expect(api.posts).toEqual([{
     name: 'Gateway',
     providerType: 'web_request',
@@ -50,21 +41,16 @@ test('a successful Save polls to Reachable and lists the checked Connector', asy
   await expect(page.getByRole('heading', { name: 'Gateway', exact: true })).toBeVisible();
 });
 
-test('a failed Save retains an editable draft, adds no card, and keeps prior Connectors', async ({ page }) => {
+test('a rejected Save retains an editable draft, adds no card, and keeps prior Connectors', async ({ page }) => {
   const existing = { id: 'c0', name: 'Existing', providerType: 'web_request', baseUrl: 'https://existing.example' };
-  const api = await mockConnectorApi(page, {
-    saved: [existing],
-    attempts: [{ id: 'attempt-1', state: 'finished', failureCode: 'unreachable' }]
-  });
+  const api = await mockConnectorApi(page, { saved: [existing], reject: { status: 400, message: 'Invalid Connector.' } });
   await page.goto('/connectors/');
   await expect(page.getByRole('heading', { name: 'Existing', exact: true })).toBeVisible();
   const dialog = await openWebRequestDraft(page);
   await dialog.getByLabel('Name', { exact: true }).fill('Gateway');
   await dialog.getByLabel('Base URL', { exact: true }).fill('https://example.com/extract');
   await dialog.getByRole('button', { name: 'Save', exact: true }).click();
-  await expect(dialog.getByRole('alert')).toContainText('could not reach');
-  await expect(dialog.getByLabel('Name', { exact: true })).toHaveValue('Gateway');
-  // The retained draft can be corrected before a retry.
+  await expect(dialog.getByRole('alert')).toContainText('Invalid Connector.');
   await dialog.getByLabel('Base URL', { exact: true }).fill('https://fixed.example/extract');
   await expect(dialog.getByLabel('Base URL', { exact: true })).toHaveValue('https://fixed.example/extract');
   expect(api.posts).toHaveLength(1);
@@ -74,72 +60,10 @@ test('a failed Save retains an editable draft, adds no card, and keeps prior Con
   await expect(page.getByRole('heading', { name: 'Existing', exact: true })).toBeVisible();
 });
 
-test('cancelling mid-Save drops the late result', async ({ page }) => {
-  await mockConnectorApi(page, {
-    attempts: [{ id: 'attempt-1', state: 'finished', connectorId: 'c1', finding: { kind: 'reachable', httpStatus: 200, latencyMs: 42 } }],
-    savedOnSuccess: savedConnector,
-    pollDelayMs: 1_200
-  });
+test('an unreachable API mid-Save retains the draft and clears the busy state', async ({ page }) => {
+  await mockConnectorApi(page);
   await page.goto('/connectors/');
-  const dialog = await openWebRequestDraft(page);
-  await dialog.getByLabel('Name', { exact: true }).fill('Gateway');
-  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
-  await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
-  await expect(dialog).toBeHidden();
-  // Wait past the delayed poll; the superseded reply must not save or notify.
-  await page.waitForTimeout(1_800);
-  await expect(page.getByRole('heading', { name: 'Gateway', exact: true })).toHaveCount(0);
-  await expect(page.getByText(/is saved\./)).toHaveCount(0);
-});
-
-test('leaving the page mid-Save disposes the attempt and the draft', async ({ page }) => {
-  await mockConnectorApi(page, {
-    attempts: [{ id: 'attempt-1', state: 'finished', connectorId: 'c1', finding: { kind: 'reachable', httpStatus: 200, latencyMs: 42 } }],
-    pollDelayMs: 1_200
-  });
-  await page.goto('/');
-  await page.getByRole('button', { name: 'Integrations', exact: true }).click();
-  await page.getByRole('link', { name: 'Connectors', exact: true }).click();
-  await expect(page).toHaveURL(/\/connectors\/$/);
-  const dialog = await openWebRequestDraft(page);
-  await dialog.getByLabel('Name', { exact: true }).fill('Gateway');
-  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
-  await page.goBack();
-  await expect(page).toHaveURL('http://127.0.0.1:5175/');
-  await page.goForward();
-  await expect(page).toHaveURL(/\/connectors\/$/);
-  // The draft and dialog must not resurrect, and the late reply must not notify.
-  // (The worker-side Save may still commit; that is the T5 contract, not UI state.)
-  await expect(page.getByRole('dialog')).toHaveCount(0);
-  await page.waitForTimeout(1_800);
-  await expect(page.getByRole('dialog')).toHaveCount(0);
-  await expect(page.getByText(/is saved\./)).toHaveCount(0);
-  const fresh = await openWebRequestDraft(page);
-  await expect(fresh.getByLabel('Name', { exact: true })).toHaveValue('Web Request');
-});
-
-test('reloading mid-Save never renders the attempt as saved', async ({ page }) => {
-  await mockConnectorApi(page, {
-    attempts: [{ id: 'attempt-1', state: 'running' }],
-    savedOnSuccess: savedConnector
-  });
-  await page.goto('/connectors/');
-  const dialog = await openWebRequestDraft(page);
-  await dialog.getByLabel('Name', { exact: true }).fill('Gateway');
-  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
-  await expect(dialog.getByText(/Checking/)).toBeVisible();
-  await page.reload();
-  await expect(page.getByRole('dialog')).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Gateway', exact: true })).toHaveCount(0);
-  await expect(page.getByText(/is saved\./)).toHaveCount(0);
-});
-
-test('a polling failure mid-Save retains the draft and clears the busy state', async ({ page }) => {
-  await mockConnectorApi(page, {
-    attempts: [{ id: 'attempt-1', state: 'running' }],
-    failPollAfter: 1
-  });
-  await page.goto('/connectors/');
+  await page.route('**/api/v1/connectors', route => (route.request().method() === 'POST' ? route.abort() : route.fallback()));
   const dialog = await openWebRequestDraft(page);
   await dialog.getByLabel('Name', { exact: true }).fill('Gateway');
   const save = dialog.getByRole('button', { name: 'Save', exact: true });
@@ -149,7 +73,22 @@ test('a polling failure mid-Save retains the draft and clears the busy state', a
   await expect(save).toBeEnabled();
 });
 
-test('Cancel discards the draft without staging a Save', async ({ page }) => {
+test('a reply that lands after Cancel lists the Connector but leaves a reopened draft alone', async ({ page }) => {
+  await mockConnectorApi(page, { saveDelayMs: 1_200 });
+  await page.goto('/connectors/');
+  const dialog = await openWebRequestDraft(page);
+  await dialog.getByLabel('Name', { exact: true }).fill('Gateway');
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+  const reopened = await openWebRequestDraft(page);
+  await reopened.getByLabel('Name', { exact: true }).fill('Second');
+  await expect(page.getByRole('heading', { name: 'Gateway', exact: true })).toBeVisible({ timeout: 5_000 });
+  await expect(reopened).toBeVisible();
+  await expect(reopened.getByLabel('Name', { exact: true })).toHaveValue('Second');
+  await expect(page.getByText(/is saved\./)).toHaveCount(0);
+});
+
+test('Cancel discards the draft without saving', async ({ page }) => {
   const api = await mockConnectorApi(page);
   await page.goto('/connectors/');
   const dialog = await openWebRequestDraft(page);
@@ -183,30 +122,20 @@ test('an unreachable API reports and retries', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Gateway', exact: true })).toBeVisible();
 });
 
-test('legacy on-device data needs the explicit reset and is never listed', async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem('goldfin.connectors.v1', JSON.stringify([{
-    id: 'legacy', providerType: 'web_request', name: 'Legacy gateway', baseUrl: 'https://example.com', apiKey: 'plaintext', models: []
-  }])));
-  await mockConnectorApi(page);
-  await page.goto('/connectors/');
-  await expect(page.getByRole('heading', { name: 'Legacy on-device Connectors', exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Legacy gateway', exact: true })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Clear legacy data', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Legacy on-device Connectors', exact: true })).toHaveCount(0);
-  expect(await page.evaluate(() => localStorage.getItem('goldfin.connectors.v1'))).toBeNull();
-});
-
-test('a failed legacy clear reports instead of pretending success', async ({ page }) => {
+test('legacy on-device data is cleared on load and never listed', async ({ page }) => {
   await page.addInitScript(() => {
-    localStorage.setItem('goldfin.connectors.v1', '[]');
-    Storage.prototype.removeItem = () => { throw new Error('blocked'); };
+    if (!sessionStorage.getItem('seeded')) {
+      sessionStorage.setItem('seeded', '1');
+      localStorage.setItem('goldfin.connectors.v1', JSON.stringify([{
+        id: 'legacy', providerType: 'web_request', name: 'Legacy gateway', baseUrl: 'https://example.com', apiKey: 'plaintext', models: []
+      }]));
+    }
   });
   await mockConnectorApi(page);
   await page.goto('/connectors/');
-  await expect(page.getByRole('heading', { name: 'Legacy on-device Connectors', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Clear legacy data', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('Could not clear the legacy data');
-  await expect(page.getByRole('heading', { name: 'Legacy on-device Connectors', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'No connectors yet', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Legacy gateway', exact: true })).toHaveCount(0);
+  expect(await page.evaluate(() => localStorage.getItem('goldfin.connectors.v1'))).toBeNull();
 });
 
 test('saved cards expose no Configure or Delete until edit and deletion ship', async ({ page }) => {

@@ -198,6 +198,98 @@
   .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
   .btn-primary:hover:not(:disabled) { background: var(--accent-2); border-color: var(--accent-2); }
   .btn-ghost { background: transparent; }
+  [hidden] { display: none !important; }
+  select {
+    width: 100%; padding: 7px 10px; border: 1px solid var(--line);
+    border-radius: 6px; background: var(--rail); color: var(--tx); font: inherit;
+    color-scheme: dark;
+  }
+  :is(button, input, select):focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+  .btn:active:not(:disabled) { background: var(--panel-3); }
+  .nav-button { width: 100%; background: none; border: 0; cursor: pointer; font: inherit; text-align: start; }
+  .connector-form { width: min(100%, 560px); padding: 24px; overflow-y: auto; }
+  .connector-form p { color: var(--tx-2); overflow-wrap: anywhere; }
+  .connector-form .actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+  .connection-note { color: var(--tx-2); font-size: 12px; overflow-wrap: anywhere; }
+  .in-wrap:has(.peek) input { padding-right: 36px; }
+  .drop:focus-within { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+  .drop input { display: block; position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+  .workflow-body { display: flex; flex-direction: column; flex: 1; min-height: 0; container-type: inline-size; }
+  #workflowControls { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; margin: 0; padding: 0; border: 0; }
+  .workflow-toolbar { display: flex; align-items: end; flex-wrap: wrap; gap: 8px; padding: 12px 16px; }
+  .workflow-field { flex: 1 1 160px; min-width: 0; }
+  .workflow-field label { display: block; margin-block-end: 4px; color: var(--tx-2); font-size: 12px; }
+  .workflow-split { display: grid; grid-template-columns: minmax(240px, var(--workspace-track, 69fr)) 12px minmax(240px, var(--preview-track, 31fr)); flex: 1; min-height: 0; }
+  .workflow-divider { display: grid; place-items: center; padding: 0; border: 0; border-inline: 1px solid var(--line); background: var(--rail); cursor: col-resize; touch-action: none; }
+  .workflow-divider::after { content: ''; inline-size: 2px; block-size: 24px; border-radius: 1px; background: var(--tx-3); }
+  .workflow-divider:active { background: var(--panel-3); }
+  @media (hover: hover) and (pointer: fine) { .workflow-divider:hover { background: var(--panel-2); } }
+  .workspace-scroll { min-width: 0; min-height: 400px; overflow: auto; overscroll-behavior: contain; background: var(--rail); }
+  .workflow-canvas { --dot-gap: clamp(12px, 1.2vw, 16px); position: relative; min-inline-size: 100%; min-block-size: 100%; background-image: radial-gradient(var(--line-2) 1px, transparent 1px); background-size: var(--dot-gap) var(--dot-gap); }
+  .workflow-canvas > svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+  .workflow-wire { fill: none; stroke: var(--tx-3); stroke-width: 2; }
+  .workflow-wire.pending { stroke: var(--accent-2); stroke-dasharray: 5 5; }
+  .workflow-node { position: absolute; width: 230px; border: 1px solid var(--line-2); border-radius: var(--r); background: var(--panel); }
+  .node-header { display: flex; align-items: center; padding: 12px; gap: 4px; }
+  .node-drag { flex: 1; min-width: 0; padding: 4px; text-align: start; color: var(--tx); background: none; border: 0; font: inherit; cursor: grab; touch-action: none; }
+  .node-drag:active { cursor: grabbing; background: var(--panel-2); }
+  .node-drag strong, .node-drag small { display: block; overflow-wrap: anywhere; }
+  .node-drag small { margin-block-start: 4px; font-size: 11px; color: var(--tx-2); }
+  .node-remove { font-size: 11px; padding: 4px 6px; }
+  .node-state { margin: 0; padding: 0 16px 8px; color: var(--tx-2); font-size: 11px; }
+  .workflow-node[data-state="running"] { border-color: var(--amber); }
+  .workflow-node[data-state="failed"] { border-color: var(--red); }
+  .workflow-node[data-state="complete"] { border-color: var(--green); }
+  .node-ports { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding-block: 8px; }
+  .node-port-label { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--tx-2); }
+  .node-port-label.output { margin-inline-start: auto; }
+  .node-port { width: 28px; height: 28px; padding: 6px; border: 0; background: none; cursor: crosshair; touch-action: none; }
+  .node-port::after { content: ''; display: block; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--tx-3); background: var(--rail); }
+  .node-port[aria-pressed="true"]::after, .node-port.connected::after { border-color: var(--accent-2); background: var(--accent); }
+  .workflow-node.preview-pill { display: flex; align-items: center; width: 136px; min-height: 40px; padding: 4px; border-radius: 999px; }
+  .preview-pill .node-header { flex: 1; min-width: 0; padding: 0; }
+  .preview-pill .node-drag { padding-block: 6px; padding-inline: 0 12px; }
+  .preview-pill .node-ports { flex: none; padding: 0; }
+  .preview-pill :is(.node-state, .node-drag small, .node-port-caption) { display: none; }
+  .node-prompt { display: block; padding: 4px 16px 8px; color: var(--tx-2); font-size: 12px; }
+  .node-prompt select { display: block; margin-block-start: 6px; }
+  textarea:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+  .workflow-preview { display: flex; flex-direction: column; min-width: 0; min-height: 260px; background: var(--panel); border-inline-start: 1px solid var(--line); }
+  .workflow-preview h2 { margin: 0; padding: 16px; font-size: 14px; font-weight: 500; }
+  #workflowOutput { flex: 1; min-height: 0; max-height: 75dvh; overflow: auto; }
+  #workflowOutput:empty::before { content: 'Connect an LLM output to Preview, then run the workflow.'; color: var(--tx-2); }
+  .workflow-help, #workflowMessage { margin: 0; padding: 8px 16px; font-size: 12px; color: var(--tx-2); }
+  #workflowMessage { min-height: 34px; }
+  .prompt-body { display: flex; flex-direction: column; flex: 1; min-block-size: 0; overflow: auto; }
+  .prompt-window { display: flex; flex-direction: column; flex: 1; min-block-size: 360px; margin: 0 16px 16px; border: 1px solid var(--line); border-radius: var(--r); background: var(--panel); overflow: clip; }
+  .prompt-window-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 12px 16px; border-block-end: 1px solid var(--line); }
+  .prompt-window-head h2 { margin: 0; font-size: 14px; font-weight: 500; }
+  #promptContent, .prompt-markdown { flex: 1; min-block-size: 320px; inline-size: 100%; margin: 0; padding: 20px; color: var(--tx-2); overflow: auto; }
+  #promptContent { resize: vertical; font: 12px/1.7 var(--mono); background: var(--panel); border: 0; border-radius: 0; }
+  #promptContent:focus-visible { outline-offset: -2px; }
+  .prompt-markdown { overflow-wrap: anywhere; }
+  .prompt-markdown :is(h1, h2, h3, h4, h5, h6) { color: var(--tx); line-height: 1.4; margin-block: 24px 12px; }
+  .prompt-markdown h1 { font-size: 24px; }
+  .prompt-markdown h2 { font-size: 20px; }
+  .prompt-markdown > :first-child { margin-block-start: 0; }
+  .prompt-markdown pre { padding: 12px; background: var(--rail); border-radius: 6px; overflow: auto; }
+  .prompt-markdown code { font-family: var(--mono); font-size: 12px; }
+  .prompt-markdown a { color: var(--accent-2); }
+  .prompt-markdown img { max-inline-size: 100%; block-size: auto; }
+  .prompt-markdown blockquote { margin-inline: 0; padding-inline-start: 16px; border-inline-start: 2px solid var(--line-2); }
+  .prompt-markdown table { display: block; max-inline-size: 100%; overflow: auto; border-collapse: collapse; }
+  .prompt-markdown :is(th, td) { padding: 8px; border: 1px solid var(--line-2); text-align: start; }
+  .prompt-markdown:empty::before { content: 'Write a prompt in Edit mode to preview its Markdown.'; color: var(--tx-3); }
+  #promptMessage { margin: 0; padding: 0 16px 16px; color: var(--tx-2); overflow-wrap: anywhere; }
+  .app:has(#workflowsPage:not([hidden])) .logbox { display: none; }
+  .app:has(#workflowsPage:not([hidden])) #playgroundConnection { display: none; }
+  .app:has(#promptsPage:not([hidden])) :is(.logbox, #playgroundConnection, .side-scroll > .field, .side-scroll > .hr) { display: none; }
+  @container (width < 760px) {
+    .workflow-split { grid-template-columns: minmax(0, 1fr); }
+    .workflow-divider { display: none; }
+    .workspace-scroll { max-height: 520px; }
+    .workflow-preview { border-inline-start: 0; border-block-start: 1px solid var(--line); }
+  }
 
   .body {
     flex: 1 1 auto; min-height: 0; overflow: hidden; padding: 20px 24px 24px;
@@ -237,7 +329,7 @@
     color: var(--tx-2); white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere;
     height: 100%; overflow-y: auto;
   }
-  pre.text:empty::before { content: 'No document analyzed yet. Select a PDF and run Analyze.'; color: #6e6e68; }
+  pre.text:empty::before { content: 'No document analyzed yet. Select a document and run Analyze.'; color: #6e6e68; }
   .outwrap { padding: 0; display: flex; min-height: 0; position: relative; flex: 1 1 auto; }
   .outwrap pre { flex: 1 1 auto; min-height: 0; }
   .outwrap.busy pre.text:empty::before { content: ''; }
@@ -268,6 +360,10 @@
     pre.text { height: auto; max-height: 420px; }
     .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .head-actions { margin-left: 0; }
+    .topbar { flex-wrap: wrap; height: auto; padding-block: 8px; }
+    .app { grid-template-rows: auto auto; }
+    .top-right { gap: 4px; }
+    .crumb .tail { display: none; }
   }
   @media (prefers-reduced-motion: reduce) {
     * { animation: none !important; transition: none !important; }
@@ -285,7 +381,7 @@
     <div class="crumb">
       <b>Document Intelligence</b>
       <span class="sep">/</span>
-      <span class="tail">Playground</span>
+      <span class="tail" id="pageCrumb">Playground</span>
     </div>
     <div class="top-right">
       <span class="pill" id="pill"><span class="dot"></span><span id="pillText">Idle</span></span>
@@ -296,48 +392,44 @@
   <aside class="sidebar">
     <div class="side-scroll">
       <div class="rail-head">Connection</div>
-      <div class="navitem on">
+      <button class="navitem nav-button on" id="playgroundNav" aria-current="page">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>
-        Endpoint
-      </div>
-      <div class="navitem">
+        Playground
+      </button>
+      <button class="navitem nav-button" id="connectorsNav">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        Key
-        <span class="k" id="keyState">unset</span>
+        Connectors
+      </button>
+      <button class="navitem nav-button" id="workflowsNav">
+        <svg class="ic" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="3" width="6" height="6" rx="1"/><rect x="15" y="15" width="6" height="6" rx="1"/><path d="M9 6h6M6 9v9h9"/></svg>
+        Workflows
+      </button>
+      <button class="navitem nav-button" id="promptsNav">
+        <svg class="ic" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>
+        Prompts
+      </button>
+      <div class="hr"></div>
+
+      <div class="field" id="playgroundConnection">
+        <label for="connector">Connector</label>
+        <select id="connector">
+          <option value="di">Document Intelligence</option>
+          <option value="eu">Foundry EU</option>
+          <option value="us">Foundry US</option>
+        </select>
+        <p class="connection-note" id="connectionSummary"></p>
       </div>
       <div class="hr"></div>
 
       <div class="field">
-        <label for="base">Base URL</label>
-        <div class="in-wrap mono">
-          <input type="text" id="base" spellcheck="false" placeholder="https://resource.cognitiveservices.azure.com">
-        </div>
-      </div>
-      <div class="field">
-        <label for="key">API key</label>
-        <div class="in-wrap mono">
-          <input type="password" id="key" spellcheck="false" placeholder="Ocp-Apim-Subscription-Key">
-          <button class="peek" id="peek" title="Show key" aria-label="Show key">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-          </button>
-        </div>
-      </div>
-      <div class="field">
-        <label for="ver">API version</label>
-        <div class="in-wrap mono">
-          <input type="text" id="ver" spellcheck="false" value="2024-11-30">
-        </div>
-      </div>
-      <div class="hr"></div>
-
-      <div class="field">
-        <label>Document</label>
+        <label for="file">Document</label>
         <label class="drop" id="drop">
-          <input type="file" id="file" accept=".pdf,application/pdf">
+          <input type="file" id="file" accept=".pdf,.jpg,.jpeg,.png,.docx,application/pdf,image/jpeg,image/png,application/vnd.openxmlformats-officedocument.wordprocessingml.document" aria-describedby="fileFormats">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="m9.5 14.5 2.5-2.5 2.5 2.5"/></svg>
-          <div class="name" id="fileName">Select a PDF</div>
+          <div class="name" id="fileName">Select a document</div>
           <div class="meta" id="fileMeta">or drop one here</div>
         </label>
+        <p class="connection-note" id="fileFormats">PDF, JPEG, PNG. DOCX: Document Intelligence only.</p>
       </div>
     </div>
 
@@ -348,16 +440,16 @@
     <div class="side-foot">
       <div class="user">
         <div class="avatar">DI</div>
-        <div class="who">Local session<small>Key stays in memory</small></div>
+        <div class="who">Local prototype<small>Saved keys are unencrypted</small></div>
       </div>
     </div>
   </aside>
 
-  <main class="main">
+  <main class="main" id="playgroundPage">
     <div class="pagehead">
       <div>
-        <h1>Read a PDF, end to end</h1>
-        <p>Raw binary POST, Operation-Location header, two-second poll. Same contract as internal/processing/ocr.</p>
+        <h1 tabindex="-1">Read a document, end to end</h1>
+        <p id="contractNote">Document Intelligence: binary upload and two-second polling.</p>
       </div>
       <div class="head-actions">
         <button class="btn" id="stop" disabled>
@@ -381,17 +473,17 @@
         <div class="stat">
           <div class="k"><svg class="ic blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>Pages</div>
           <div class="v" id="sPages">0</div>
-          <div class="sub">analyzeResult.pages</div>
+          <div class="sub" id="pagesSource">analyzeResult.pages</div>
         </div>
         <div class="stat">
           <div class="k"><svg class="ic green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>Characters</div>
           <div class="v" id="sChars">0</div>
-          <div class="sub">analyzeResult.content</div>
+          <div class="sub" id="textSource">analyzeResult.content</div>
         </div>
         <div class="stat">
           <div class="k"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>Elapsed</div>
           <div class="v" id="sTime">0s</div>
-          <div class="sub">No timeout</div>
+          <div class="sub">5 minute timeout</div>
         </div>
       </div>
 
@@ -414,16 +506,111 @@
     </div>
   </main>
 
+  <main class="main" id="connectorsPage" hidden>
+    <div class="pagehead"><div><h1 tabindex="-1">Connectors</h1><p>Save connection settings for this browser.</p></div></div>
+    <form class="connector-form" id="connectorForm">
+      <p>Prototype only: URLs and API keys are saved unencrypted in this browser's localStorage. Use a trusted browser. Clear a key and save to remove it.</p>
+      <div class="field">
+        <label for="editConnector">Edit connector</label>
+        <select id="editConnector">
+          <option value="di">Document Intelligence</option>
+          <option value="eu">Foundry EU</option>
+          <option value="us">Foundry US</option>
+          <option value="new">New LLM connector…</option>
+        </select>
+      </div>
+      <div id="llmFields" hidden>
+        <div class="field"><label for="connectorName">Connector name</label><input type="text" id="connectorName" maxlength="80"></div>
+        <div class="field">
+          <label for="apiMode">API mode</label>
+          <select id="apiMode"><option value="responses">OpenAI Responses</option><option value="chat">OpenAI-compatible Chat Completions</option></select>
+        </div>
+        <div class="field"><label for="modelId">Model ID</label><input type="text" id="modelId" spellcheck="false"></div>
+        <p>Use the API root, including its version path, e.g. <code>https://api.openai.com/v1</code>. The selected API path is appended.</p>
+      </div>
+      <div class="field">
+        <label for="base">Base URL</label>
+        <div class="in-wrap mono"><input type="text" id="base" required spellcheck="false" placeholder="https://resource.cognitiveservices.azure.com"></div>
+      </div>
+      <div class="field">
+        <label for="key">API key</label>
+        <div class="in-wrap mono">
+          <input type="password" id="key" spellcheck="false" autocomplete="off">
+          <button type="button" class="peek" id="peek" aria-label="Show key">Show</button>
+        </div>
+      </div>
+      <div class="field" id="versionField">
+        <label for="ver">API version</label>
+        <div class="in-wrap mono"><input type="text" id="ver" spellcheck="false" value="2024-11-30"></div>
+      </div>
+      <p id="deploymentNote" hidden>Deployment: <code>ocr3-pilot</code>. PDF limit: 30 pages / 30 MB; Azure validates page count.</p>
+      <p>Requests go directly to the configured service. Browser CORS restrictions apply.</p>
+      <p>Test sends a small LLM request, or the selected document for OCR. Calls may be billed. Test timeout: 30 seconds.</p>
+      <div class="actions"><button class="btn btn-primary" type="submit">Save connector</button><button class="btn" type="button" id="connectionTest">Test connection</button><span id="connectorMessage" role="status"></span></div>
+    </form>
+  </main>
+
+  <main class="main" id="promptsPage" hidden>
+    <div class="pagehead"><div><h1 tabindex="-1">Prompts</h1><p>Save system instructions and select them on LLM nodes.</p></div></div>
+    <form class="prompt-body" id="promptForm">
+      <div class="workflow-toolbar">
+        <div class="workflow-field"><label for="savedPrompt">Saved prompt</label><select id="savedPrompt"><option value="new">New prompt…</option></select></div>
+        <div class="workflow-field"><label for="promptName">Prompt name</label><input type="text" id="promptName" maxlength="80" required></div>
+        <button class="btn btn-primary" type="submit" id="promptSave">Save prompt</button>
+      </div>
+      <section class="prompt-window" aria-label="Prompt editor">
+        <div class="prompt-window-head"><h2 id="promptContentHeading">Prompt content</h2><button class="btn" type="button" id="promptMode" aria-pressed="false" aria-controls="promptContent promptMarkdown">Markdown preview</button></div>
+        <textarea id="promptContent" aria-labelledby="promptContentHeading" spellcheck="false" placeholder="Write system instructions in Markdown…"></textarea>
+        <div class="prompt-markdown" id="promptMarkdown" role="region" aria-label="Markdown preview" tabindex="0" hidden></div>
+      </section>
+      <p id="promptMessage" role="status">Saved in this browser. Save before switching prompts. Workflows use the latest saved text.</p>
+    </form>
+  </main>
+
+  <main class="main" id="workflowsPage" hidden>
+    <div class="pagehead">
+      <div><h1 tabindex="-1">Workflows</h1><p>Connect saved OCR and LLM nodes. Preview follows the connected path.</p></div>
+      <div class="head-actions"><button class="btn" id="workflowStop" disabled>Stop workflow</button><button class="btn btn-primary" id="workflowRun">Run workflow</button></div>
+    </div>
+    <div class="workflow-body">
+      <fieldset id="workflowControls">
+        <div class="workflow-toolbar">
+          <div class="workflow-field"><label for="savedWorkflow">Saved workflow</label><select id="savedWorkflow"><option value="new">New workflow…</option></select></div>
+          <div class="workflow-field"><label for="workflowName">Workflow name</label><input type="text" id="workflowName" maxlength="80" placeholder="Untitled workflow"></div>
+          <button class="btn" id="workflowSave">Save workflow</button>
+        </div>
+        <div class="workflow-toolbar">
+          <div class="workflow-field"><label for="nodeConnector">Saved connector</label><select id="nodeConnector"></select></div>
+          <button class="btn" id="nodeAdd">Add node</button>
+        </div>
+        <div class="workflow-split" id="workflowSplit">
+          <div class="workspace-scroll" id="workflowWorkspace" tabindex="0" aria-label="Scrollable workflow workspace"><div class="workflow-canvas" id="workflowCanvas"><svg id="workflowWires" aria-hidden="true"></svg></div></div>
+          <button class="workflow-divider" id="workflowDivider" role="separator" aria-label="Resize response pane" aria-orientation="vertical" aria-controls="workflowWorkspace workflowPreview" aria-valuemin="20" aria-valuemax="80" aria-valuenow="69" title="Drag to resize; arrow keys also work"></button>
+          <aside class="workflow-preview" id="workflowPreview" aria-label="LLM response preview"><h2>Response preview</h2><div class="outwrap" id="workflowOutwrap"><pre class="text" id="workflowOutput"></pre></div></aside>
+        </div>
+      </fieldset>
+      <p class="workflow-help">Drag headers or use arrow keys to move. Connect output → input by dragging or clicking ports. Click an input to disconnect. Scroll for more nodes. Save before switching.</p>
+      <p id="workflowMessage" role="status">Only the path feeding Preview runs, using the selected document and current saved connector settings.</p>
+    </div>
+  </main>
+
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/markdown-it@15.0.3/dist/browser/markdown-it.umd.min.js" integrity="sha384-ARStLecQmtLYjBgfD3+w+irhiSoLTnFk/ne6c0gRWQKQtC9791ZLMQ9D3OaBISt3" crossorigin="anonymous"></script>
 <script>
 (function () {
   var $ = function (id) { return document.getElementById(id); };
   var baseEl = $('base'), keyEl = $('key'), verEl = $('ver'), fileEl = $('file');
   var runEl = $('run'), stopEl = $('stop'), pill = $('pill'), pillText = $('pillText');
   var consoleEl = $('console'), outEl = $('out'), drop = $('drop');
-  var PAGES = { running: 2000, default: 2000 };
-  var current = null, cancel = false, startedAt = 0, text = '';
+  var connectorEl = $('connector'), editorEl = $('editConnector');
+  var current = null, active = null, startedAt = 0, text = '', runningWorkflow = false;
+  var storageKey = 'ocr-playground.connectors';
+  var connectors = {
+    di: { base: '', key: '', version: '2024-11-30' },
+    eu: { base: '', key: '' },
+    us: { base: '', key: '' }
+  };
 
   var nebula = (function () {
     var cvs = $('nebula'), ctx = cvs.getContext('2d');
@@ -441,6 +628,7 @@
     }
     fit();
     window.addEventListener('resize', fit);
+    new ResizeObserver(fit).observe(cvs);
 
     // Triangles are baked once per size/tint and blitted per frame. Rebuilding
     // 2500 paths every frame costs ~5x the draw calls for an identical result.
@@ -523,8 +711,493 @@
     };
   })();
 
-  baseEl.value = localStorage.getItem('di.base') || '';
-  verEl.value = localStorage.getItem('di.ver') || '2024-11-30';
+  try {
+    connectors.di.base = localStorage.getItem('di.base') || '';
+    connectors.di.version = localStorage.getItem('di.ver') || '2024-11-30';
+    var saved = JSON.parse(localStorage.getItem(storageKey) || '{}');
+    Object.keys(connectors).forEach(function (id) {
+      if (!saved || !saved[id]) return;
+      ['base', 'key', 'version'].forEach(function (field) {
+        if (typeof saved[id][field] === 'string') connectors[id][field] = saved[id][field];
+      });
+    });
+    Object.keys(saved || {}).forEach(function (id) {
+      var config = saved[id];
+      if (!id.startsWith('llm-') || !config || config.kind !== 'llm') return;
+      if (!['name', 'base', 'key', 'model'].every(function (field) { return typeof config[field] === 'string'; })) return;
+      if (config.protocol !== 'responses' && config.protocol !== 'chat') return;
+      connectors[id] = { kind: 'llm', name: config.name, base: config.base, key: config.key, model: config.model, protocol: config.protocol };
+    });
+  } catch (e) { log('Saved connectors could not be loaded. Configure them in Connectors.', 'err'); }
+
+  function connectorName(id) {
+    if (id === 'di') return 'Document Intelligence';
+    if (id === 'eu' || id === 'us') return 'Foundry ' + id.toUpperCase();
+    return connectors[id] ? connectors[id].name : 'Missing connector';
+  }
+  function refreshConnectorOptions() {
+    editorEl.querySelectorAll('[data-llm]').forEach(function (option) { option.remove(); });
+    Object.keys(connectors).forEach(function (id) {
+      if (connectors[id].kind !== 'llm') return;
+      var option = new Option(connectorName(id), id);
+      option.dataset.llm = '';
+      editorEl.add(option, editorEl.querySelector('[value="new"]'));
+    });
+    refreshNodeOptions();
+  }
+  function loadEditor() {
+    var config = editorEl.value === 'new' ? { kind: 'llm', name: '', base: 'https://api.openai.com/v1', key: '', model: '', protocol: 'responses' } : connectors[editorEl.value];
+    var llm = config.kind === 'llm';
+    baseEl.value = config.base;
+    keyEl.value = config.key;
+    keyEl.type = 'password';
+    $('peek').textContent = 'Show';
+    $('peek').setAttribute('aria-label', 'Show key');
+    verEl.value = config.version || '2024-11-30';
+    $('versionField').hidden = editorEl.value !== 'di';
+    $('deploymentNote').hidden = llm || editorEl.value === 'di';
+    $('llmFields').hidden = !llm;
+    $('connectorName').value = config.name || '';
+    $('modelId').value = config.model || '';
+    $('apiMode').value = config.protocol || 'responses';
+    $('connectorName').required = llm;
+    $('modelId').required = llm;
+    $('connectorMessage').textContent = '';
+  }
+  function updateConnection() {
+    var di = connectorEl.value === 'di';
+    $('connectionSummary').textContent = connectors[connectorEl.value].key ? 'Key saved locally' : 'Key unset — open Connectors';
+    $('contractNote').textContent = di ? 'Document Intelligence: PDF, JPEG, PNG, or DOCX. Binary upload and two-second polling.' : 'Foundry: PDF, JPEG, or PNG → Markdown. Deployment: ocr3-pilot. PDF limit: 30 pages / 30 MB.';
+    $('pagesSource').textContent = di ? 'analyzeResult.pages' : 'usage_info.pages_processed';
+    $('textSource').textContent = di ? 'analyzeResult.content' : 'pages[].markdown';
+  }
+  function showPage(page) {
+    ['playground', 'connectors', 'workflows', 'prompts'].forEach(function (name) {
+      $(name + 'Page').hidden = name !== page;
+      $(name + 'Nav').classList.toggle('on', name === page);
+      $(name + 'Nav').setAttribute('aria-current', name === page ? 'page' : 'false');
+    });
+    if (page === 'connectors') { editorEl.value = connectorEl.value; loadEditor(); }
+    if (page === 'workflows') { renderWorkflow(); canvas.parentElement.scrollTo(0, 0); }
+    $('pageCrumb').textContent = page.charAt(0).toUpperCase() + page.slice(1);
+    $(page + 'Page').querySelector('h1').focus();
+  }
+  function baseURL(value, llm) {
+    var url;
+    try { url = new URL(value.trim()); } catch (e) { throw new Error('Enter a valid HTTPS base URL.'); }
+    var localHTTP = llm && url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+    if ((url.protocol !== 'https:' && !localHTTP) || url.username || url.password || url.search || url.hash || (!llm && !/^\/*$/.test(url.pathname))) {
+      if (llm) throw new Error('Use an HTTPS API root (or HTTP localhost) without query parameters or credentials.');
+      throw new Error('Use an HTTPS base URL without a path, query, or credentials.');
+    }
+    return url.origin + (llm ? url.pathname.replace(/\/+$/, '') : '');
+  }
+  function documentType(file, connectorId) {
+    var extension = (/\.([^.]+)$/.exec(file.name) || [])[1];
+    var types = { pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
+    var mime = types[(extension || '').toLowerCase()];
+    if (typeof mime !== 'string' || !file.size) throw new Error('Select a non-empty PDF, JPEG, PNG, or DOCX file.');
+    if (connectorId && connectorId !== 'di') {
+      if (mime === types.docx) throw new Error('DOCX requires Document Intelligence. Switch the OCR connector or save the document as PDF for Foundry.');
+      if (mime === types.pdf && file.size > 30000000) throw new Error('Foundry PDFs must be 30 MB or smaller.');
+    }
+    return mime;
+  }
+  $('playgroundNav').addEventListener('click', function () { showPage('playground'); });
+  $('connectorsNav').addEventListener('click', function () { showPage('connectors'); });
+  $('workflowsNav').addEventListener('click', function () { showPage('workflows'); });
+  $('promptsNav').addEventListener('click', function () { showPage('prompts'); });
+  editorEl.addEventListener('change', loadEditor);
+  connectorEl.addEventListener('change', updateConnection);
+  function connectorDraft() {
+    var llm = editorEl.value === 'new' || connectors[editorEl.value].kind === 'llm';
+    var config = { base: baseURL(baseEl.value, llm), key: keyEl.value.trim() };
+    if (llm) {
+      config.kind = 'llm'; config.name = $('connectorName').value.trim();
+      config.model = $('modelId').value.trim(); config.protocol = $('apiMode').value;
+      if (!config.name || !config.model) throw new Error('Connector name and Model ID are required.');
+    }
+    if (editorEl.value === 'di') {
+      config.version = verEl.value.trim();
+      if (!config.version) throw new Error('API version is required.');
+    }
+    return config;
+  }
+  $('connectorForm').addEventListener('input', function () { $('connectorMessage').textContent = ''; });
+  $('connectorForm').addEventListener('submit', function (event) {
+    event.preventDefault();
+    try {
+      var config = connectorDraft();
+      var next = Object.assign({}, connectors);
+      var id = editorEl.value === 'new' ? newID('llm') : editorEl.value;
+      next[id] = config;
+      // shortcut: plaintext browser storage for this local prototype; use worker-owned Credentials before production.
+      try { localStorage.setItem(storageKey, JSON.stringify(next)); }
+      catch (e) { throw new Error('Browser storage is unavailable. Connector was not saved.'); }
+      connectors = next;
+      refreshConnectorOptions();
+      editorEl.value = id;
+      $('connectorMessage').textContent = 'Connector saved in this browser.';
+      updateConnection();
+    } catch (e) { $('connectorMessage').textContent = e.message; }
+  });
+  var connectionTest = null;
+  function connectionTestControls(busy) {
+    controls(busy);
+    $('connectorForm').querySelectorAll('input, select, button').forEach(function (control) { control.disabled = busy; });
+    $('connectionTest').disabled = false;
+    $('connectionTest').textContent = busy ? 'Cancel test' : 'Test connection';
+  }
+  $('connectionTest').addEventListener('click', async function () {
+    if (connectionTest) { connectionTest.abort(); return; }
+    if (active) return;
+    var config, id = editorEl.value;
+    try {
+      config = connectorDraft();
+      if (!config.key) throw new Error('API key is empty.');
+      if (config.kind !== 'llm') {
+        if (!current) throw new Error('Select a document in the sidebar to test OCR.');
+        documentType(current, id);
+      }
+    } catch (e) { $('connectorMessage').textContent = e.message; return; }
+    var request = new AbortController(), timedOut = false;
+    connectionTest = request; active = request;
+    var timeout = setTimeout(function () { timedOut = true; request.abort(); }, 30000);
+    connectionTestControls(true);
+    $('connectorMessage').textContent = 'Testing connection…';
+    try {
+      if (config.kind === 'llm') await invokeLLM(config, 'Reply with OK.', '', request.signal);
+      else await extractOCR(config, id, current, request.signal, function () { $('connectorMessage').textContent = 'Testing OCR: polling for completion…'; });
+      request.signal.throwIfAborted();
+      $('connectorMessage').textContent = 'Connection test succeeded (HTTP 200). Settings were not saved.';
+    } catch (e) {
+      if (timedOut) $('connectorMessage').textContent = 'Connection test timed out after 30 seconds. The service may still process the request.';
+      else if (request.signal.aborted) $('connectorMessage').textContent = 'Connection test cancelled. The service may still process the request.';
+      else $('connectorMessage').textContent = 'Connection test failed: ' + requestErrorText(e);
+    } finally {
+      clearTimeout(timeout);
+      connectionTest = null; active = null;
+      connectionTestControls(false);
+    }
+  });
+  refreshConnectorOptions();
+  loadEditor();
+  updateConnection();
+
+  var promptKey = 'ocr-playground.prompts', savedPrompts = [];
+  var markdown = window.markdownit ? window.markdownit({ html: false }) : null;
+  try {
+    var prompts = JSON.parse(localStorage.getItem(promptKey) || '[]');
+    var promptIDs = new Set();
+    if (!Array.isArray(prompts) || !prompts.every(function (item) {
+      if (!item || typeof item.id !== 'string' || !/^prompt-[a-z0-9-]+$/.test(item.id) || promptIDs.has(item.id) || typeof item.name !== 'string' || typeof item.content !== 'string') return false;
+      promptIDs.add(item.id); return true;
+    })) throw new Error('Invalid prompts');
+    savedPrompts = prompts;
+  } catch (e) {
+    $('promptMessage').textContent = 'Saved prompts could not be loaded. Existing browser data has not been changed. Reload before saving.';
+    $('promptSave').disabled = true;
+  }
+  function refreshPromptOptions() {
+    var selected = $('savedPrompt').value;
+    $('savedPrompt').replaceChildren(new Option('New prompt…', 'new'));
+    savedPrompts.forEach(function (item) { $('savedPrompt').add(new Option(item.name, item.id)); });
+    $('savedPrompt').value = selected || 'new';
+  }
+  function promptMode(preview) {
+    if (preview && !markdown) {
+      $('promptMessage').textContent = 'Markdown preview is unavailable. Allow the pinned CDN script and reload. Editing and saving still work.';
+      return;
+    }
+    if (preview) $('promptMarkdown').innerHTML = markdown.render($('promptContent').value);
+    $('promptContent').hidden = preview;
+    $('promptMarkdown').hidden = !preview;
+    $('promptMode').textContent = preview ? 'Edit' : 'Markdown preview';
+    $('promptMode').setAttribute('aria-pressed', String(preview));
+  }
+  $('promptMode').addEventListener('click', function () { promptMode(!$('promptContent').hidden); });
+  $('savedPrompt').addEventListener('change', function () {
+    var item = savedPrompts.find(function (item) { return item.id === $('savedPrompt').value; });
+    $('promptName').value = item ? item.name : '';
+    $('promptContent').value = item ? item.content : '';
+    promptMode(false);
+    $('promptMessage').textContent = item ? 'Prompt loaded. Edit and save to update it.' : 'New prompt. Enter a name and system instructions.';
+  });
+  $('promptForm').addEventListener('input', function () { $('promptMessage').textContent = 'Unsaved changes. Save before switching prompts.'; });
+  $('promptForm').addEventListener('submit', function (event) {
+    event.preventDefault();
+    if ($('promptSave').disabled) return;
+    var name = $('promptName').value.trim();
+    if (!name) { $('promptMessage').textContent = 'Enter a prompt name before saving.'; return; }
+    var id = $('savedPrompt').value === 'new' ? newID('prompt') : $('savedPrompt').value;
+    var next = savedPrompts.filter(function (item) { return item.id !== id; }).concat({ id: id, name: name, content: $('promptContent').value });
+    try { localStorage.setItem(promptKey, JSON.stringify(next)); }
+    catch (e) { $('promptMessage').textContent = 'Browser storage is unavailable. Prompt was not saved.'; return; }
+    savedPrompts = next;
+    refreshPromptOptions(); $('savedPrompt').value = id;
+    $('workflowOutput').textContent = '';
+    $('promptMessage').textContent = 'Prompt saved in this browser. Connected nodes use this saved text on their next run.';
+  });
+  refreshPromptOptions();
+
+  var workflowKey = 'ocr-playground.workflows';
+  var savedWorkflows = [], workflow = emptyWorkflow(), pendingSource = null, gesture = null;
+  var canvas = $('workflowCanvas'), wires = $('workflowWires');
+  var nodeSizes = new ResizeObserver(function () { sizeCanvas(); drawWires(); });
+  var split = $('workflowSplit'), divider = $('workflowDivider'), splitPercent = 69, resizingSplit = false;
+  function resizeSplit(percent) {
+    if (!divider.offsetWidth) return;
+    var available = split.clientWidth - divider.offsetWidth;
+    var minimum = 240 / available * 100;
+    splitPercent = Math.max(minimum, Math.min(100 - minimum, percent));
+    split.style.setProperty('--workspace-track', splitPercent + 'fr');
+    split.style.setProperty('--preview-track', (100 - splitPercent) + 'fr');
+    divider.setAttribute('aria-valuemin', String(Math.round(minimum)));
+    divider.setAttribute('aria-valuemax', String(Math.round(100 - minimum)));
+    divider.setAttribute('aria-valuenow', String(Math.round(splitPercent)));
+  }
+  divider.addEventListener('pointerdown', function (event) {
+    if (active || event.button !== 0) return;
+    resizingSplit = true; divider.setPointerCapture(event.pointerId); event.preventDefault();
+  });
+  divider.addEventListener('pointermove', function (event) {
+    if (!resizingSplit) return;
+    var rect = split.getBoundingClientRect();
+    var offset = event.clientX - rect.left - divider.offsetWidth / 2;
+    if (getComputedStyle(split).direction === 'rtl') offset = rect.width - offset - divider.offsetWidth;
+    resizeSplit(offset / (rect.width - divider.offsetWidth) * 100);
+  });
+  divider.addEventListener('lostpointercapture', function () { resizingSplit = false; });
+  divider.addEventListener('keydown', function (event) {
+    var direction = getComputedStyle(split).direction === 'rtl' ? -1 : 1;
+    if (event.key === 'ArrowLeft') resizeSplit(splitPercent - 5 * direction);
+    else if (event.key === 'ArrowRight') resizeSplit(splitPercent + 5 * direction);
+    else if (event.key === 'Home') resizeSplit(0);
+    else if (event.key === 'End') resizeSplit(100);
+    else return;
+    event.preventDefault();
+  });
+  new ResizeObserver(function () { resizeSplit(splitPercent); }).observe(split);
+  try {
+    var stored = JSON.parse(localStorage.getItem(workflowKey) || '[]');
+    if (!Array.isArray(stored) || !stored.every(validWorkflow)) throw new Error('Invalid workflows');
+    savedWorkflows = stored;
+  } catch (e) {
+    $('workflowMessage').textContent = 'Saved workflows could not be loaded. Existing browser data has not been changed. Reload before saving.';
+    $('workflowSave').disabled = true;
+  }
+  refreshWorkflowOptions();
+
+  function newID(prefix) { return prefix + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8); }
+  function emptyWorkflow() {
+    return { nodes: [{ id: 'node-preview', kind: 'preview', connector: '', prompt: '', x: 580, y: 160 }], edges: [] };
+  }
+  function validWorkflow(item) {
+    if (!item || typeof item.id !== 'string' || typeof item.name !== 'string' || !Array.isArray(item.nodes) || !Array.isArray(item.edges)) return false;
+    var ids = new Set();
+    var validNodes = item.nodes.every(function (node) {
+      if (!node || typeof node.id !== 'string' || !/^node-[a-z0-9-]+$/.test(node.id) || ids.has(node.id)) return false;
+      ids.add(node.id);
+      return ['ocr', 'llm', 'preview'].includes(node.kind) && typeof node.connector === 'string' && typeof node.prompt === 'string' && (node.promptId === undefined || typeof node.promptId === 'string') && Number.isFinite(node.x) && node.x >= 0 && Number.isFinite(node.y) && node.y >= 0;
+    });
+    return validNodes && item.nodes.filter(function (node) { return node.kind === 'preview'; }).length === 1 && item.edges.every(function (edge) { return edge && ids.has(edge.from) && ids.has(edge.to); });
+  }
+  function refreshWorkflowOptions() {
+    var selected = $('savedWorkflow').value;
+    $('savedWorkflow').replaceChildren(new Option('New workflow…', 'new'));
+    savedWorkflows.forEach(function (item) { $('savedWorkflow').add(new Option(item.name, item.id)); });
+    $('savedWorkflow').value = selected || 'new';
+  }
+  function refreshNodeOptions() {
+    var select = $('nodeConnector'), selected = select.value;
+    select.replaceChildren();
+    Object.keys(connectors).forEach(function (id) {
+      if (connectors[id].key) select.add(new Option(connectorName(id), id));
+    });
+    if (!select.options.length) select.add(new Option('Save a connector first', ''));
+    if (Array.from(select.options).some(function (option) { return option.value === selected; })) select.value = selected;
+    $('nodeAdd').disabled = !select.value;
+  }
+  function workflowChanged() {
+    $('workflowMessage').textContent = 'Unsaved changes. Save workflow to keep this layout and prompts.';
+    $('workflowOutput').textContent = '';
+  }
+  $('workflowName').addEventListener('input', workflowChanged);
+  $('savedWorkflow').addEventListener('change', function () {
+    var saved = savedWorkflows.find(function (item) { return item.id === $('savedWorkflow').value; });
+    workflow = saved ? structuredClone(saved) : emptyWorkflow();
+    $('workflowName').value = saved ? saved.name : '';
+    pendingSource = null;
+    $('workflowOutput').textContent = '';
+    renderWorkflow();
+    $('workflowMessage').textContent = saved ? 'Workflow loaded. Uses current saved connector settings.' : 'New workflow. Add saved connectors and connect them to Preview.';
+  });
+  $('workflowSave').addEventListener('click', function () {
+    var name = $('workflowName').value.trim();
+    if (!name) { $('workflowMessage').textContent = 'Enter a workflow name before saving.'; return; }
+    var snapshot = structuredClone(workflow);
+    snapshot.name = name;
+    snapshot.id = $('savedWorkflow').value === 'new' ? newID('workflow') : $('savedWorkflow').value;
+    var next = savedWorkflows.filter(function (item) { return item.id !== snapshot.id; }).concat(snapshot);
+    try { localStorage.setItem(workflowKey, JSON.stringify(next)); }
+    catch (e) { $('workflowMessage').textContent = 'Browser storage is unavailable. Workflow was not saved.'; return; }
+    savedWorkflows = next;
+    workflow.id = snapshot.id; workflow.name = name;
+    refreshWorkflowOptions();
+    $('savedWorkflow').value = snapshot.id;
+    $('workflowMessage').textContent = 'Workflow saved in this browser. Keys remain in connector settings.';
+  });
+  $('nodeAdd').addEventListener('click', function () {
+    var id = $('nodeConnector').value, config = connectors[id];
+    if (!config) return;
+    var kind = config.kind === 'llm' ? 'llm' : 'ocr';
+    var index = workflow.nodes.filter(function (node) { return node.kind === kind; }).length;
+    workflow.nodes.push({ id: newID('node'), kind: kind, connector: id, prompt: '', x: (kind === 'ocr' ? 32 : 304) + Math.floor(index / 2) * 280, y: 64 + (index % 2) * 300 });
+    workflowChanged(); renderWorkflow();
+  });
+  function renderWorkflow() {
+    nodeSizes.disconnect();
+    canvas.querySelectorAll('.workflow-node').forEach(function (node) { node.remove(); });
+    workflow.nodes.forEach(function (node) {
+      var name = node.kind === 'preview' ? 'Preview' : connectorName(node.connector);
+      var el = document.createElement('article');
+      el.className = 'workflow-node'; el.id = node.id;
+      el.setAttribute('role', 'group'); el.setAttribute('aria-label', name + ' node');
+      el.style.left = node.x + 'px'; el.style.top = node.y + 'px';
+      el.innerHTML = '<div class="node-header"><button class="node-drag" aria-label="Move node"><strong></strong><small></small></button><button class="btn btn-ghost node-remove" aria-label="Remove node">Remove</button></div><p class="node-state">Not run</p><div class="node-ports"><span class="node-port-label input"><button class="node-port input" aria-label="Input" title="Connect or disconnect input"></button><span class="node-port-caption">Text input</span></span><span class="node-port-label output"><span class="node-port-caption">Text output</span><button class="node-port output" aria-label="Output" aria-pressed="false"></button></span></div>';
+      el.querySelector('strong').textContent = name;
+      el.querySelector('small').textContent = node.kind === 'preview' ? 'Connected to response pane' : node.kind === 'llm' ? (connectors[node.connector] || {}).model || 'Connector missing' : 'Document → text';
+      el.querySelector('.node-remove').hidden = node.kind === 'preview';
+      el.querySelector('.node-port-label.input').hidden = node.kind === 'ocr';
+      el.querySelector('.node-port-label.output').hidden = node.kind === 'preview';
+      if (node.kind === 'preview') { el.classList.add('preview-pill'); el.prepend(el.querySelector('.node-ports')); }
+      if (node.kind === 'llm') {
+        var label = document.createElement('label'), prompt = document.createElement('select');
+        label.className = 'node-prompt'; label.textContent = 'Prompt';
+        prompt.setAttribute('aria-label', 'Prompt');
+        prompt.add(new Option('No system instructions', ''));
+        if (node.prompt) prompt.add(new Option('Existing inline prompt', 'inline'));
+        savedPrompts.forEach(function (item) { prompt.add(new Option(item.name, item.id)); });
+        if (node.promptId && !savedPrompts.some(function (item) { return item.id === node.promptId; })) prompt.add(new Option('Missing saved prompt', node.promptId));
+        prompt.value = node.promptId || (node.prompt ? 'inline' : '');
+        prompt.addEventListener('change', function () {
+          node.promptId = prompt.value === 'inline' ? '' : prompt.value;
+          if (prompt.value !== 'inline') {
+             node.prompt = '';
+             var inlineOption = prompt.querySelector('option[value="inline"]');
+             if (inlineOption) inlineOption.remove();
+          }
+          workflowChanged();
+        });
+        label.appendChild(prompt); el.insertBefore(label, el.querySelector('.node-ports'));
+      }
+      canvas.appendChild(el); nodeSizes.observe(el);
+    });
+    sizeCanvas(); drawWires();
+  }
+  function sizeCanvas() {
+    canvas.style.width = Math.max(860, ...workflow.nodes.map(function (node) { return node.x + 280; })) + 'px';
+    canvas.style.height = Math.max(700, ...workflow.nodes.map(function (node) { return node.y + ($(node.id) ? $(node.id).offsetHeight : 240) + 40; })) + 'px';
+  }
+  function portPoint(id, direction) {
+    var rect = $(id).querySelector('.node-port.' + direction).getBoundingClientRect();
+    var frame = canvas.getBoundingClientRect();
+    return { x: rect.x + rect.width / 2 - frame.x, y: rect.y + rect.height / 2 - frame.y };
+  }
+  function drawWire(from, to, pending) {
+    var curve = Math.max(60, Math.abs(to.x - from.x) / 2);
+    var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('class', 'workflow-wire' + (pending ? ' pending' : ''));
+    path.setAttribute('d', 'M ' + from.x + ' ' + from.y + ' C ' + (from.x + curve) + ' ' + from.y + ', ' + (to.x - curve) + ' ' + to.y + ', ' + to.x + ' ' + to.y);
+    wires.appendChild(path);
+  }
+  function drawWires() {
+    if ($('workflowsPage').hidden) return;
+    wires.replaceChildren();
+    canvas.querySelectorAll('.node-port').forEach(function (port) {
+      var id = port.closest('.workflow-node').id;
+      port.setAttribute('aria-pressed', String(port.classList.contains('output') && id === pendingSource));
+      port.classList.toggle('connected', workflow.edges.some(function (edge) { return port.classList.contains('input') ? edge.to === id : edge.from === id; }));
+    });
+    workflow.edges.forEach(function (edge) { drawWire(portPoint(edge.from, 'output'), portPoint(edge.to, 'input')); });
+    if (pendingSource) {
+      var point = portPoint(pendingSource, 'output');
+      drawWire(point, gesture && gesture.wire ? gesture.point : { x: point.x + 60, y: point.y }, true);
+    }
+  }
+  function connectNode(from, to) {
+    var source = workflow.nodes.find(function (node) { return node.id === from; });
+    var target = workflow.nodes.find(function (node) { return node.id === to; });
+    if (!source || !target || source.kind === 'preview' || target.kind === 'ocr') return;
+    if (target.kind === 'preview' && source.kind !== 'llm') { $('workflowMessage').textContent = 'Preview takes an LLM output.'; return; }
+    var cursor = from, seen = new Set();
+    while (cursor) {
+      if (cursor === to || seen.has(cursor)) { $('workflowMessage').textContent = 'Connection rejected: workflows cannot contain cycles.'; return; }
+      seen.add(cursor);
+      var previous = workflow.edges.find(function (edge) { return edge.to === cursor; });
+      cursor = previous ? previous.from : null;
+    }
+    workflow.edges = workflow.edges.filter(function (edge) { return edge.to !== to; });
+    workflow.edges.push({ from: from, to: to });
+    pendingSource = null; workflowChanged(); drawWires();
+  }
+  canvas.addEventListener('click', function (event) {
+    if (active) return;
+    var button = event.target.closest('button');
+    if (!button) return;
+    var id = button.closest('.workflow-node').id;
+    if (button.classList.contains('node-remove')) {
+      workflow.nodes = workflow.nodes.filter(function (node) { return node.id !== id; });
+      workflow.edges = workflow.edges.filter(function (edge) { return edge.from !== id && edge.to !== id; });
+      pendingSource = null; workflowChanged(); renderWorkflow();
+    } else if (button.classList.contains('output') && event.detail === 0) {
+      pendingSource = id; drawWires();
+    } else if (button.classList.contains('input')) {
+      if (pendingSource) connectNode(pendingSource, id);
+      else { workflow.edges = workflow.edges.filter(function (edge) { return edge.to !== id; }); workflowChanged(); drawWires(); }
+    }
+  });
+  function moveNode(node, x, y) {
+    node.x = Math.max(16, x); node.y = Math.max(16, y);
+    $(node.id).style.left = node.x + 'px'; $(node.id).style.top = node.y + 'px';
+    sizeCanvas(); drawWires();
+  }
+  canvas.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape') { pendingSource = null; gesture = null; drawWires(); return; }
+    if (active || !event.target.classList.contains('node-drag')) return;
+    var delta = { ArrowLeft: [-16, 0], ArrowRight: [16, 0], ArrowUp: [0, -16], ArrowDown: [0, 16] }[event.key];
+    if (!delta) return;
+    event.preventDefault();
+    var node = workflow.nodes.find(function (item) { return item.id === event.target.closest('.workflow-node').id; });
+    moveNode(node, node.x + delta[0], node.y + delta[1]); workflowChanged();
+  });
+  canvas.addEventListener('pointerdown', function (event) {
+    if (active || event.button !== 0) return;
+    var header = event.target.closest('.node-drag'), output = event.target.closest('.node-port.output');
+    if (!header && !output) return;
+    var node = workflow.nodes.find(function (item) { return item.id === event.target.closest('.workflow-node').id; });
+    if (output) { pendingSource = node.id; gesture = { wire: true, point: portPoint(node.id, 'output') }; }
+    else { gesture = { node: node, x: event.clientX, y: event.clientY, left: node.x, top: node.y }; }
+    event.preventDefault(); canvas.setPointerCapture(event.pointerId); drawWires();
+  });
+  canvas.addEventListener('pointermove', function (event) {
+    if (!gesture) return;
+    if (gesture.wire) {
+      var rect = canvas.getBoundingClientRect();
+      gesture.point = { x: event.clientX - rect.x, y: event.clientY - rect.y }; drawWires();
+    } else { moveNode(gesture.node, gesture.left + event.clientX - gesture.x, gesture.top + event.clientY - gesture.y); }
+  });
+  canvas.addEventListener('pointerup', function (event) {
+    if (!gesture) return;
+    if (gesture.wire) {
+      var input = document.elementFromPoint(event.clientX, event.clientY);
+      input = input && input.closest('.node-port.input');
+      if (input) connectNode(pendingSource, input.closest('.workflow-node').id);
+    } else { workflowChanged(); }
+    gesture = null; drawWires();
+  });
+  canvas.addEventListener('pointercancel', function () { gesture = null; pendingSource = null; drawWires(); });
+  window.addEventListener('resize', drawWires);
 
   function stamp() { return new Date().toTimeString().slice(0, 8); }
   function log(msg, kind) {
@@ -542,9 +1215,16 @@
     $('sStatus').textContent = label;
     $('sHint').textContent = hint || '';
     $('sHint').className = 'sub' + (state === 'run' ? ' warn' : '');
+    if (runningWorkflow) $('workflowMessage').textContent = label + (hint ? ': ' + hint : '');
     var busy = state === 'run';
+    var wrap = runningWorkflow ? $('workflowOutwrap') : $('outwrap');
+    if (busy && $('stage').parentElement !== wrap) wrap.appendChild($('stage'));
     $('stage').hidden = !busy;
-    $('outwrap').classList.toggle('busy', busy);
+    [$('outwrap'), $('workflowOutwrap')].forEach(function (output) {
+      var loading = busy && output === wrap;
+      output.classList.toggle('busy', loading);
+      output.setAttribute('aria-busy', String(loading));
+    });
     if (busy) { $('stageCap').textContent = hint || 'Working'; nebula.start(); } else { nebula.stop(); }
   }
   function tick() {
@@ -565,7 +1245,9 @@
   fileEl.addEventListener('change', function () { if (fileEl.files[0]) setFile(fileEl.files[0]); });
 
   function setFile(f) {
+    if (active) return;
     current = f;
+    $('workflowOutput').textContent = '';
     $('fileName').textContent = f.name;
     $('fileMeta').textContent = (f.size / 1024).toFixed(0) + ' KB';
     setState('', 'Idle', 'Ready to run');
@@ -573,105 +1255,268 @@
 
   $('peek').addEventListener('click', function () {
     keyEl.type = keyEl.type === 'password' ? 'text' : 'password';
-    $('peek').style.color = keyEl.type === 'text' ? 'var(--tx)' : '';
-  });
-  keyEl.addEventListener('input', function () {
-    $('keyState').textContent = keyEl.value.trim() ? 'set' : 'unset';
+    $('peek').textContent = keyEl.type === 'text' ? 'Hide' : 'Show';
+    $('peek').setAttribute('aria-label', keyEl.type === 'text' ? 'Hide key' : 'Show key');
   });
 
-  function headers() { return { 'Ocp-Apim-Subscription-Key': keyEl.value.trim(), 'Content-Type': 'application/pdf' }; }
-  function analyzeURL() {
-    return baseEl.value.trim().replace(/\/+$/, '') + '/documentintelligence/documentModels/prebuilt-read:analyze?api-version=' + encodeURIComponent(verEl.value.trim());
+  function controls(busy) {
+    runEl.disabled = busy; stopEl.disabled = !busy;
+    connectorEl.disabled = busy; fileEl.disabled = busy;
+    $('connectorsNav').disabled = busy;
+    $('playgroundNav').disabled = busy; $('workflowsNav').disabled = busy; $('promptsNav').disabled = busy;
+    $('workflowControls').disabled = busy;
+    $('workflowRun').disabled = busy; $('workflowStop').disabled = !busy;
   }
   function fail(msg) {
     clearInterval(ticker);
     startedAt = 0;
     $('topElapsed').textContent = '';
-    setState('bad', 'Failed', 'See event log');
+    setState('bad', 'Failed', runningWorkflow ? msg : 'See event log');
     log(msg, 'err');
-    runEl.disabled = false; stopEl.disabled = true; cancel = true;
+    controls(false);
+    runningWorkflow = false;
   }
 
-  async function run() {
+  function workflowPath() {
+    var node = workflow.nodes.find(function (item) { return item.kind === 'preview'; });
+    var path = [], seen = new Set();
+    while (node) {
+      if (seen.has(node.id)) throw new Error('Workflow contains a cycle.');
+      seen.add(node.id);
+      var inputs = workflow.edges.filter(function (edge) { return edge.to === node.id; });
+      if (node.kind !== 'preview') {
+        var config = connectors[node.connector];
+        if (!config) throw new Error('A workflow connector is missing. Remove and re-add that node.');
+        if ((config.kind === 'llm' ? 'llm' : 'ocr') !== node.kind) throw new Error('Connector type changed. Remove and re-add that node.');
+        var prompt = node.prompt;
+        if (node.kind === 'llm' && node.promptId) {
+          var selectedPrompt = savedPrompts.find(function (item) { return item.id === node.promptId; });
+          if (!selectedPrompt) throw new Error('A saved prompt is missing. Select an available prompt on the LLM node.');
+          prompt = selectedPrompt.content;
+        }
+        path.unshift({ node: node, id: node.connector, config: Object.assign({}, config), prompt: prompt });
+      }
+      if (node.kind === 'ocr') {
+        if (inputs.length) throw new Error('OCR nodes take the selected document, not another node.');
+        return path;
+      }
+      if (inputs.length !== 1) throw new Error('Connect exactly one input to each LLM and Preview node.');
+      var previous = workflow.nodes.find(function (item) { return item.id === inputs[0].from; });
+      if (!previous || (node.kind === 'preview' && previous.kind !== 'llm')) throw new Error('Connect an LLM output to Preview.');
+      node = previous;
+    }
+    throw new Error('Workflow needs an OCR node connected through an LLM to Preview.');
+  }
+  function nodeState(node, state) {
+    var el = $(node.id);
+    el.dataset.state = state;
+    el.querySelector('.node-state').textContent = { running: 'Running', complete: 'Complete', failed: 'Failed', stopped: 'Stopped' }[state] || 'Not run';
+  }
+  async function run(workflowMode) {
+    if (active) return;
+    runningWorkflow = workflowMode;
+    if (workflowMode) $('workflowOutput').textContent = '';
     if (!current) return fail('No document selected.');
-    if (!keyEl.value.trim()) return fail('API key is empty.');
-    var b = baseEl.value.trim();
-    if (!/^https:\/\//i.test(b)) return fail('Base URL must start with https://');
-    localStorage.setItem('di.base', b);
-    localStorage.setItem('di.ver', verEl.value.trim());
+    var path;
+    try {
+      documentType(current);
+      path = workflowMode ? workflowPath() : [{ id: connectorEl.value, config: Object.assign({}, connectors[connectorEl.value]) }];
+      path.forEach(function (step) {
+        var llm = step.config.kind === 'llm';
+        if (!step.config.key) throw new Error('API key is empty. Open Connectors and save a key.');
+        baseURL(step.config.base, llm);
+        if (llm && !step.config.model.trim()) throw new Error('Model ID is empty. Open Connectors and save a model.');
+        if (!llm) documentType(current, step.id);
+      });
+    } catch (e) { fail(e.message); runningWorkflow = false; return; }
 
-    cancel = false; startedAt = Date.now();
+    var request = new AbortController();
+    active = request;
+    var timedOut = false;
+    var timeout = setTimeout(function () { timedOut = true; request.abort(); }, 300000);
+    startedAt = Date.now();
     clearInterval(ticker);
     ticker = setInterval(tick, 100);
-    text = '';
-    outEl.textContent = '';
+    if (workflowMode) {
+      pendingSource = null; renderWorkflow();
+      $('workflowOutput').textContent = '';
+    } else { text = ''; outEl.textContent = ''; }
     $('sPages').textContent = '0';
     $('sChars').textContent = '0';
-    runEl.disabled = true; stopEl.disabled = false;
-    setState('run', 'Submitting', 'Uploading PDF');
-    log('POST ' + analyzeURL());
-
-    var response;
+    controls(true);
+    setState('run', 'Submitting', 'Uploading document');
+    var content = '', pages = 0, currentNode = null;
     try {
-      response = await fetch(analyzeURL(), { method: 'POST', headers: headers(), body: current, credentials: 'omit' });
+      for (var step of path) {
+        currentNode = step.node;
+        if (currentNode) nodeState(currentNode, 'running');
+        setState('run', 'Running', connectorName(step.id));
+        if (step.config.kind === 'llm') content = await invokeLLM(step.config, content, step.prompt, request.signal);
+        else {
+          var extraction = await extractOCR(step.config, step.id, current, request.signal, function () { setState('run', 'Running', 'Polling every 2s'); });
+          content = extraction.content; pages = extraction.pages;
+        }
+        if (active !== request) return;
+        if (currentNode) nodeState(currentNode, 'complete');
+      }
+      if (workflowMode) nodeState(workflow.nodes.find(function (node) { return node.kind === 'preview'; }), 'complete');
+      done(content, pages, workflowMode);
     } catch (e) {
-      return fail('Network or CORS failure. Serve this file over http:// and check the resource CORS policy. (' + e.message + ')');
+      if (active !== request) return;
+      if (currentNode) nodeState(currentNode, 'failed');
+      if (timedOut) fail('Timed out after 5 minutes. The service may still process the request.');
+      else fail(requestErrorText(e));
+    } finally {
+      clearTimeout(timeout);
+      if (active === request) { active = null; runningWorkflow = false; controls(false); }
     }
+  }
 
-    if (response.status !== 202) {
-      return fail('Expected 202, got ' + response.status + ' ' + (await response.text()).slice(0, 500));
+  async function extractOCR(config, id, file, signal, onPolling) {
+    var foundry = id !== 'di', base = baseURL(config.base);
+    var mime = documentType(file, id);
+    var url = base + (foundry ? '/providers/mistral/azure/ocr' : '/documentintelligence/documentModels/prebuilt-read:analyze?api-version=' + encodeURIComponent(config.version));
+    var payload = file;
+    var headers = { 'Ocp-Apim-Subscription-Key': config.key, 'Content-Type': mime };
+    if (foundry) {
+      var dataURL = await new Promise(function (resolve, reject) {
+        var reader = new FileReader();
+        reader.onload = function () { resolve(reader.result); };
+        reader.onerror = function () { reject(new Error('Could not read the document. Select it again.')); };
+        reader.readAsDataURL(file);
+      });
+      signal.throwIfAborted();
+      headers = { 'Authorization': 'Bearer ' + config.key, 'Content-Type': 'application/json' };
+      var source = 'data:' + mime + ';base64,' + dataURL.split(',')[1];
+      var ocrDocument = mime.startsWith('image/') ? { type: 'image_url', image_url: source } : { type: 'document_url', document_url: source };
+      payload = JSON.stringify({ model: 'ocr3-pilot', document: ocrDocument, include_image_base64: false });
+    }
+    log('POST ' + url);
+    var response = await fetch(url, { method: 'POST', headers: headers, body: payload, credentials: 'omit', redirect: 'error', signal: signal });
+    signal.throwIfAborted();
+    if (response.status !== (foundry ? 200 : 202)) throw new Error(httpError(response.status));
+    if (foundry) {
+      var result = await response.json();
+      signal.throwIfAborted();
+      if (!result || !Array.isArray(result.pages) || !result.pages.every(function (page) { return page && typeof page.markdown === 'string'; })) throw new Error('Unexpected OCR response: missing pages[].markdown.');
+      var pages = result.usage_info && result.usage_info.pages_processed;
+      return { content: result.pages.map(function (page) { return page.markdown; }).join('\n\n'), pages: Number.isInteger(pages) && pages >= 0 ? pages : result.pages.length };
     }
     var location = response.headers.get('Operation-Location');
-    if (!location) return fail('202 but no Operation-Location header. The response is not CORS-exposed to this origin.');
-    log('202 Accepted. Operation-Location: ' + location, 'ok');
-
-    setState('run', 'Running', 'Polling every 2s');
-    var interval = PAGES.running;
-    while (!cancel) {
-      await sleep(interval);
-      if (cancel) break;
-
-      var poll;
-      try {
-        poll = await fetch(location, { method: 'GET', headers: { 'Ocp-Apim-Subscription-Key': keyEl.value.trim() }, credentials: 'omit' });
-      } catch (e) {
-        return fail('Poll network or CORS failure. (' + e.message + ')');
-      }
-      if (poll.status !== 200) return fail('Poll returned ' + poll.status + ' ' + (await poll.text()).slice(0, 500));
-
+    if (!location) throw new Error('202 but no Operation-Location header. Azure must expose this header through CORS.');
+    if (new URL(location).origin !== base) throw new Error('Rejected Operation-Location on a different origin.');
+    log('202 Accepted. Polling for completion.', 'ok');
+    onPolling();
+    var interval = 2000;
+    while (!signal.aborted) {
+      await sleep(interval, signal);
+      var poll = await fetch(location, { headers: { 'Ocp-Apim-Subscription-Key': config.key }, credentials: 'omit', redirect: 'error', signal: signal });
+      signal.throwIfAborted();
+      if (poll.status !== 200) throw new Error(httpError(poll.status));
       var body = await poll.json();
-      var retry = poll.headers.get('Retry-After');
-      interval = retry ? Math.max(PAGES.default, parseInt(retry, 10) * 1000 || PAGES.default) : PAGES.running;
-
-      if (body.status === 'succeeded') return done(body);
-      if (body.status === 'failed' || body.status === 'canceled') {
-        var err = body.error || {};
-        return fail('Run ' + body.status + ': ' + (err.code || 'unknown') + ' — ' + (err.message || ''));
+      signal.throwIfAborted();
+      if (!body || typeof body.status !== 'string') throw new Error('Unexpected Document Intelligence response: missing status.');
+      interval = Math.max(2000, parseInt(poll.headers.get('Retry-After'), 10) * 1000 || 2000);
+      if (body.status === 'succeeded') {
+        var extraction = body.analyzeResult;
+        if (!extraction || typeof extraction.content !== 'string' || !Array.isArray(extraction.pages)) throw new Error('Unexpected Document Intelligence response: missing analyzeResult.');
+        return { content: extraction.content, pages: extraction.pages.length };
       }
+      if (body.status === 'failed' || body.status === 'canceled') throw new Error('Document Intelligence reported ' + body.status + '. Check the resource in Azure.');
     }
-    if (cancel) { clearInterval(ticker); startedAt = 0; $('topElapsed').textContent = ''; setState('', 'Stopped', 'Run cancelled'); log('Stopped by user.'); runEl.disabled = false; stopEl.disabled = true; }
+    signal.throwIfAborted();
+  }
+  async function invokeLLM(config, input, prompt, signal) {
+    var responses = config.protocol === 'responses';
+    var payload;
+    if (responses) {
+      payload = { model: config.model, input: input, store: false };
+      if (prompt) payload.instructions = prompt;
+    } else {
+      var messages = [];
+      if (prompt) messages.push({ role: 'system', content: prompt });
+      messages.push({ role: 'user', content: input });
+      payload = { model: config.model, messages: messages };
+    }
+    var url = baseURL(config.base, true) + (responses ? '/responses' : '/chat/completions');
+    log('POST ' + url);
+    var response = await fetch(url, { method: 'POST', headers: { 'Authorization': 'Bearer ' + config.key, 'Content-Type': 'application/json' }, body: JSON.stringify(payload), credentials: 'omit', redirect: 'error', signal: signal });
+    signal.throwIfAborted();
+    if (response.status !== 200) throw new Error(httpError(response.status));
+    var body = await response.json();
+    signal.throwIfAborted();
+    if (!body || body.error) throw new Error('LLM returned an error response.');
+    var content;
+    if (responses) {
+      if (body.status && body.status !== 'completed') throw new Error('LLM response is incomplete or failed.');
+      if (!Array.isArray(body.output)) throw new Error('Unexpected Responses API output.');
+      var parts = [];
+      body.output.forEach(function (item) {
+        if (!item || item.type !== 'message' || item.role !== 'assistant' || (item.channel && item.channel !== 'final')) return;
+        if (item.status && item.status !== 'completed') throw new Error('LLM response is incomplete or failed.');
+        if (!Array.isArray(item.content)) throw new Error('Unexpected Responses API content.');
+        item.content.forEach(function (part) { if (part && part.type === 'output_text' && typeof part.text === 'string') parts.push(part.text); });
+      });
+      content = parts.join('\n\n');
+    } else {
+      var choice = Array.isArray(body.choices) && body.choices[0];
+      if (choice && choice.finish_reason && choice.finish_reason !== 'stop') throw new Error('LLM response did not finish normally.');
+      content = choice && choice.message && choice.message.content;
+    }
+    if (typeof content !== 'string' || !content.trim()) throw new Error('LLM returned no text response.');
+    return content;
   }
 
-  function done(body) {
+  function requestErrorText(error) {
+    if (error instanceof SyntaxError) return 'Service returned invalid JSON.';
+    if (error instanceof TypeError) return 'Network or CORS failure. Serve this file over HTTP. If the endpoint blocks this origin, use a local proxy.';
+    return error.message;
+  }
+  function httpError(status) {
+    if (status === 401 || status === 403) return 'HTTP ' + status + ': check the selected connector and its resource/key pairing.';
+    if (status === 404) return 'HTTP 404: check the API base URL and model/deployment ID.';
+    if (status === 400) return 'HTTP 400: check the document format, size, and request settings.';
+    if (status === 429) return 'HTTP 429: quota or rate limit reached. Try again later.';
+    return 'Service returned HTTP ' + status + '. Check the selected connector.';
+  }
+
+  function done(content, pages, workflowMode) {
     clearInterval(ticker);
-    var result = body.analyzeResult || {};
-    text = result.content || '';
-    var pages = Array.isArray(result.pages) ? result.pages.length : 0;
+    if (workflowMode) $('workflowOutput').textContent = content;
+    else { text = content; outEl.textContent = text; }
     $('sPages').textContent = pages;
-    $('sChars').textContent = text.length.toLocaleString();
+    $('sChars').textContent = content.length.toLocaleString();
     $('sTime').textContent = ((Date.now() - startedAt) / 1000).toFixed(1) + 's';
-    outEl.textContent = text;
     setState('ok', 'Succeeded', pages + (pages === 1 ? ' page' : ' pages'));
     $('topElapsed').textContent = '';
-    log('Done. ' + pages + ' page(s), ' + text.length + ' characters.', 'ok');
+    log('Done. ' + pages + ' page(s), ' + content.length + ' characters.', 'ok');
     startedAt = 0;
-    runEl.disabled = false; stopEl.disabled = true;
+    controls(false);
   }
 
-  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  function sleep(ms, signal) {
+    return new Promise(function (resolve, reject) {
+      function abort() { clearTimeout(timer); reject(signal.reason); }
+      var timer = setTimeout(function () { signal.removeEventListener('abort', abort); resolve(); }, ms);
+      signal.addEventListener('abort', abort, { once: true });
+      if (signal.aborted) abort();
+    });
+  }
 
-  runEl.addEventListener('click', run);
-  stopEl.addEventListener('click', function () { cancel = true; });
+  runEl.addEventListener('click', function () { run(false); });
+  $('workflowRun').addEventListener('click', function () { run(true); });
+  function stop() {
+    if (!active) return;
+    active.abort(); active = null;
+    clearInterval(ticker); startedAt = 0; $('topElapsed').textContent = '';
+    setState('', 'Stopped', 'Browser request aborted');
+    if (runningWorkflow) workflow.nodes.forEach(function (node) { if ($(node.id).dataset.state === 'running') nodeState(node, 'stopped'); });
+    log('Stopped locally. The service may still process a submitted request.');
+    runningWorkflow = false;
+    controls(false);
+  }
+  stopEl.addEventListener('click', stop);
+  $('workflowStop').addEventListener('click', stop);
   $('copy').addEventListener('click', function () {
     navigator.clipboard.writeText(text).then(function () { log('Copied to clipboard.'); });
   });
@@ -679,7 +1524,7 @@
     var url = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
     var a = document.createElement('a');
     a.href = url;
-    a.download = (current.name || 'document').replace(/\.pdf$/i, '') + '.txt';
+    a.download = (current ? current.name : 'document').replace(/\.(pdf|jpe?g|png|docx)$/i, '') + '.txt';
     a.click();
     URL.revokeObjectURL(url);
   });
