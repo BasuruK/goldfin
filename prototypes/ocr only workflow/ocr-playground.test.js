@@ -115,6 +115,16 @@ test('Prompt storage failures preserve saved text, and editing survives an unava
   assert.equal(await page.evaluate(() => localStorage.getItem('ocr-playground.prompts')), 'broken saved data');
 });
 
+test('Workflow storage failures preserve saved Workflows', async (t) => {
+  const page = await playground(t);
+  await page.evaluate(() => localStorage.setItem('ocr-playground.workflows', 'broken saved data'));
+  await page.reload();
+  await page.getByRole('button', { name: 'Workflows', exact: true }).click();
+  await expect(page.locator('#workflowMessage')).toContainText('Saved workflows could not be loaded');
+  await expect(page.getByRole('button', { name: 'Save workflow', exact: true })).toBeDisabled();
+  assert.equal(await page.evaluate(() => localStorage.getItem('ocr-playground.workflows')), 'broken saved data');
+});
+
 test('named LLM connectors retain API mode, model and API-root path without replacing OCR settings', async (t) => {
   const page = await playground(t);
   await configure(page, 'eu', 'https://eu.services.ai.azure.com', 'eu-test-key');
@@ -371,6 +381,9 @@ test('old inline Prompts still execute, and missing saved Prompts block all requ
   });
   await page.getByRole('button', { name: 'Run workflow', exact: true }).click();
   await expect(page.locator('#workflowOutput')).toHaveText('Result');
+  const inlinePrompt = page.getByRole('group', { name: 'Extraction node', exact: true }).getByLabel('Prompt', { exact: true });
+  await inlinePrompt.selectOption('');
+  await expect(inlinePrompt.getByRole('option', { name: 'Existing inline prompt', exact: true })).toHaveCount(0);
   await page.evaluate(() => {
     const workflows = JSON.parse(localStorage.getItem('ocr-playground.workflows'));
     workflows[0].nodes.find((node) => node.kind === 'llm').promptId = 'prompt-missing';

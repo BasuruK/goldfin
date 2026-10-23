@@ -982,7 +982,10 @@
     var stored = JSON.parse(localStorage.getItem(workflowKey) || '[]');
     if (!Array.isArray(stored) || !stored.every(validWorkflow)) throw new Error('Invalid workflows');
     savedWorkflows = stored;
-  } catch (e) { $('workflowMessage').textContent = 'Saved workflows could not be loaded. Existing browser data has not been changed.'; }
+  } catch (e) {
+    $('workflowMessage').textContent = 'Saved workflows could not be loaded. Existing browser data has not been changed. Reload before saving.';
+    $('workflowSave').disabled = true;
+  }
   refreshWorkflowOptions();
 
   function newID(prefix) { return prefix + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8); }
@@ -1079,7 +1082,11 @@
         prompt.value = node.promptId || (node.prompt ? 'inline' : '');
         prompt.addEventListener('change', function () {
           node.promptId = prompt.value === 'inline' ? '' : prompt.value;
-          if (prompt.value !== 'inline') node.prompt = '';
+          if (prompt.value !== 'inline') {
+             node.prompt = '';
+             var inlineOption = prompt.querySelector('option[value="inline"]');
+             if (inlineOption) inlineOption.remove();
+          }
           workflowChanged();
         });
         label.appendChild(prompt); el.insertBefore(label, el.querySelector('.node-ports'));
