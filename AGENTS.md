@@ -32,6 +32,7 @@ Read the matching target on turn 1 before exploring or editing that branch:
 2. Verify module paths, config keys, and flags in `node_modules`, `go doc`, or Context7. Resolve dependency versions, action SHAs, and image digests via CLI commands.
 3. Fix compiler, type, and lint errors at the root declaration or call site while keeping strict type and lint checks intact.
 4. Migrate all callers and delete replaced functions in the same diff.
+5. Add no race or edge-case handling the failure table doesn't list. On a two-way seam, record it as a `ponytail:` note. On a one-way seam, ask first, stating the failure mode, likelihood, and complexity cost.
 - **Criterion**: Every new behavior has a test that went red then green, and all callers use the new contract.
 
 ### 3. Verify & review (`sweep`)
