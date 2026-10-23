@@ -1,0 +1,98 @@
+Contoso
+:image:
+DATE
+March 13th
+INVOICE NO
+10000102
+YOUR COMPANY
+1 Redmond Way
+Redmond, WA 99243
+888-888-8888
+INVOICE TO
+Microsoft Corp
+123 456th St, Redmond, WA
+98052
+888-888-8888
+SALESPERSON
+Job
+Payment Terms
+Due date
+Anne
+Due on Receipt
+8/30/2021
+Quantity
+Description
+Unit Price
+Line Total
+Product1
+Product description
+$1.00
+$5.00
+Product2
+Product description
+$2.00
+$8.00
+Product3
+Product description
+$14.50
+$29.00
+Product4
+Product description
+$1.00
+$1.00
+Product5
+Product description
+$1.00
+$2.00
+Product6
+Product description
+$2.00
+$2.00
+Product7
+Product description
+$14.50
+$14.50
+Product8
+Product description
+$1.00
+$4.00
+Product9
+Product description
+$1.00
+$1.00
+Product10
+Product description
+$2.00
+$6.00
+Product11
+Product description
+$14.50
+$14.50
+Product12
+Product description
+$1.00
+$2.00
+Product13
+Product description
+$2.00
+$4.00
+Product14
+Product description
+$14.50
+$29.00
+Product15
+Product description
+$1.00
+$1.00
+Product16
+Product description
+$1.00
+$1.00
+Subtotal
+$124.00
+Sales Tax
+$12.40
+Total
+$136.40
+Logo
+Name
