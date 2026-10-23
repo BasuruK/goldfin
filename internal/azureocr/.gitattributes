@@ -1,0 +1,4 @@
+*.go text eol=lf
+testdata/* -text
+testdata/*.pdf binary
+testdata/*.docx binary
