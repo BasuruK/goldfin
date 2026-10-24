@@ -1,0 +1,18 @@
+{
+  "status": "succeeded",
+  "createdDateTime": "2023-03-21T22:37:29Z",
+  "lastUpdatedDateTime": "2023-03-21T22:37:30Z",
+  "analyzeResult": {
+    "apiVersion": "2023-02-28-preview",
+    "modelId": "prebuilt-read",
+    "content": "Contoso\n:image:\nDATE\nMarch 13th\nINVOICE NO\n10000102\nYOUR COMPANY\n1 Redmond Way\nRedmond, WA 99243\n888-888-8888\nINVOICE TO\nMicrosoft Corp\n123 456th St, Redmond, WA\n98052\n888-888-8888\nSALESPERSON\nJob\nPayment Terms\nDue date\nAnne\nDue on Receipt\n8/30/2021\nQuantity\nDescription\nUnit Price\nLine Total\nProduct1\nProduct description\n$1.00\n$5.00\nProduct2\nProduct description\n$2.00\n$8.00\nProduct3\nProduct description\n$14.50\n$29.00\nProduct4\nProduct description\n$1.00\n$1.00\nProduct5\nProduct description\n$1.00\n$2.00\nProduct6\nProduct description\n$2.00\n$2.00\nProduct7\nProduct description\n$14.50\n$14.50\nProduct8\nProduct description\n$1.00\n$4.00\nProduct9\nProduct description\n$1.00\n$1.00\nProduct10\nProduct description\n$2.00\n$6.00\nProduct11\nProduct description\n$14.50\n$14.50\nProduct12\nProduct description\n$1.00\n$2.00\nProduct13\nProduct description\n$2.00\n$4.00\nProduct14\nProduct description\n$14.50\n$29.00\nProduct15\nProduct description\n$1.00\n$1.00\nProduct16\nProduct description\n$1.00\n$1.00\nSubtotal\n$124.00\nSales Tax\n$12.40\nTotal\n$136.40\nLogo\nName",
+    "pages": [
+      {
+        "pageNumber": 1
+      },
+      {
+        "pageNumber": 2
+      }
+    ]
+  }
+}
