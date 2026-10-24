@@ -1,7 +1,7 @@
 -- Azure Document Intelligence OCR Connector settings alongside existing Web Request Connectors.
 
 -- +goose Up
-ALTER TABLE connectors ADD COLUMN api_version text;
+ALTER TABLE connectors ADD COLUMN IF NOT EXISTS api_version text;
 
 ALTER TABLE connectors DROP CONSTRAINT connectors_provider_type_check;
 
