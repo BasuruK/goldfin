@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/BasuruK/goldfin/db/migrations"
-	"github.com/BasuruK/goldfin/internal/probe"
 	"github.com/BasuruK/goldfin/internal/secretbox"
 	"github.com/BasuruK/goldfin/internal/testdb"
 )
@@ -169,7 +168,7 @@ func TestProductionAPIServerExposesOCRProbeAndConnectors(t *testing.T) {
 		t.Fatalf("connectors list: %d", list.StatusCode)
 	}
 
-	ocrReq, err := http.NewRequestWithContext(t.Context(), http.MethodPost, base+probe.OCRPath, strings.NewReader("not multipart"))
+	ocrReq, err := http.NewRequestWithContext(t.Context(), http.MethodPost, base+"/api/v1/probes/ocr", strings.NewReader("not multipart"))
 	if err != nil {
 		t.Fatal(err)
 	}

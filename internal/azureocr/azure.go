@@ -39,9 +39,23 @@ type Extraction struct {
 type Executor struct{ client http.Client }
 
 const (
-	processingBudget = 5 * time.Minute
+	// ProcessingBudget bounds one whole OCR execution, polls included.
+	ProcessingBudget = 5 * time.Minute
 	maxResponseBytes = 8 << 20
 )
+
+// Document MIME types Azure prebuilt-read accepts.
+const (
+	PDFMIME  = "application/pdf"
+	JPEGMIME = "image/jpeg"
+	PNGMIME  = "image/png"
+	DOCXMIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+)
+
+// SupportedMIME reports whether mime is a Document type prebuilt-read accepts.
+func SupportedMIME(mime string) bool {
+	return mime == PDFMIME || mime == JPEGMIME || mime == PNGMIME || mime == DOCXMIME
+}
 
 // New uses the supplied transport, or http.DefaultTransport when nil.
 func New(transport http.RoundTripper) *Executor {
@@ -62,16 +76,14 @@ var errResponseTooLarge = errors.New("OCR response exceeded the size limit")
 // Extract submits once and polls synchronously for at most five minutes, with 30-second requests
 // and an 8 MiB cap per response. A cancelled Azure operation may continue remotely.
 func (e *Executor) Extract(ctx context.Context, config Config, document Document) (Extraction, error) {
-	ctx, cancel := context.WithTimeout(ctx, processingBudget)
+	ctx, cancel := context.WithTimeout(ctx, ProcessingBudget)
 	defer cancel()
 	if err := ctx.Err(); err != nil {
 		return Extraction{}, err
 	}
 	endpoint, ok := safeURL(config.BaseURL, config.Credential)
-	validMIME := document.MIMEType == "application/pdf" || document.MIMEType == "image/jpeg" || document.MIMEType == "image/png" ||
-		document.MIMEType == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 	if !ok || strings.TrimSpace(config.Credential) == "" || strings.ContainsFunc(config.Credential, unicode.IsControl) ||
-		strings.TrimSpace(config.APIVersion) == "" || strings.Contains(config.APIVersion, config.Credential) || !validMIME || len(document.Bytes) == 0 {
+		strings.TrimSpace(config.APIVersion) == "" || strings.Contains(config.APIVersion, config.Credential) || !SupportedMIME(document.MIMEType) || len(document.Bytes) == 0 {
 		return Extraction{}, ErrInvalidInput
 	}
 	origin := endpoint
@@ -148,8 +160,8 @@ func (e *Executor) Extract(ctx context.Context, config Config, document Document
 		}
 		interval = 2 * time.Second
 		if seconds, err := strconv.ParseInt(res.Header.Get("Retry-After"), 10, 64); (err == nil || errors.Is(err, strconv.ErrRange)) && seconds > 2 {
-			if seconds > int64(processingBudget/time.Second) {
-				interval = processingBudget
+			if seconds > int64(ProcessingBudget/time.Second) {
+				interval = ProcessingBudget
 			} else {
 				interval = time.Duration(seconds) * time.Second
 			}

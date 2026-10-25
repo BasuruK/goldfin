@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/BasuruK/goldfin/db/migrations"
+	"github.com/BasuruK/goldfin/internal/azureocr"
 	"github.com/BasuruK/goldfin/internal/handler"
 	"github.com/BasuruK/goldfin/internal/secretbox"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -69,7 +70,7 @@ const (
 	healthcheckTimeout = 3 * time.Second
 
 	readHeaderTimeout = 10 * time.Second
-	probeRouteBudget  = 5*time.Minute + 30*time.Second // OCR Probe upload + processing; Connector handlers keep a shorter request context.
+	probeRouteBudget  = azureocr.ProcessingBudget + 30*time.Second // OCR Probe upload + processing; Connector handlers keep a shorter request context.
 	readTimeout       = probeRouteBudget
 	writeTimeout      = probeRouteBudget
 	idleTimeout       = 2 * time.Minute
