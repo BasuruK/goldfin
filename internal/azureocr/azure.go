@@ -54,6 +54,9 @@ func New(transport http.RoundTripper) *Executor {
 }
 
 var errFailed = errors.New("could not extract the Document")
+
+// ErrInvalidInput means the Connector settings or Document were rejected before any provider call.
+var ErrInvalidInput = errors.New("invalid OCR settings or Document")
 var errResponseTooLarge = errors.New("OCR response exceeded the size limit")
 
 // Extract submits once and polls synchronously for at most five minutes, with 30-second requests
@@ -69,7 +72,7 @@ func (e *Executor) Extract(ctx context.Context, config Config, document Document
 		document.MIMEType == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 	if !ok || strings.TrimSpace(config.Credential) == "" || strings.ContainsFunc(config.Credential, unicode.IsControl) ||
 		strings.TrimSpace(config.APIVersion) == "" || strings.Contains(config.APIVersion, config.Credential) || !validMIME || len(document.Bytes) == 0 {
-		return Extraction{}, errors.New("invalid OCR settings or Document")
+		return Extraction{}, ErrInvalidInput
 	}
 	origin := endpoint
 	endpoint = endpoint.JoinPath("documentintelligence", "documentModels", "prebuilt-read:analyze")
