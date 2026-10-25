@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/BasuruK/goldfin/db/migrations"
-	"github.com/BasuruK/goldfin/internal/api"
+	"github.com/BasuruK/goldfin/internal/handler"
 	"github.com/BasuruK/goldfin/internal/secretbox"
 	"github.com/BasuruK/goldfin/internal/testdb"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -32,7 +32,7 @@ func newAPI(t *testing.T) (http.Handler, *pgxpool.Pool, *secretbox.Box) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return api.NewHandler(pool, box), pool, box
+	return handler.New(pool, box, nil), pool, box
 }
 
 func request(t *testing.T, handler http.Handler, method, path, body string) *httptest.ResponseRecorder {
@@ -56,8 +56,8 @@ func countConnectors(t *testing.T, pool *pgxpool.Pool) int {
 }
 
 type connector struct {
-	ID, Name, ProviderType, BaseURL, CredentialLabel string
-	CredentialSetAt                                  *time.Time
+	ID, Name, ProviderType, BaseURL, APIVersion, CredentialLabel string
+	CredentialSetAt                                               *time.Time
 }
 
 func TestAPICreatesAConnectorAndEncryptsItsCredential(t *testing.T) {
@@ -110,6 +110,45 @@ func TestAPICreatesAConnectorAndEncryptsItsCredential(t *testing.T) {
 	}
 }
 
+func TestAPICreatesAzureDocumentIntelligenceConnector(t *testing.T) {
+	handler, pool, box := newAPI(t)
+	secret := rand.Text()
+	body, err := json.Marshal(map[string]string{
+		"name": " Azure OCR ", "providerType": " azure_document_intelligence ",
+		"baseUrl": " https://ocr.example.cognitiveservices.azure.com ",
+		"credential": secret, "credentialLabel": "Azure key",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	created := request(t, handler, http.MethodPost, "/api/v1/connectors", string(body))
+	if created.Code != http.StatusCreated || strings.Contains(created.Body.String(), secret) {
+		t.Fatalf("create: %d %s", created.Code, created.Body.String())
+	}
+	var got connector
+	if err := json.Unmarshal(created.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.ProviderType != "azure_document_intelligence" || got.BaseURL != "https://ocr.example.cognitiveservices.azure.com" ||
+		got.APIVersion != "2024-11-30" {
+		t.Fatalf("created Connector: %+v", got)
+	}
+	var providerType, apiVersion string
+	var ciphertext []byte
+	if err := pool.QueryRow(t.Context(), `
+		SELECT provider_type, api_version, credential_ciphertext FROM connectors WHERE id = $1`, got.ID,
+	).Scan(&providerType, &apiVersion, &ciphertext); err != nil {
+		t.Fatal(err)
+	}
+	if providerType != "azure_document_intelligence" || apiVersion != "2024-11-30" {
+		t.Fatalf("persisted settings: %s %s", providerType, apiVersion)
+	}
+	plain, err := box.Decrypt(ciphertext)
+	if err != nil || string(plain) != secret {
+		t.Fatal("stored Credential does not round-trip")
+	}
+}
+
 func TestAPICreatesAConnectorWithoutACredential(t *testing.T) {
 	handler, _, _ := newAPI(t)
 	created := request(t, handler, http.MethodPost, "/api/v1/connectors", `{"name":"Local","providerType":"web_request","baseUrl":"http://127.0.0.1:9000"}`)
@@ -129,6 +168,8 @@ func TestAPIRejectsInvalidConnectorsWithoutInserting(t *testing.T) {
 		{"missing_name", `{"providerType":"web_request","baseUrl":"https://example.com"}`, "application/json"},
 		{"blank_name", strings.Replace(valid, "Fixture", "  ", 1), "application/json"},
 		{"unsupported_provider", strings.Replace(valid, "web_request", "openai", 1), "application/json"},
+		{"web_request_api_version", strings.TrimSuffix(valid, "}") + `,"apiVersion":"2024-11-30"}`, "application/json"},
+		{"azure_without_credential", `{"name":"Azure","providerType":"azure_document_intelligence","baseUrl":"https://ocr.example.cognitiveservices.azure.com","credentialLabel":"key"}`, "application/json"},
 		{"relative_url", withURL("/check"), "application/json"},
 		{"wrong_scheme", withURL("ftp://example.com"), "application/json"},
 		{"missing_host", withURL("https:///check"), "application/json"},
