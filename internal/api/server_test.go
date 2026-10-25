@@ -57,7 +57,7 @@ func countConnectors(t *testing.T, pool *pgxpool.Pool) int {
 
 type connector struct {
 	ID, Name, ProviderType, BaseURL, APIVersion, CredentialLabel string
-	CredentialSetAt                                               *time.Time
+	CredentialSetAt                                              *time.Time
 }
 
 func TestAPICreatesAConnectorAndEncryptsItsCredential(t *testing.T) {
@@ -115,7 +115,7 @@ func TestAPICreatesAzureDocumentIntelligenceConnector(t *testing.T) {
 	secret := rand.Text()
 	body, err := json.Marshal(map[string]string{
 		"name": " Azure OCR ", "providerType": " azure_document_intelligence ",
-		"baseUrl": " https://ocr.example.cognitiveservices.azure.com ",
+		"baseUrl":    " https://ocr.example.cognitiveservices.azure.com ",
 		"credential": secret, "credentialLabel": "Azure key",
 	})
 	if err != nil {

@@ -192,6 +192,92 @@ func TestOCRProbeRejectsInvalidRequests(t *testing.T) {
 	}
 }
 
+func TestOCRProbeAcceptsDOCXWithGenericPartType(t *testing.T) {
+	document := azureFixture(t, "invoice.docx")
+	running := azureFixture(t, "running.json")
+	succeeded := azureFixture(t, "succeeded.json")
+	calls := 0
+	transport := roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		calls++
+		if calls == 1 {
+			res := response(http.StatusAccepted, nil)
+			res.Header.Set("Operation-Location", testOperationURL)
+			return res, nil
+		}
+		if calls == 2 {
+			return response(http.StatusOK, running), nil
+		}
+		return response(http.StatusOK, succeeded), nil
+	})
+	h := newHandler(t, transport)
+	connectorID := createAzureConnector(t, h)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, ocrRequest(t, connectorID, document, "application/octet-stream"))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("DOCX with generic part type: %d %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestOCRProbeRejectsMismatchedDocumentType(t *testing.T) {
+	h := newHandler(t, roundTripFunc(func(*http.Request) (*http.Response, error) {
+		t.Fatal("mismatched Document reached the provider")
+		return nil, nil
+	}))
+	connectorID := createAzureConnector(t, h)
+	rec := httptest.NewRecorder()
+	jpeg := []byte{0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10}
+	h.ServeHTTP(rec, ocrRequest(t, connectorID, jpeg, "application/pdf"))
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("JPEG labelled PDF: %d %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestOCRProbeRejectsOversizeDocument(t *testing.T) {
+	h := newHandler(t, roundTripFunc(func(*http.Request) (*http.Response, error) {
+		t.Fatal("oversize Document reached the provider")
+		return nil, nil
+	}))
+	connectorID := createAzureConnector(t, h)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, ocrRequest(t, connectorID, make([]byte, 30_000_001), "application/pdf"))
+	if rec.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("oversize Document: %d %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestOCRProbeMapsProviderFailure(t *testing.T) {
+	transport := roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return response(http.StatusInternalServerError, nil), nil
+	})
+	h := newHandler(t, transport)
+	connectorID := createAzureConnector(t, h)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, ocrRequest(t, connectorID, []byte("document"), "application/pdf"))
+	if rec.Code != http.StatusBadGateway || !strings.Contains(rec.Body.String(), "Could not extract the Document.") {
+		t.Fatalf("provider failure: %d %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestOCRProbeTimesOut(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		transport := roundTripFunc(func(r *http.Request) (*http.Response, error) {
+			if r.Method == http.MethodPost {
+				res := response(http.StatusAccepted, nil)
+				res.Header.Set("Operation-Location", testOperationURL)
+				return res, nil
+			}
+			return response(http.StatusOK, []byte(`{"status":"running"}`)), nil
+		})
+		h := newHandler(t, transport)
+		connectorID := createAzureConnector(t, h)
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, ocrRequest(t, connectorID, []byte("document"), "application/pdf"))
+		if rec.Code != http.StatusGatewayTimeout || !strings.Contains(rec.Body.String(), "OCR timed out.") {
+			t.Fatalf("stuck OCR: %d %s", rec.Code, rec.Body.String())
+		}
+	})
+}
+
 func createWebConnector(t *testing.T, h http.Handler) string {
 	t.Helper()
 	rec := httptest.NewRecorder()
