@@ -269,18 +269,27 @@
 .nav-chevron[data-open='true'] { transform: rotate(180deg); }
 .nav-sublist {
   --nav-child-gap: 4px;
+  position: relative;
   margin-block-start: var(--nav-group-gap);
   margin-inline-start: 32px;
+}
+.nav-sublist::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: -12px;
+  inset-block: 0;
+  border-inline-start: 1px solid var(--ufg3);
+  opacity: 0.4;
+  pointer-events: none;
 }
 .nav-sublist > li { position: relative; }
 .nav-sublist > li::before {
   content: '';
   position: absolute;
   inset-inline-start: -12px;
-  inset-block-start: calc(-1 * var(--nav-child-gap));
+  inset-block-start: 50%;
   inline-size: 10px;
-  block-size: calc(50% + var(--nav-child-gap));
-  border-inline-start: 1px solid var(--ufg3);
+  block-size: 0;
   border-block-end: 1px solid var(--ufg3);
   border-end-start-radius: 4px;
   opacity: 0.4;
