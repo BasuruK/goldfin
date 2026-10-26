@@ -32,7 +32,7 @@
   $effect(() => trackViewport());
   $effect(() => syncShell());
   $effect(() => {
-    if (page.url.pathname.startsWith('/connectors/')) {
+    if (page.url.pathname.startsWith('/connectors/') || page.url.pathname.startsWith('/playground/')) {
       shell.integrationsAnimate = false;
       shell.integrationsOpen = true;
     }

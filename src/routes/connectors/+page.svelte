@@ -54,7 +54,7 @@
   {:else if connectorStore.connectors.length === 0}
     <Section title="No connectors yet" id="connectors-empty">
       <p class="note">
-        Add a Web Request endpoint. Other providers cannot be saved yet.
+        Add a Web Request or Azure Document Intelligence OCR Connector to get started.
       </p>
     </Section>
   {:else}

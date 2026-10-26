@@ -36,7 +36,13 @@ export async function mockConnectorApi(page, options = {}) {
     if (options.saveDelayMs) await new Promise(resolve => setTimeout(resolve, options.saveDelayMs));
     if (options.reject) return route.fulfill({ status: options.reject.status, json: { message: options.reject.message } });
     /** @type {import('../src/lib/connectors/api.js').SavedConnector} */
-    const saved = { id: `c${state.posts.length}`, name: body.name, providerType: body.providerType, baseUrl: body.baseUrl };
+    const saved = {
+      id: `c${state.posts.length}`,
+      name: body.name,
+      providerType: body.providerType,
+      baseUrl: body.baseUrl
+    };
+    if (body.apiVersion) saved.apiVersion = body.apiVersion;
     if (body.credentialLabel) saved.credentialLabel = body.credentialLabel;
     state.connectors = [...state.connectors, saved];
     await route.fulfill({ status: 201, json: saved });
@@ -51,4 +57,24 @@ export async function mockConnectorApi(page, options = {}) {
 export async function selectProvider(dialog, label) {
   await dialog.getByLabel('Provider', { exact: true }).click();
   await dialog.page().getByRole('option', { name: label, exact: true }).click();
+}
+
+/**
+ * @param {import('@playwright/test').Page} page
+ * @param {object} [options]
+ * @param {string} [options.content]
+ * @param {number} [options.pages]
+ * @param {number} [options.delayMs]
+ * @param {{ status: number, message: string }} [options.reject]
+ */
+export async function mockOcrApi(page, options = {}) {
+  await page.route('**/api/v1/probes/ocr', async route => {
+    if (options.delayMs) await new Promise(resolve => setTimeout(resolve, options.delayMs));
+    if (options.reject) {
+      return route.fulfill({ status: options.reject.status, json: { message: options.reject.message } });
+    }
+    await route.fulfill({
+      json: { content: options.content ?? 'Known OCR text', pages: options.pages ?? 1 }
+    });
+  });
 }

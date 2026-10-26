@@ -17,7 +17,7 @@ export function isCatalogEditable(record) {
  */
 export function applyConnectorPatch(record, patch) {
   /** @type {(keyof ConnectorRecord)[]} */
-  const connectionFields = ['providerType', 'baseUrl', 'apiKey'];
+  const connectionFields = ['providerType', 'baseUrl', 'apiKey', 'apiVersion'];
   const changed = connectionFields.some(
     field => field in patch && patch[field] !== record[field]
   );

@@ -1,4 +1,4 @@
-/** @typedef {'openai' | 'azure' | 'openai_compatible' | 'web_request'} ProviderType */
+/** @typedef {'openai' | 'azure' | 'openai_compatible' | 'web_request' | 'azure_document_intelligence'} ProviderType */
 
 /** @typedef {{ value: ProviderType, label: string, description: string, defaultBaseUrl: string, icon: string, modelProbePath?: string }} ProviderOption */
 
@@ -33,8 +33,17 @@ const PROVIDERS = [
     description: 'Arbitrary HTTP endpoint for a custom gateway.',
     defaultBaseUrl: 'https://api.example.com/extract',
     icon: 'link'
+  },
+  {
+    value: 'azure_document_intelligence',
+    label: 'Azure Document Intelligence',
+    description: 'Azure Document Intelligence OCR for PDF, JPEG, PNG, and DOCX.',
+    defaultBaseUrl: 'https://YOUR-RESOURCE.cognitiveservices.azure.com',
+    icon: 'file'
   }
 ];
+
+export const DEFAULT_AZURE_OCR_API_VERSION = '2024-11-30';
 
 /** The provider a new or unreadable Connector gets; `providerByType` falls back to the same one. */
 export const DEFAULT_PROVIDER_TYPE = PROVIDERS[0].value;

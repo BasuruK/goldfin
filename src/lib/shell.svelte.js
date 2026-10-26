@@ -32,7 +32,13 @@ export const SIDES = [
    below decide that. */
 export const NAV = [
   { items: [{ href: '/', label: 'Home', icon: 'home' }] },
-  { label: 'Integrations', items: [{ href: '/connectors/', label: 'Connectors', icon: 'plug' }] }
+  {
+    label: 'Integrations',
+    items: [
+      { href: '/playground/', label: 'OCR Playground', icon: 'file' },
+      { href: '/connectors/', label: 'Connectors', icon: 'plug' }
+    ]
+  }
 ];
 
 export const shell = $state({
