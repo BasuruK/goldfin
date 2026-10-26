@@ -26,7 +26,12 @@ test('changing connection details blocks model use but retains selections for re
   });
   assert.deepEqual(availableModelIds(record), ['model-a']);
   /** @type {Partial<ConnectorRecord>[]} */
-  const patches = [{ baseUrl: 'https://other.example/v1' }, { apiKey: 'changed' }, { providerType: 'azure' }];
+  const patches = [
+    { baseUrl: 'https://other.example/v1' },
+    { apiKey: 'changed' },
+    { apiVersion: '2024-11-30' },
+    { providerType: 'azure' }
+  ];
   for (const patch of patches) {
     const changed = applyConnectorPatch(record, patch);
     assert.equal(changed.catalogState, 'idle');
