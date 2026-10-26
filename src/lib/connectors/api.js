@@ -61,7 +61,9 @@ async function requestJSON(path, init = {}) {
 export async function createConnector(draft) {
   /** @type {Record<string, string>} */
   const payload = { name: draft.name.trim(), providerType: draft.providerType, baseUrl: draft.baseUrl.trim() };
-  if (draft.apiVersion?.trim()) payload.apiVersion = draft.apiVersion.trim();
+  if (draft.providerType === 'azure_document_intelligence' && draft.apiVersion?.trim()) {
+    payload.apiVersion = draft.apiVersion.trim();
+  }
   if (draft.credential !== '') {
     payload.credential = draft.credential;
     payload.credentialLabel = draft.credentialLabel.trim();
