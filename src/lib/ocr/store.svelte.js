@@ -1,5 +1,5 @@
-import { listConnectors } from '#lib/connectors/api.js';
-import { ApiError } from '#lib/connectors/api.js';
+import { ApiError, listConnectors } from '#lib/connectors/api.js';
+import { AZURE_OCR_PROVIDER_TYPE } from '#lib/connectors/providers.js';
 import { OcrError, submitOcr } from './api.js';
 import { validateDocument } from './documents.js';
 
@@ -61,7 +61,7 @@ export async function loadOcrConnectors() {
   playgroundStore.listError = '';
   try {
     const all = await listConnectors();
-    playgroundStore.connectors = all.filter(c => c.providerType === 'azure_document_intelligence');
+    playgroundStore.connectors = all.filter(c => c.providerType === AZURE_OCR_PROVIDER_TYPE);
     playgroundStore.listState = 'loaded';
     if (!playgroundStore.connectorId && playgroundStore.connectors[0]) {
       playgroundStore.connectorId = playgroundStore.connectors[0].id;
