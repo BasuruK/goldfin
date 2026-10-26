@@ -21,6 +21,8 @@ import (
 // ConnectorsPath is the create and list collection for Connectors.
 const ConnectorsPath = "/api/v1/connectors"
 
+const defaultAzureAPIVersion = "2024-11-30"
+
 type server struct {
 	pool *pgxpool.Pool
 	box  *secretbox.Box
@@ -44,6 +46,7 @@ type connectorRequest struct {
 	Name            string `json:"name"`
 	ProviderType    string `json:"providerType"`
 	BaseURL         string `json:"baseUrl"`
+	APIVersion      string `json:"apiVersion"`
 	Credential      string `json:"credential"`
 	CredentialLabel string `json:"credentialLabel"`
 }
@@ -54,6 +57,7 @@ type connectorResponse struct {
 	Name            string     `json:"name"`
 	ProviderType    string     `json:"providerType"`
 	BaseURL         string     `json:"baseUrl"`
+	APIVersion      string     `json:"apiVersion,omitempty"`
 	CredentialLabel string     `json:"credentialLabel,omitempty"`
 	CredentialSetAt *time.Time `json:"credentialSetAt,omitempty"`
 }
@@ -65,9 +69,13 @@ func (s *server) createConnector(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"message": "Invalid Connector."})
 		return
 	}
-	out := connectorResponse{Name: in.Name, ProviderType: in.ProviderType, BaseURL: in.BaseURL}
+	out := connectorResponse{Name: in.Name, ProviderType: in.ProviderType, BaseURL: in.BaseURL, APIVersion: in.APIVersion}
 	var label *string
 	var ciphertext []byte
+	var apiVersion *string
+	if in.APIVersion != "" {
+		apiVersion = &in.APIVersion
+	}
 	if in.Credential != "" {
 		if ciphertext, err = s.box.Encrypt([]byte(in.Credential)); err != nil {
 			writeJSON(w, http.StatusServiceUnavailable, map[string]string{"message": "Could not save the Connector."})
@@ -77,10 +85,10 @@ func (s *server) createConnector(w http.ResponseWriter, r *http.Request) {
 		label, out.CredentialLabel, out.CredentialSetAt = &in.CredentialLabel, in.CredentialLabel, &setAt
 	}
 	err = s.pool.QueryRow(r.Context(), `
-		INSERT INTO connectors (name, provider_type, base_url, credential_label, credential_ciphertext, credential_set_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO connectors (name, provider_type, base_url, api_version, credential_label, credential_ciphertext, credential_set_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id`,
-		in.Name, in.ProviderType, in.BaseURL, label, ciphertext, out.CredentialSetAt,
+		in.Name, in.ProviderType, in.BaseURL, apiVersion, label, ciphertext, out.CredentialSetAt,
 	).Scan(&out.ID)
 	if err != nil {
 		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"message": "Could not save the Connector."})
@@ -91,7 +99,7 @@ func (s *server) createConnector(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) listConnectors(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.pool.Query(r.Context(), `
-		SELECT id, name, provider_type, base_url, COALESCE(credential_label, ''), credential_set_at
+		SELECT id, name, provider_type, base_url, COALESCE(api_version, ''), COALESCE(credential_label, ''), credential_set_at
 		FROM connectors
 		ORDER BY created_at, id`)
 	if err != nil {
@@ -102,7 +110,7 @@ func (s *server) listConnectors(w http.ResponseWriter, r *http.Request) {
 	out := []connectorResponse{}
 	for rows.Next() {
 		var c connectorResponse
-		if err := rows.Scan(&c.ID, &c.Name, &c.ProviderType, &c.BaseURL, &c.CredentialLabel, &c.CredentialSetAt); err != nil {
+		if err := rows.Scan(&c.ID, &c.Name, &c.ProviderType, &c.BaseURL, &c.APIVersion, &c.CredentialLabel, &c.CredentialSetAt); err != nil {
 			writeJSON(w, http.StatusServiceUnavailable, map[string]string{"message": "Could not load Connectors."})
 			return
 		}
@@ -129,7 +137,7 @@ func decodeConnector(w http.ResponseWriter, r *http.Request) (connectorRequest, 
 	}
 	var in connectorRequest
 	fields := map[string]*string{
-		"name": &in.Name, "providerType": &in.ProviderType, "baseUrl": &in.BaseURL,
+		"name": &in.Name, "providerType": &in.ProviderType, "baseUrl": &in.BaseURL, "apiVersion": &in.APIVersion,
 		"credential": &in.Credential, "credentialLabel": &in.CredentialLabel,
 	}
 	for decoder.More() {
@@ -161,35 +169,68 @@ func decodeConnector(w http.ResponseWriter, r *http.Request) (connectorRequest, 
 	in.Name = strings.TrimSpace(in.Name)
 	in.ProviderType = strings.TrimSpace(in.ProviderType)
 	in.BaseURL = strings.TrimSpace(in.BaseURL)
+	in.APIVersion = strings.TrimSpace(in.APIVersion)
 	in.CredentialLabel = strings.TrimSpace(in.CredentialLabel)
-	if in.Name == "" || in.ProviderType != "web_request" ||
-		(in.Credential != "" && in.CredentialLabel == "") || (in.Credential == "" && in.CredentialLabel != "") ||
-		strings.ContainsFunc(in.Credential, unicode.IsControl) {
+	if in.Name == "" || strings.ContainsFunc(in.Credential, unicode.IsControl) {
 		return connectorRequest{}, invalid
 	}
-	endpoint, err := url.Parse(in.BaseURL)
-	if err != nil || endpoint.Hostname() == "" || endpoint.User != nil || endpoint.Fragment != "" ||
-		(endpoint.Scheme != "http" && endpoint.Scheme != "https") ||
-		(in.Credential != "" && endpoint.Scheme != "https") {
+	switch in.ProviderType {
+	case "web_request":
+		if in.APIVersion != "" || (in.Credential != "" && in.CredentialLabel == "") || (in.Credential == "" && in.CredentialLabel != "") {
+			return connectorRequest{}, invalid
+		}
+		if err := validateBaseURL(in.BaseURL, in.Credential, true); err != nil {
+			return connectorRequest{}, invalid
+		}
+	case "azure_document_intelligence":
+		if in.APIVersion == "" {
+			in.APIVersion = defaultAzureAPIVersion
+		}
+		if in.Credential == "" || in.CredentialLabel == "" {
+			return connectorRequest{}, invalid
+		}
+		if err := validateBaseURL(in.BaseURL, in.Credential, false); err != nil {
+			return connectorRequest{}, invalid
+		}
+	default:
 		return connectorRequest{}, invalid
+	}
+	return in, nil
+}
+
+var errInvalidBaseURL = errors.New("invalid base URL")
+
+func validateBaseURL(raw, credential string, allowHTTPWithoutCredential bool) error {
+	endpoint, err := url.Parse(raw)
+	if err != nil || endpoint.Hostname() == "" || endpoint.User != nil || endpoint.Fragment != "" {
+		return errInvalidBaseURL
+	}
+	switch endpoint.Scheme {
+	case "https":
+	case "http":
+		if !allowHTTPWithoutCredential || credential != "" {
+			return errInvalidBaseURL
+		}
+	default:
+		return errInvalidBaseURL
 	}
 	if port := endpoint.Port(); port != "" {
 		n, err := strconv.Atoi(port)
 		if err != nil || n < 1 || n > 65535 {
-			return connectorRequest{}, invalid
+			return errInvalidBaseURL
 		}
 	}
 	query, err := url.ParseQuery(endpoint.RawQuery)
 	if err != nil {
-		return connectorRequest{}, invalid
+		return errInvalidBaseURL
 	}
 	for key := range query {
 		switch strings.ToLower(key) {
 		case "api_key", "token", "access_token", "sig", "key", "subscription-key", "x-amz-signature":
-			return connectorRequest{}, invalid
+			return errInvalidBaseURL
 		}
 	}
-	return in, nil
+	return nil
 }
 
 func writeJSON(w http.ResponseWriter, status int, body any) {

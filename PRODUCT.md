@@ -37,7 +37,7 @@ Current UI work follows design artefacts (`DESIGN.md`, OpenDesign handoffs) and 
 - **Connectors**: Registered `ocr`, `llm`, and `fused` configurations; Credentials are encrypted at rest and never returned to the client; a save is one synchronous request with no save-time check yet (ADR 0013).
 - **Workflows & Probes (v1)**: Any acyclic graph of Connector nodes over one Document; output is shown, not stored (ADR 0014).
 - **Runs (v2+)**: Copy Connector definitions at start; re-attempts are new Runs, not repairs (ADR 0008).
-- **API boundary**: The `api` encrypts Credentials and never decrypts one (ADR 0005, 0013).
+- **API boundary**: Connector saves encrypt Credentials at rest; only the probe/run outbound path decrypts in-process until a worker exists (ADR 0005, 0013).
 - **Frontend**: Static SvelteKit; nginx proxies `/api` so the browser avoids CORS.
 - **v1 gaps (explicit)**: `{{credential}}` interpolation and the REST connector's request template are decided but not built; the Workflow executor and Prompt versions are not built yet.
 

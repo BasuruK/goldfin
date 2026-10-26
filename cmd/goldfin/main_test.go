@@ -6,12 +6,17 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"errors"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
 
+	"github.com/BasuruK/goldfin/db/migrations"
+	"github.com/BasuruK/goldfin/internal/secretbox"
 	"github.com/BasuruK/goldfin/internal/testdb"
 )
 
@@ -122,6 +127,76 @@ func TestPingHonoursExpiredContext(t *testing.T) {
 	cancel()
 	if err := ping(ctx, db); !errors.Is(err, context.Canceled) {
 		t.Fatalf("expected context.Canceled, got %v", err)
+	}
+}
+
+func TestProductionAPIServerExposesOCRProbeAndConnectors(t *testing.T) {
+	pool, db := testdb.New(t)
+	migrator, err := migrations.NewProvider(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := migrator.Up(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	box, err := secretbox.New(bytes.Repeat([]byte{1}, 32))
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := configureAPIServer(t.Context(), buildAPIMux(pool, box))
+	ln, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_ = srv.Close()
+		_ = ln.Close()
+	})
+	go func() { _ = srv.Serve(ln) }()
+
+	base := "http://" + ln.Addr().String()
+	listReq, err := http.NewRequestWithContext(t.Context(), http.MethodGet, base+"/api/v1/connectors", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	list, err := http.DefaultClient.Do(listReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = list.Body.Close() }()
+	if list.StatusCode != http.StatusOK {
+		t.Fatalf("connectors list: %d", list.StatusCode)
+	}
+
+	ocrReq, err := http.NewRequestWithContext(t.Context(), http.MethodPost, base+"/api/v1/probes/ocr", strings.NewReader("not multipart"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ocrReq.Header.Set("Content-Type", "text/plain")
+	ocr, err := http.DefaultClient.Do(ocrReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = ocr.Body.Close() }()
+	if ocr.StatusCode != http.StatusBadRequest {
+		t.Fatalf("OCR probe must be mounted, not 404: %d", ocr.StatusCode)
+	}
+	body, err := io.ReadAll(ocr.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(body), "Invalid OCR request") {
+		t.Fatalf("unexpected OCR error body: %s", body)
+	}
+}
+
+func TestAPIServerTimeoutsKeepDefaultRoutesShort(t *testing.T) {
+	const short = 30 * time.Second
+	if readTimeout != short || writeTimeout != short {
+		t.Fatalf("health and Connector routes should use short server timeouts: read=%s write=%s", readTimeout, writeTimeout)
+	}
+	if readTimeout != writeTimeout {
+		t.Fatalf("read and write timeouts should match: %s vs %s", readTimeout, writeTimeout)
 	}
 }
 

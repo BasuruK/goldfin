@@ -15,8 +15,9 @@ import (
 	"time"
 
 	"github.com/BasuruK/goldfin/db/migrations"
-	"github.com/BasuruK/goldfin/internal/api"
+	"github.com/BasuruK/goldfin/internal/handler"
 	"github.com/BasuruK/goldfin/internal/secretbox"
+	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
@@ -74,6 +75,24 @@ const (
 	shutdownTimeout   = 10 * time.Second
 )
 
+func buildAPIMux(pool *pgxpool.Pool, box *secretbox.Box) http.Handler {
+	mux := http.NewServeMux()
+	registerAPIRoutes(mux)
+	mux.Handle("/api/", handler.New(pool, box, nil))
+	return mux
+}
+
+func configureAPIServer(ctx context.Context, apiHandler http.Handler) *http.Server {
+	return &http.Server{
+		Handler:           apiHandler,
+		ReadHeaderTimeout: readHeaderTimeout,
+		ReadTimeout:       readTimeout,
+		WriteTimeout:      writeTimeout,
+		IdleTimeout:       idleTimeout,
+		BaseContext:       func(net.Listener) context.Context { return ctx },
+	}
+}
+
 func ping(ctx context.Context, db *sql.DB) error {
 	ctx, cancel := context.WithTimeout(ctx, pingTimeout)
 	defer cancel()
@@ -121,17 +140,7 @@ func runAPI(ctx context.Context, addr string) error {
 	if err != nil {
 		return err
 	}
-	mux := http.NewServeMux()
-	registerAPIRoutes(mux)
-	mux.Handle("/api/", api.NewHandler(pool, box))
-	srv := &http.Server{
-		Handler:           mux,
-		ReadHeaderTimeout: readHeaderTimeout,
-		ReadTimeout:       readTimeout,
-		WriteTimeout:      writeTimeout,
-		IdleTimeout:       idleTimeout,
-		BaseContext:       func(net.Listener) context.Context { return ctx },
-	}
+	srv := configureAPIServer(ctx, buildAPIMux(pool, box))
 	ln, err := (&net.ListenConfig{}).Listen(ctx, "tcp", addr)
 	if err != nil {
 		return err

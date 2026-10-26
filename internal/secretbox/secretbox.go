@@ -1,4 +1,4 @@
-// Package secretbox encrypts Credentials at rest. The API encrypts and never decrypts (ADR 0013).
+// Package secretbox encrypts Credentials at rest. Connector saves encrypt; the probe/run path decrypts in-process until a worker exists (ADR 0013).
 package secretbox
 
 import (
