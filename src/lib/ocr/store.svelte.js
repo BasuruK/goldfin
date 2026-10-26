@@ -153,13 +153,6 @@ export async function analyzeDocument() {
   } catch (error) {
     if (isStale(operation)) return;
     resetBusyUi();
-    if (error instanceof OcrError && error.kind === 'canceled') {
-      playgroundStore.statusLabel = 'Stopped';
-      playgroundStore.statusHint = 'Browser request aborted';
-      playgroundStore.stoppedNotice =
-        'Stopped locally. Azure may still process a submitted operation.';
-      return;
-    }
     playgroundStore.statusLabel = 'Failed';
     playgroundStore.statusHint = 'See the message below.';
     playgroundStore.error = error instanceof OcrError ? error.message : 'Could not run OCR. Try again.';
