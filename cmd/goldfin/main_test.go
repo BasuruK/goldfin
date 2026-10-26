@@ -190,15 +190,13 @@ func TestProductionAPIServerExposesOCRProbeAndConnectors(t *testing.T) {
 	}
 }
 
-func TestAPIServerTimeoutsAllowOCRProbeBudget(t *testing.T) {
-	if readTimeout < probeRouteBudget || writeTimeout < probeRouteBudget {
-		t.Fatalf("server timeouts %s / %s are shorter than the OCR budget %s", readTimeout, writeTimeout, probeRouteBudget)
+func TestAPIServerTimeoutsKeepDefaultRoutesShort(t *testing.T) {
+	const short = 30 * time.Second
+	if readTimeout != short || writeTimeout != short {
+		t.Fatalf("health and Connector routes should use short server timeouts: read=%s write=%s", readTimeout, writeTimeout)
 	}
 	if readTimeout != writeTimeout {
-		t.Fatalf("read and write timeouts should match for the OCR upload + poll path: %s vs %s", readTimeout, writeTimeout)
-	}
-	if readTimeout < 5*time.Minute {
-		t.Fatal("read timeout must cover the five-minute OCR processing budget")
+		t.Fatalf("read and write timeouts should match: %s vs %s", readTimeout, writeTimeout)
 	}
 }
 

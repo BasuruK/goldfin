@@ -2,6 +2,7 @@
 package probe
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -10,6 +11,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/BasuruK/goldfin/internal/azureocr"
 	"github.com/BasuruK/goldfin/internal/secretbox"
@@ -36,6 +38,11 @@ func NewOCRHandler(pool *pgxpool.Pool, box *secretbox.Box, transport http.RoundT
 	h := ocrHandler{pool: pool, box: box, executor: azureocr.New(transport)}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
+		routeBudget := azureocr.ProcessingBudget + 30*time.Second
+		deadline := time.Now().Add(routeBudget)
+		rc := http.NewResponseController(w)
+		_ = rc.SetReadDeadline(deadline)
+		_ = rc.SetWriteDeadline(deadline)
 		ctx, cancel := context.WithTimeout(r.Context(), azureocr.ProcessingBudget)
 		defer cancel()
 		h.serveOCR(w, r.WithContext(ctx))
@@ -148,16 +155,35 @@ func normalizeDocumentMIME(header string, document []byte) string {
 	if sniffed == "application/zip" {
 		sniffed = azureocr.DOCXMIME // Sniffing cannot tell a DOCX from any other ZIP; Azure rejects a plain ZIP.
 	}
-	if azureocr.SupportedMIME(sniffed) {
+	if azureocr.SupportedMIME(sniffed) && documentMatchesMIME(sniffed, document) {
 		if declared == "" || declared == "application/octet-stream" || declared == sniffed {
 			return sniffed
 		}
 		return ""
 	}
-	if azureocr.SupportedMIME(declared) {
+	if azureocr.SupportedMIME(declared) && documentMatchesMIME(declared, document) {
 		return declared
 	}
 	return ""
+}
+
+func documentMatchesMIME(mimeType string, document []byte) bool {
+	switch mimeType {
+	case azureocr.PDFMIME:
+		scan := document
+		if len(scan) > 1024 {
+			scan = scan[:1024]
+		}
+		return bytes.Contains(scan, []byte("%PDF-"))
+	case azureocr.JPEGMIME:
+		return len(document) >= 3 && document[0] == 0xFF && document[1] == 0xD8 && document[2] == 0xFF
+	case azureocr.PNGMIME:
+		return len(document) >= 8 && bytes.Equal(document[:8], []byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A})
+	case azureocr.DOCXMIME:
+		return len(document) >= 4 && document[0] == 'P' && document[1] == 'K' && document[2] == 3 && document[3] == 4
+	default:
+		return false
+	}
 }
 
 func (h *ocrHandler) loadAzureConnector(ctx context.Context, id string) (azureocr.Config, error) {

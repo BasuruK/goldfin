@@ -143,7 +143,7 @@ func TestOCRProbeOutlivesConnectorDatabaseGuard(t *testing.T) {
 		h := newHandler(t, transport)
 		connectorID := createAzureConnector(t, h)
 		rec := httptest.NewRecorder()
-		h.ServeHTTP(rec, ocrRequest(t, connectorID, []byte("document"), "application/pdf"))
+		h.ServeHTTP(rec, ocrRequest(t, connectorID, syntheticPDFDocument(), "application/pdf"))
 		if rec.Code != http.StatusOK || time.Since(start) < 6*time.Second {
 			t.Fatalf("OCR was cut off by the short Connector guard: %d after %s", rec.Code, time.Since(start))
 		}
@@ -252,7 +252,7 @@ func TestOCRProbeMapsProviderFailure(t *testing.T) {
 	h := newHandler(t, transport)
 	connectorID := createAzureConnector(t, h)
 	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, ocrRequest(t, connectorID, []byte("document"), "application/pdf"))
+	h.ServeHTTP(rec, ocrRequest(t, connectorID, syntheticPDFDocument(), "application/pdf"))
 	if rec.Code != http.StatusBadGateway || !strings.Contains(rec.Body.String(), "Could not extract the Document.") {
 		t.Fatalf("provider failure: %d %s", rec.Code, rec.Body.String())
 	}
@@ -271,7 +271,7 @@ func TestOCRProbeTimesOut(t *testing.T) {
 		h := newHandler(t, transport)
 		connectorID := createAzureConnector(t, h)
 		rec := httptest.NewRecorder()
-		h.ServeHTTP(rec, ocrRequest(t, connectorID, []byte("document"), "application/pdf"))
+		h.ServeHTTP(rec, ocrRequest(t, connectorID, syntheticPDFDocument(), "application/pdf"))
 		if rec.Code != http.StatusGatewayTimeout || !strings.Contains(rec.Body.String(), "OCR timed out.") {
 			t.Fatalf("stuck OCR: %d %s", rec.Code, rec.Body.String())
 		}
@@ -304,6 +304,10 @@ func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { retu
 
 func response(status int, body []byte) *http.Response {
 	return &http.Response{StatusCode: status, Header: make(http.Header), Body: io.NopCloser(bytes.NewReader(body))}
+}
+
+func syntheticPDFDocument() []byte {
+	return []byte("%PDF-1.4\n% synthetic fixture body\n")
 }
 
 func azureFixture(t *testing.T, name string) []byte {
