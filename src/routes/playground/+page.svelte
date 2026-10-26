@@ -147,7 +147,7 @@
         <div class="playground-output" aria-busy={playgroundStore.busy}>
           {#if playgroundStore.busy}
             <div class="playground-busy" role="status">
-              <Spinner tone="running" label="Running OCR" />
+              <Spinner tone="key" label="Running OCR" />
               <span>Running OCR…</span>
             </div>
           {/if}
