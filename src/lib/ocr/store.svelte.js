@@ -38,6 +38,7 @@ export const playgroundStore = $state({
 });
 
 let activeOperation = 0;
+let listOperation = 0;
 /** @type {AbortController | null} */
 let abortController = null;
 /** @type {number | null} */
@@ -57,10 +58,12 @@ function resetBusyUi() {
 }
 
 export async function loadOcrConnectors() {
+  const operation = ++listOperation;
   playgroundStore.listState = 'loading';
   playgroundStore.listError = '';
   try {
     const all = await listConnectors();
+    if (operation !== listOperation) return;
     playgroundStore.connectors = all.filter(c => c.providerType === 'azure_document_intelligence');
     playgroundStore.listState = 'loaded';
     if (!playgroundStore.connectorId && playgroundStore.connectors[0]) {
@@ -72,6 +75,7 @@ export async function loadOcrConnectors() {
       playgroundStore.connectorId = playgroundStore.connectors[0]?.id ?? '';
     }
   } catch (error) {
+    if (operation !== listOperation) return;
     playgroundStore.listState = 'failed';
     playgroundStore.listError = error instanceof ApiError ? error.message : 'Could not load Connectors. Try again.';
   }
