@@ -7,6 +7,7 @@
   import IntegrationsIcon from '#lib/IntegrationsIcon.svelte';
   import {
     NAV,
+    isGroupedNavPath,
     closeLayers,
     focusSidebar,
     handles,
@@ -32,7 +33,7 @@
   $effect(() => trackViewport());
   $effect(() => syncShell());
   $effect(() => {
-    if (page.url.pathname.startsWith('/connectors/') || page.url.pathname.startsWith('/playground/')) {
+    if (isGroupedNavPath(page.url.pathname)) {
       shell.integrationsAnimate = false;
       shell.integrationsOpen = true;
     }
