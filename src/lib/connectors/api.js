@@ -8,8 +8,8 @@ export const CONNECTORS_PATH = '/api/v1/connectors';
 const REQUEST_TIMEOUT_MS = 10_000;
 
 /** @typedef {'timeout' | 'unreachable' | 'rejected' | 'unavailable' | 'malformed'} ApiErrorKind */
-/** @typedef {{ id: string, name: string, providerType: string, baseUrl: string, credentialLabel?: string, credentialSetAt?: string }} SavedConnector */
-/** @typedef {{ name: string, providerType: string, baseUrl: string, credential: string, credentialLabel: string }} SaveDraft */
+/** @typedef {{ id: string, name: string, providerType: string, baseUrl: string, apiVersion?: string, credentialLabel?: string, credentialSetAt?: string }} SavedConnector */
+/** @typedef {{ name: string, providerType: string, baseUrl: string, apiVersion?: string, credential: string, credentialLabel: string }} SaveDraft */
 
 export class ApiError extends Error {
   /** @param {ApiErrorKind} kind @param {string} message */
@@ -61,6 +61,7 @@ async function requestJSON(path, init = {}) {
 export async function createConnector(draft) {
   /** @type {Record<string, string>} */
   const payload = { name: draft.name.trim(), providerType: draft.providerType, baseUrl: draft.baseUrl.trim() };
+  if (draft.apiVersion?.trim()) payload.apiVersion = draft.apiVersion.trim();
   if (draft.credential !== '') {
     payload.credential = draft.credential;
     payload.credentialLabel = draft.credentialLabel.trim();
@@ -88,6 +89,14 @@ export async function listConnectors() {
  */
 export function validateDraft(draft) {
   if (!draft.name.trim()) return { field: 'name', message: 'Name is required.' };
+  if (draft.providerType === 'azure_document_intelligence') {
+    if (!draft.credential.trim()) {
+      return { field: 'credential', message: 'API Key is required for Azure Document Intelligence.' };
+    }
+    if (!draft.credentialLabel.trim()) {
+      return { field: 'credentialLabel', message: 'A label is required when a Credential is set.' };
+    }
+  }
   if (!draft.baseUrl.trim()) return { field: 'baseUrl', message: 'Base URL is required.' };
   let url;
   try {

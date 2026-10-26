@@ -117,6 +117,23 @@ describe('validateDraft', () => {
     assert.equal(validateDraft(draft), null);
   });
 
+  it('requires a Credential and label for Azure Document Intelligence', () => {
+    const azure = {
+      ...draft,
+      providerType: 'azure_document_intelligence',
+      baseUrl: 'https://ocr.example.cognitiveservices.azure.com'
+    };
+    assert.deepEqual(validateDraft(azure), {
+      field: 'credential',
+      message: 'API Key is required for Azure Document Intelligence.'
+    });
+    assert.deepEqual(
+      validateDraft({ ...azure, credential: 'key' }),
+      { field: 'credentialLabel', message: 'A label is required when a Credential is set.' }
+    );
+    assert.equal(validateDraft({ ...azure, credential: 'key', credentialLabel: 'Prod' }), null);
+  });
+
   it('requires a label exactly when a Credential is supplied', () => {
     assert.deepEqual(
       validateDraft({ ...draft, credential: 'secret' }),

@@ -17,7 +17,12 @@
     saveDraft,
     setDraftProviderType
   } from './store.svelte.js';
-  import { DEFAULT_PROVIDER_TYPE, PROVIDER_SELECT_ITEMS, providerByType } from './providers.js';
+  import {
+    DEFAULT_AZURE_OCR_API_VERSION,
+    DEFAULT_PROVIDER_TYPE,
+    PROVIDER_SELECT_ITEMS,
+    providerByType
+  } from './providers.js';
 
   const record = $derived(connectorStore.draft);
   const provider = $derived(record ? providerByType(record.providerType) : null);
@@ -49,9 +54,14 @@
 
   const saving = $derived(connectorStore.saving);
   const fieldsDisabled = $derived(saving);
-  const saveUnavailable = $derived(record !== null && record.providerType !== 'web_request');
+  const savableProvider = $derived(
+    record?.providerType === 'web_request' || record?.providerType === 'azure_document_intelligence'
+  );
+  const saveUnavailable = $derived(record !== null && !savableProvider);
+  const isAzureOcr = $derived(record?.providerType === 'azure_document_intelligence');
   const showModels = $derived(
-    (record?.catalogState ?? 'idle') !== 'idle' || (record?.models?.length ?? 0) > 0
+    !isAzureOcr
+    && ((record?.catalogState ?? 'idle') !== 'idle' || (record?.models?.length ?? 0) > 0)
   );
 
   /** @param {'name' | 'baseUrl' | 'credential' | 'credentialLabel'} field */
@@ -103,6 +113,18 @@
               disabled={fieldsDisabled}
               error={fieldError('baseUrl')}
             />
+            {#if isAzureOcr}
+              <Input
+                label="API version"
+                inlineMessage
+                value={record.apiVersion || DEFAULT_AZURE_OCR_API_VERSION}
+                oninput={(/** @type {Event} */ e) => fieldInput('apiVersion', e)}
+                autocomplete="off"
+                spellcheck="false"
+                disabled={fieldsDisabled}
+                description="Azure Document Intelligence REST API version."
+              />
+            {/if}
             <Input
               label="API Key"
               inlineMessage
@@ -110,8 +132,8 @@
               oninput={(/** @type {Event} */ e) => fieldInput('apiKey', e)}
               type="password"
               autocomplete="off"
-              placeholder={record.providerType === 'web_request' ? 'Optional' : 'sk-…'}
-              description={record.providerType === 'web_request' ? 'Optional for public endpoints.' : ''}
+              placeholder={record.providerType === 'web_request' ? 'Optional' : 'Paste your key'}
+              description={record.providerType === 'web_request' ? 'Optional for public endpoints.' : isAzureOcr ? 'Required for Azure Document Intelligence.' : ''}
               disabled={fieldsDisabled}
               error={fieldError('credential')}
             />
@@ -129,8 +151,7 @@
             {/if}
             {#if saveUnavailable}
               <p class="connector-save-note">
-                Saving is not available for {provider.label} yet. Only Web Request Connectors can
-                be saved; the model preview below stays simulated.
+                Saving is not available for {provider.label} yet; the model preview below stays simulated.
               </p>
             {/if}
             {#if generalSaveError}
@@ -139,11 +160,13 @@
           </div>
         </DialogBody>
         <div class="modal-foot connector-dialog-foot">
-          <div class="connector-test-wrap">
-            <Button type="button" disabled={record.catalogState === 'loading' || fieldsDisabled} onclick={() => previewDraftModels()}>
-              Preview models
-            </Button>
-          </div>
+          {#if !isAzureOcr}
+            <div class="connector-test-wrap">
+              <Button type="button" disabled={record.catalogState === 'loading' || fieldsDisabled} onclick={() => previewDraftModels()}>
+                Preview models
+              </Button>
+            </div>
+          {/if}
           <div class="modal-foot-actions connector-dialog-actions">
             <Button type="button" onclick={closeDialog}>Cancel</Button>
             <LoadingButton

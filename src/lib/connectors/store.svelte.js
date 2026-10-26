@@ -1,5 +1,10 @@
 import { applyConnectorPatch, beginDiscovery, finishDiscovery, addManualModel, isCatalogEditable } from './models.js';
-import { DEFAULT_PROVIDER_TYPE, defaultBaseUrlFor, defaultNameFor } from './providers.js';
+import {
+  DEFAULT_AZURE_OCR_API_VERSION,
+  DEFAULT_PROVIDER_TYPE,
+  defaultBaseUrlFor,
+  defaultNameFor
+} from './providers.js';
 import { clearLegacyConnectors, createEmptyConnector } from './storage.js';
 import { previewModelCatalog } from './model-preview.js';
 import { ApiError, createConnector, listConnectors, validateDraft } from './api.js';
@@ -94,15 +99,16 @@ export function setDraftProviderType(providerType) {
   patchDraft({
     providerType,
     name: draft.name === defaultNameFor(draft.providerType) ? defaultNameFor(providerType) : draft.name,
-    baseUrl: wasDefault || !draft.baseUrl.trim() ? defaultBaseUrlFor(providerType) : draft.baseUrl
+    baseUrl: wasDefault || !draft.baseUrl.trim() ? defaultBaseUrlFor(providerType) : draft.baseUrl,
+    apiVersion: providerType === 'azure_document_intelligence' ? DEFAULT_AZURE_OCR_API_VERSION : ''
   });
 }
 
 export async function saveDraft() {
   const draft = connectorStore.draft;
   if (!draft || connectorStore.saving) return;
-  if (draft.providerType !== 'web_request') {
-    connectorStore.saveError = 'Saving is not available for this provider yet. Only Web Request Connectors can be saved.';
+  if (draft.providerType !== 'web_request' && draft.providerType !== 'azure_document_intelligence') {
+    connectorStore.saveError = 'Saving is not available for this provider yet.';
     connectorStore.saveErrorField = null;
     return;
   }
@@ -110,6 +116,9 @@ export async function saveDraft() {
     name: draft.name,
     providerType: draft.providerType,
     baseUrl: draft.baseUrl,
+    apiVersion: draft.providerType === 'azure_document_intelligence'
+      ? (draft.apiVersion.trim() || DEFAULT_AZURE_OCR_API_VERSION)
+      : undefined,
     credential: draft.apiKey,
     credentialLabel: draft.credentialLabel
   };
