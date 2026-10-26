@@ -72,6 +72,16 @@
   const generalSaveError = $derived(
     connectorStore.saveError && !connectorStore.saveErrorField ? connectorStore.saveError : ''
   );
+
+  const apiKeyDescription = $derived(
+    !record
+      ? ''
+      : record.providerType === 'web_request'
+        ? 'Optional for public endpoints.'
+        : isAzureOcr
+          ? 'Required for Azure Document Intelligence.'
+          : ''
+  );
 </script>
 
 <Primitive.Root open={connectorStore.dialogOpen} onOpenChange={onOpenChange}>
