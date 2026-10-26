@@ -9,7 +9,7 @@
     Select
   } from '$goldfin/lib/index.js';
   import ConnectorDialog from '#lib/connectors/ConnectorDialog.svelte';
-  import { connectorStore, openAddDialog } from '#lib/connectors/store.svelte.js';
+  import { closeDialog, connectorStore, openAddDialog } from '#lib/connectors/store.svelte.js';
   import { DOCUMENT_ACCEPT, validateDocument } from '#lib/ocr/documents.js';
   import {
     analyzeDocument,
@@ -25,6 +25,7 @@
   });
 
   onDestroy(() => {
+    closeDialog();
     disposePlayground();
   });
 
