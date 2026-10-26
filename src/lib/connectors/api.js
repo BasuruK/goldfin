@@ -93,9 +93,6 @@ export function validateDraft(draft) {
     if (!draft.credential.trim()) {
       return { field: 'credential', message: 'API Key is required for Azure Document Intelligence.' };
     }
-    if (!draft.credentialLabel.trim()) {
-      return { field: 'credentialLabel', message: 'A label is required when a Credential is set.' };
-    }
   }
   if (!draft.baseUrl.trim()) return { field: 'baseUrl', message: 'Base URL is required.' };
   let url;
