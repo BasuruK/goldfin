@@ -36,7 +36,7 @@ test('provider failure shows a mapped message without fabricating text', async (
   await page.goto('/playground/');
   await page.locator('input[type="file"]').setInputFiles(blankPdf);
   await page.getByRole('button', { name: 'Analyze', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('Could not extract the Document.');
+  await expect(page.getByRole('alert')).toContainText('Goldfin is unavailable right now. Try again.');
   await expect(page.locator('.playground-text')).toHaveText('');
 });
 

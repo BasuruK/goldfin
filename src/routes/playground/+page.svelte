@@ -124,46 +124,48 @@
     {/if}
 
     <Section title="Extraction" id="playground-extraction">
-      <dl class="playground-stats">
-        <div>
-          <dt>Status</dt>
-          <dd>{playgroundStore.statusLabel}{playgroundStore.statusHint ? ` — ${playgroundStore.statusHint}` : ''}</dd>
-        </div>
-        <div>
-          <dt>Pages</dt>
-          <dd>{playgroundStore.extraction ? playgroundStore.extraction.pages : 0}</dd>
-        </div>
-        <div>
-          <dt>Characters</dt>
-          <dd>{playgroundStore.extraction ? playgroundStore.extraction.characters.toLocaleString() : '0'}</dd>
-        </div>
-        <div>
-          <dt>Elapsed</dt>
-          <dd>{playgroundStore.extraction ? `${playgroundStore.extraction.elapsedSeconds}s` : '0s'}</dd>
-        </div>
-      </dl>
+      <div class="playground-extraction">
+        <dl class="playground-stats">
+          <div>
+            <dt>Status</dt>
+            <dd>{playgroundStore.statusLabel}{playgroundStore.statusHint ? ` — ${playgroundStore.statusHint}` : ''}</dd>
+          </div>
+          <div>
+            <dt>Pages</dt>
+            <dd>{playgroundStore.extraction ? playgroundStore.extraction.pages : 0}</dd>
+          </div>
+          <div>
+            <dt>Characters</dt>
+            <dd>{playgroundStore.extraction ? playgroundStore.extraction.characters.toLocaleString() : '0'}</dd>
+          </div>
+          <div>
+            <dt>Elapsed</dt>
+            <dd>{playgroundStore.extraction ? `${playgroundStore.extraction.elapsedSeconds}s` : '0s'}</dd>
+          </div>
+        </dl>
 
-      <div class="playground-output" aria-busy={playgroundStore.busy}>
-        {#if playgroundStore.busy}
-          <div class="playground-busy" role="status">
-            <Spinner tone="running" label="Running OCR" />
-            <span>Running OCR…</span>
+        <div class="playground-output" aria-busy={playgroundStore.busy}>
+          {#if playgroundStore.busy}
+            <div class="playground-busy" role="status">
+              <Spinner tone="running" label="Running OCR" />
+              <span>Running OCR…</span>
+            </div>
+          {/if}
+          <pre class="playground-text">{extractionText}</pre>
+        </div>
+
+        {#if playgroundStore.extraction}
+          <div class="playground-export">
+            <CopyButton text={extractionText} label="Copy text" />
+            <Button
+              type="button"
+              onclick={() => downloadExtraction()}
+            >
+              Download .txt
+            </Button>
           </div>
         {/if}
-        <pre class="playground-text">{extractionText}</pre>
       </div>
-
-      {#if playgroundStore.extraction}
-        <div class="playground-export">
-          <CopyButton text={extractionText} label="Copy text" />
-          <Button
-            type="button"
-            onclick={() => downloadExtraction()}
-          >
-            Download .txt
-          </Button>
-        </div>
-      {/if}
     </Section>
   {/if}
 </div>
@@ -195,10 +197,14 @@
     gap: 12px;
   }
 
+  .playground-extraction {
+    display: grid;
+    gap: 16px;
+  }
+
   .playground-stats {
     display: grid;
     gap: 8px;
-    margin-block-end: 16px;
   }
 
   .playground-stats div {
@@ -224,12 +230,14 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-block-end: 12px;
     font-size: 13px;
     color: var(--ufg2);
   }
 
   .playground-output {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
     position: relative;
     border: 1px solid var(--uline);
     border-radius: 8px;
@@ -253,7 +261,6 @@
     flex-wrap: wrap;
     gap: 12px;
     align-items: flex-start;
-    margin-block-start: 16px;
   }
 
   .note.error {

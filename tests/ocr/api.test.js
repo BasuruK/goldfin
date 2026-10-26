@@ -32,10 +32,18 @@ describe('submitOcr', () => {
   });
 
   it('maps timeout and unreachable failures distinctly', async () => {
-    mock.method(globalThis, 'fetch', async () => jsonResponse(504, { message: 'OCR timed out.' }));
+    mock.method(globalThis, 'fetch', async () => jsonResponse(504, { message: 'internal detail' }));
     await assert.rejects(submitOcr('c1', new File(['x'], 'a.pdf')), error => {
       assert.ok(error instanceof OcrError);
       assert.equal(error.kind, 'timeout');
+      assert.equal(error.message, 'OCR timed out.');
+      return true;
+    });
+    mock.method(globalThis, 'fetch', async () => jsonResponse(503, { message: 'raw db detail' }));
+    await assert.rejects(submitOcr('c1', new File(['x'], 'a.pdf')), error => {
+      assert.ok(error instanceof OcrError);
+      assert.equal(error.kind, 'unavailable');
+      assert.equal(error.message, 'Goldfin is unavailable right now. Try again.');
       return true;
     });
     mock.method(globalThis, 'fetch', async () => {

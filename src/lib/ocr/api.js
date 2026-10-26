@@ -72,9 +72,13 @@ export async function submitOcr(connectorId, document, signal) {
   }
   const record = body && typeof body === 'object' ? /** @type {Record<string, unknown>} */ (body) : null;
   if (!response.ok) {
+    if (response.status === 408 || response.status === 504) {
+      throw new OcrError('timeout', mapStatus(response.status));
+    }
+    if (response.status >= 500) {
+      throw new OcrError('unavailable', mapStatus(response.status));
+    }
     const message = typeof record?.message === 'string' ? record.message : mapStatus(response.status);
-    if (response.status === 408 || response.status === 504) throw new OcrError('timeout', message);
-    if (response.status >= 500) throw new OcrError('unavailable', message);
     throw new OcrError('rejected', message);
   }
   if (typeof record?.content !== 'string' || typeof record?.pages !== 'number') {
@@ -85,8 +89,9 @@ export async function submitOcr(connectorId, document, signal) {
 
 /** @param {number} status */
 function mapStatus(status) {
+  if (status === 408 || status === 504) return MESSAGES.timeout;
+  if (status >= 500) return MESSAGES.unavailable;
   if (status === 413) return 'Request is too large.';
-  if (status === 502) return 'Could not extract the Document.';
   if (status === 400) return MESSAGES.rejected;
   return MESSAGES.rejected;
 }
