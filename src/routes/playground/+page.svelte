@@ -97,6 +97,7 @@
         label="Document"
         name="Select a document"
         description="PDF, JPEG, PNG, or DOCX · up to 30 MB"
+        disabled={playgroundStore.busy}
       />
       {#if playgroundStore.documentError}
         <p class="note error" role="alert">{playgroundStore.documentError}</p>
