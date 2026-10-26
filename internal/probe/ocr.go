@@ -43,9 +43,7 @@ func NewOCRHandler(pool *pgxpool.Pool, box *secretbox.Box, transport http.RoundT
 		rc := http.NewResponseController(w)
 		_ = rc.SetReadDeadline(deadline)
 		_ = rc.SetWriteDeadline(deadline)
-		ctx, cancel := context.WithTimeout(r.Context(), azureocr.ProcessingBudget)
-		defer cancel()
-		h.serveOCR(w, r.WithContext(ctx))
+		h.serveOCR(w, r)
 	})
 }
 
@@ -109,7 +107,9 @@ func (h *ocrHandler) serveOCR(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"message": "Invalid OCR request."})
 		return
 	}
-	config, err := h.loadAzureConnector(r.Context(), connectorID)
+	ctx, cancel := context.WithTimeout(r.Context(), azureocr.ProcessingBudget)
+	defer cancel()
+	config, err := h.loadAzureConnector(ctx, connectorID)
 	if err != nil {
 		if errors.Is(err, errWrongConnector) {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"message": "Invalid OCR request."})
@@ -122,7 +122,7 @@ func (h *ocrHandler) serveOCR(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"message": "Could not run OCR."})
 		return
 	}
-	extraction, err := h.executor.Extract(r.Context(), config, azureocr.Document{Bytes: document, MIMEType: documentMIME})
+	extraction, err := h.executor.Extract(ctx, config, azureocr.Document{Bytes: document, MIMEType: documentMIME})
 	if err != nil {
 		if errors.Is(err, azureocr.ErrInvalidInput) {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"message": "Invalid OCR request."})
