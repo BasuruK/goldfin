@@ -265,6 +265,6 @@
   }
 
   .note.error {
-    color: var(--bad, #e85d5d);
+    color: var(--bad);
   }
 </style>
