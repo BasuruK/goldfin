@@ -10,7 +10,7 @@
   } from '$goldfin/lib/index.js';
   import ConnectorDialog from '#lib/connectors/ConnectorDialog.svelte';
   import { connectorStore, openAddDialog } from '#lib/connectors/store.svelte.js';
-  import { DOCUMENT_ACCEPT, validateDocument } from '#lib/ocr/documents.js';
+  import { DOCUMENT_ACCEPT, MAX_DOCUMENT_BYTES, validateDocument } from '#lib/ocr/documents.js';
   import {
     analyzeDocument,
     disposePlayground,
@@ -96,7 +96,7 @@
         accept={DOCUMENT_ACCEPT}
         label="Document"
         name="Select a document"
-        description="PDF, JPEG, PNG, or DOCX · up to 30 MB"
+        description={`PDF, JPEG, PNG, or DOCX · up to ${Math.round(MAX_DOCUMENT_BYTES / 1_000_000)} MB`}
       />
       {#if playgroundStore.documentError}
         <p class="note error" role="alert">{playgroundStore.documentError}</p>
