@@ -109,6 +109,7 @@ func (h *ocrHandler) serveOCR(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), azureocr.ProcessingBudget)
 	defer cancel()
+	_ = http.NewResponseController(w).SetWriteDeadline(time.Now().Add(azureocr.ProcessingBudget))
 	config, err := h.loadAzureConnector(ctx, connectorID)
 	if err != nil {
 		if errors.Is(err, errWrongConnector) {
