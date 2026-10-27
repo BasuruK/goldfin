@@ -8,7 +8,8 @@
     accept = '.pdf,.json,.txt',
     label = 'File drop',
     name = 'No file chosen',
-    description = 'Click to browse or drop a file here'
+    description = 'Click to browse or drop a file here',
+    disabled = false
   } = $props();
   const id = useId();
   /** @type {HTMLInputElement | undefined} */
@@ -25,7 +26,7 @@
   /* Local only: FileDrop selects a file, it never uploads one. */
   /** @param {File | null | undefined} candidate */
   function choose(candidate) {
-    if (!candidate) return;
+    if (!candidate || disabled) return;
     if (!matchesAccept(candidate, accept)) {
       error = 'Choose a file matching ' + accept + '.';
       syncInput();
@@ -39,13 +40,14 @@
   /** @param {DragEvent} event */
   function drop(event) {
     event.preventDefault();
+    if (disabled) return;
     choose(event.dataTransfer?.files[0]);
   }
 </script>
 
 <div class="field">
   <label class="label" for={id}>{label}</label>
-  <label class="drop gf-drop" for={id} ondragover={event => event.preventDefault()} ondrop={drop}>
+  <label class="drop gf-drop" class:disabled for={id} ondragover={event => event.preventDefault()} ondrop={drop}>
     <Icon name="file" size={20} />
     <span class="doc">
       <span class="name">{file?.name || name}</span>
@@ -58,6 +60,7 @@
       id={id}
       type="file"
       {accept}
+      {disabled}
       onchange={event => choose(event.currentTarget.files?.[0])}
     />
   </label>

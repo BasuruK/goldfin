@@ -132,6 +132,10 @@
             <dd>{playgroundStore.statusLabel}{playgroundStore.statusHint ? ` — ${playgroundStore.statusHint}` : ''}</dd>
           </div>
           <div>
+            <dt>Document</dt>
+            <dd>{playgroundStore.extraction?.sourceName ?? '—'}</dd>
+          </div>
+          <div>
             <dt>Pages</dt>
             <dd>{playgroundStore.extraction ? playgroundStore.extraction.pages : 0}</dd>
           </div>
