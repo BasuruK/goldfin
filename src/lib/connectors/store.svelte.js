@@ -1,9 +1,11 @@
 import { applyConnectorPatch, beginDiscovery, finishDiscovery, addManualModel, isCatalogEditable } from './models.js';
 import {
+  AZURE_OCR_PROVIDER_TYPE,
   DEFAULT_AZURE_OCR_API_VERSION,
   DEFAULT_PROVIDER_TYPE,
   defaultBaseUrlFor,
-  defaultNameFor
+  defaultNameFor,
+  isSavableProvider
 } from './providers.js';
 import { clearLegacyConnectors, createEmptyConnector } from './storage.js';
 import { previewModelCatalog } from './model-preview.js';
@@ -107,7 +109,7 @@ export function setDraftProviderType(providerType) {
 export async function saveDraft() {
   const draft = connectorStore.draft;
   if (!draft || connectorStore.saving) return;
-  if (draft.providerType !== 'web_request' && draft.providerType !== 'azure_document_intelligence') {
+  if (!isSavableProvider(draft.providerType)) {
     connectorStore.saveError = 'Saving is not available for this provider yet.';
     connectorStore.saveErrorField = null;
     return;
