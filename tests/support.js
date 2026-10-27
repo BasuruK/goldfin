@@ -74,8 +74,12 @@ export async function mockOcrApi(page, options = {}) {
     if (options.reject) {
       return route.fulfill({ status: options.reject.status, json: { message: options.reject.message } });
     }
-    await route.fulfill({
-      json: { content: options.content ?? 'Known OCR text', pages: options.pages ?? 1 }
-    });
+    try {
+      await route.fulfill({
+        json: { content: options.content ?? 'Known OCR text', pages: options.pages ?? 1 }
+      });
+    } catch {
+      // Client aborted (e.g. Stop) after delayMs; nothing left to fulfil.
+    }
   });
 }
