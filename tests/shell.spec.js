@@ -268,6 +268,13 @@ test('the collapse toggle straddles the edge in the collapsed rail too', async (
   expect(box.x + box.width - (nav.x + nav.width)).toBeGreaterThan(box.width / 2 - 2);
 });
 
+test('Integrations disclosure opens on OCR Playground', async ({ page }) => {
+  await page.goto('/playground/');
+  const group = page.getByRole('button', { name: 'Integrations', exact: true });
+  await expect(group).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByRole('link', { name: 'OCR Playground', exact: true })).toBeVisible();
+});
+
 test('Connectors is grouped under the Integrations disclosure', async ({ page }) => {
   await page.goto('/');
 

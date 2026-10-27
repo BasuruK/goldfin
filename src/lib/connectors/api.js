@@ -61,7 +61,9 @@ async function requestJSON(path, init = {}) {
 export async function createConnector(draft) {
   /** @type {Record<string, string>} */
   const payload = { name: draft.name.trim(), providerType: draft.providerType, baseUrl: draft.baseUrl.trim() };
-  if (draft.apiVersion?.trim()) payload.apiVersion = draft.apiVersion.trim();
+  if (draft.providerType === 'azure_document_intelligence' && draft.apiVersion?.trim()) {
+    payload.apiVersion = draft.apiVersion.trim();
+  }
   if (draft.credential !== '') {
     payload.credential = draft.credential;
     payload.credentialLabel = draft.credentialLabel.trim();
@@ -92,9 +94,6 @@ export function validateDraft(draft) {
   if (draft.providerType === 'azure_document_intelligence') {
     if (!draft.credential.trim()) {
       return { field: 'credential', message: 'API Key is required for Azure Document Intelligence.' };
-    }
-    if (!draft.credentialLabel.trim()) {
-      return { field: 'credentialLabel', message: 'A label is required when a Credential is set.' };
     }
   }
   if (!draft.baseUrl.trim()) return { field: 'baseUrl', message: 'Base URL is required.' };

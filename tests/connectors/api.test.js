@@ -62,6 +62,13 @@ describe('createConnector', () => {
     assert.ok(init?.signal instanceof AbortSignal);
   });
 
+  it('omits apiVersion for web_request even when a draft still carries one', async () => {
+    const fetchMock = mockFetch(async () => jsonResponse(201, saved));
+    await createConnector({ ...draft, apiVersion: '2024-11-30' });
+    const body = JSON.parse(String(fetchMock.mock.calls[0].arguments[1]?.body));
+    assert.equal(body.apiVersion, undefined);
+  });
+
   it('sends Credential bytes untouched with their trimmed label', async () => {
     const fetchMock = mockFetch(async () => jsonResponse(201, { ...saved, credentialLabel: 'Prod key' }));
     await createConnector({ ...draft, credential: ' tok en ', credentialLabel: ' Prod key ' });
