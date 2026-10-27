@@ -19,4 +19,14 @@ describe('validateDocument', () => {
     const pdf = new File(['%PDF-1.4'], 'sample.pdf', { type: 'application/pdf' });
     assert.equal(validateDocument(pdf), null);
   });
+
+  it('rejects a misleading extension when MIME type disagrees', () => {
+    const pngNamedPdf = new File([new Uint8Array([1])], 'scan.pdf', { type: 'image/png' });
+    assert.match(validateDocument(pngNamedPdf) ?? '', /Choose a PDF/);
+  });
+
+  it('allows an empty MIME type so the server can sniff bytes', () => {
+    const pdf = new File(['%PDF-1.4'], 'sample.pdf', { type: '' });
+    assert.equal(validateDocument(pdf), null);
+  });
 });

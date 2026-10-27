@@ -1,5 +1,5 @@
-import { listConnectors } from '#lib/connectors/api.js';
-import { ApiError } from '#lib/connectors/api.js';
+import { ApiError, listConnectors } from '#lib/connectors/api.js';
+import { AZURE_OCR_PROVIDER_TYPE } from '#lib/connectors/providers.js';
 import { OcrError, submitOcr } from './api.js';
 import { validateDocument } from './documents.js';
 
@@ -61,7 +61,7 @@ export async function loadOcrConnectors() {
   playgroundStore.listError = '';
   try {
     const all = await listConnectors();
-    playgroundStore.connectors = all.filter(c => c.providerType === 'azure_document_intelligence');
+    playgroundStore.connectors = all.filter(c => c.providerType === AZURE_OCR_PROVIDER_TYPE);
     playgroundStore.listState = 'loaded';
     if (!playgroundStore.connectorId && playgroundStore.connectors[0]) {
       playgroundStore.connectorId = playgroundStore.connectors[0].id;
@@ -153,13 +153,6 @@ export async function analyzeDocument() {
   } catch (error) {
     if (isStale(operation)) return;
     resetBusyUi();
-    if (error instanceof OcrError && error.kind === 'canceled') {
-      playgroundStore.statusLabel = 'Stopped';
-      playgroundStore.statusHint = 'Browser request aborted';
-      playgroundStore.stoppedNotice =
-        'Stopped locally. Azure may still process a submitted operation.';
-      return;
-    }
     playgroundStore.statusLabel = 'Failed';
     playgroundStore.statusHint = 'See the message below.';
     playgroundStore.error = error instanceof OcrError ? error.message : 'Could not run OCR. Try again.';
