@@ -182,5 +182,5 @@ export function downloadExtraction() {
   anchor.href = url;
   anchor.download = `${stem}.txt`;
   anchor.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
