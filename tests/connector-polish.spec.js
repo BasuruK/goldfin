@@ -109,7 +109,10 @@ for (const theme of ['light', 'dark']) {
       const parentBox = await boxOf(page.getByRole('button', { name: 'Integrations', exact: true }));
       const childBox = await boxOf(page.getByRole('link', { name: 'Connectors', exact: true }));
       expect(childBox.x - parentBox.x).toBe(32);
-      const stem = await page.locator('#integrations-links > li').first().evaluate(node => {
+      const stem = await page
+        .locator('#integrations-links > li')
+        .filter({ has: page.getByRole('link', { name: 'Connectors', exact: true }) })
+        .evaluate(node => {
         const rule = getComputedStyle(node, '::before');
         return {
           vertical: rule.borderInlineStartWidth, horizontal: rule.borderBlockEndWidth,

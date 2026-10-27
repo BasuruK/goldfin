@@ -13,6 +13,15 @@
     border-color var(--duration-ui) ease;
 }
 
+.drop.disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.drop.disabled input {
+  cursor: not-allowed;
+}
+
 .drop.over {
   border-color: var(--ufg3);
   background: var(--urunfield);
