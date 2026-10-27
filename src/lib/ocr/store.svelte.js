@@ -122,8 +122,8 @@ export async function analyzeDocument() {
     playgroundStore.error = 'Choose an Azure OCR Connector.';
     return;
   }
-  const document = playgroundStore.document;
-  if (!document) return;
+  const sourceDocument = playgroundStore.document;
+  if (!sourceDocument) return;
 
   const operation = ++activeOperation;
   abortController?.abort();
@@ -137,7 +137,7 @@ export async function analyzeDocument() {
   elapsedTimer = setInterval(tickElapsed, 100);
 
   try {
-    const result = await submitOcr(playgroundStore.connectorId, document, abortController.signal);
+    const result = await submitOcr(playgroundStore.connectorId, sourceDocument, abortController.signal);
     if (isStale(operation)) return;
     const elapsedSeconds = ((Date.now() - startedAt) / 1000).toFixed(1);
     playgroundStore.extraction = {
@@ -145,7 +145,7 @@ export async function analyzeDocument() {
       pages: result.pages,
       characters: result.content.length,
       elapsedSeconds,
-      sourceName: document.name
+      sourceName: sourceDocument.name
     };
     playgroundStore.statusLabel = 'Succeeded';
     playgroundStore.statusHint = `${result.pages} ${result.pages === 1 ? 'page' : 'pages'}`;
