@@ -101,6 +101,7 @@
         accept={DOCUMENT_ACCEPT}
         label="Document"
         name="Select a document"
+        disabled={playgroundStore.busy}
         description={`PDF, JPEG, PNG, or DOCX · up to ${Math.round(MAX_DOCUMENT_BYTES / 1_000_000)} MB`}
       />
       {#if playgroundStore.documentError}
