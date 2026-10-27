@@ -1,6 +1,11 @@
 import { CONNECTORS_PATH } from '../src/lib/connectors/api.js';
 import { OCR_PATH } from '../src/lib/ocr/api.js';
 
+/** @param {number | undefined} ms */
+async function mockRouteDelay(ms) {
+  if (ms) await new Promise(resolve => setTimeout(resolve, ms));
+}
+
 /**
  * The element's bounding box; throws when it has none, so a test fails at the lookup.
  * @param {import('@playwright/test').Locator} locator
@@ -34,7 +39,7 @@ export async function mockConnectorApi(page, options = {}) {
     if (request.method() !== 'POST') return route.fulfill({ status: 405, json: { message: 'Method not allowed.' } });
     const body = /** @type {Record<string, string>} */ (JSON.parse(request.postData() ?? '{}'));
     state.posts.push(body);
-    if (options.saveDelayMs) await new Promise(resolve => setTimeout(resolve, options.saveDelayMs));
+    await mockRouteDelay(options.saveDelayMs);
     if (options.reject) return route.fulfill({ status: options.reject.status, json: { message: options.reject.message } });
     /** @type {import('../src/lib/connectors/api.js').SavedConnector} */
     const saved = {
@@ -70,7 +75,7 @@ export async function selectProvider(dialog, label) {
  */
 export async function mockOcrApi(page, options = {}) {
   await page.route(`**${OCR_PATH}`, async route => {
-    if (options.delayMs) await new Promise(resolve => setTimeout(resolve, options.delayMs));
+    await mockRouteDelay(options.delayMs);
     if (options.reject) {
       return route.fulfill({ status: options.reject.status, json: { message: options.reject.message } });
     }
