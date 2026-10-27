@@ -109,20 +109,22 @@ for (const theme of ['light', 'dark']) {
       const parentBox = await boxOf(page.getByRole('button', { name: 'Integrations', exact: true }));
       const childBox = await boxOf(page.getByRole('link', { name: 'Connectors', exact: true }));
       expect(childBox.x - parentBox.x).toBe(32);
-      const stem = await page
-        .locator('#integrations-links > li')
-        .filter({ has: page.getByRole('link', { name: 'Connectors', exact: true }) })
-        .evaluate(node => {
-        const rule = getComputedStyle(node, '::before');
+      const stem = await page.locator('#integrations-links').evaluate(sublist => {
+        const rail = getComputedStyle(sublist, '::before');
+        const row = sublist.querySelector('a[href="/connectors/"]')?.closest('li');
+        if (!row) throw new Error('Connectors nav row missing');
+        const elbow = getComputedStyle(row, '::before');
         return {
-          vertical: rule.borderInlineStartWidth, horizontal: rule.borderBlockEndWidth,
-          height: parseFloat(rule.height), opacity: rule.opacity,
-          end: parseFloat(rule.insetInlineStart) + parseFloat(rule.width)
+          rail: rail.borderInlineStartWidth,
+          horizontal: elbow.borderBlockEndWidth,
+          vertical: elbow.borderInlineStartWidth,
+          end: parseFloat(elbow.insetInlineStart) + parseFloat(elbow.width),
+          opacity: elbow.opacity
         };
       });
-      expect(stem.vertical).toBe('1px');
+      expect(stem.rail).toBe('1px');
       expect(stem.horizontal).toBe('1px');
-      expect(stem.height).toBeGreaterThan(10);
+      expect(stem.vertical).toBe('0px');
       expect(stem.end).toBe(-2);
       expect(stem.opacity).toBe('0.4');
       await page.locator('#primary-nav').screenshot({ path: `test-results/nav-${theme}-${viewport.width}.png` });
