@@ -43,6 +43,8 @@ const PROVIDERS = [
   }
 ];
 
+export const AZURE_OCR_PROVIDER_TYPE = 'azure_document_intelligence';
+
 export const DEFAULT_AZURE_OCR_API_VERSION = '2024-11-30';
 
 /** The provider a new or unreadable Connector gets; `providerByType` falls back to the same one. */
