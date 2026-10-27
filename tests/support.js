@@ -1,4 +1,5 @@
 import { CONNECTORS_PATH } from '../src/lib/connectors/api.js';
+import { OCR_PATH } from '../src/lib/ocr/api.js';
 
 /**
  * The element's bounding box; throws when it has none, so a test fails at the lookup.
@@ -68,13 +69,17 @@ export async function selectProvider(dialog, label) {
  * @param {{ status: number, message: string }} [options.reject]
  */
 export async function mockOcrApi(page, options = {}) {
-  await page.route('**/api/v1/probes/ocr', async route => {
+  await page.route(`**${OCR_PATH}`, async route => {
     if (options.delayMs) await new Promise(resolve => setTimeout(resolve, options.delayMs));
     if (options.reject) {
       return route.fulfill({ status: options.reject.status, json: { message: options.reject.message } });
     }
-    await route.fulfill({
-      json: { content: options.content ?? 'Known OCR text', pages: options.pages ?? 1 }
-    });
+    try {
+      await route.fulfill({
+        json: { content: options.content ?? 'Known OCR text', pages: options.pages ?? 1 }
+      });
+    } catch {
+      // Client aborted (e.g. Stop) after delayMs; nothing left to fulfil.
+    }
   });
 }

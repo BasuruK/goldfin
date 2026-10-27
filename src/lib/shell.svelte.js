@@ -30,6 +30,13 @@ export const SIDES = [
 /* Nav is grouped so the sidebar can head each block with a separator. The group
    label is not a second source of truth for what exists — only the sections
    below decide that. */
+/** @param {string} pathname */
+export function isGroupedNavPath(pathname) {
+  return NAV.some(
+    group => group.label && group.items.some(item => pathname.startsWith(item.href))
+  );
+}
+
 export const NAV = [
   { items: [{ href: '/', label: 'Home', icon: 'home' }] },
   {
