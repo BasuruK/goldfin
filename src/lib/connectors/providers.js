@@ -47,6 +47,11 @@ export const AZURE_OCR_PROVIDER_TYPE = 'azure_document_intelligence';
 
 export const DEFAULT_AZURE_OCR_API_VERSION = '2024-11-30';
 
+/** @param {string} providerType */
+export function isSavableProvider(providerType) {
+  return providerType === 'web_request' || providerType === AZURE_OCR_PROVIDER_TYPE;
+}
+
 /** The provider a new or unreadable Connector gets; `providerByType` falls back to the same one. */
 export const DEFAULT_PROVIDER_TYPE = PROVIDERS[0].value;
 
