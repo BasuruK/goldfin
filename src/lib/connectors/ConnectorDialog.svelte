@@ -21,6 +21,7 @@
     DEFAULT_AZURE_OCR_API_VERSION,
     DEFAULT_PROVIDER_TYPE,
     PROVIDER_SELECT_ITEMS,
+    isSavableProvider,
     providerByType
   } from './providers.js';
 
@@ -54,9 +55,7 @@
 
   const saving = $derived(connectorStore.saving);
   const fieldsDisabled = $derived(saving);
-  const savableProvider = $derived(
-    record?.providerType === 'web_request' || record?.providerType === 'azure_document_intelligence'
-  );
+  const savableProvider = $derived(record ? isSavableProvider(record.providerType) : false);
   const saveUnavailable = $derived(record !== null && !savableProvider);
   const isAzureOcr = $derived(record?.providerType === 'azure_document_intelligence');
   const showModels = $derived(
@@ -71,6 +70,16 @@
 
   const generalSaveError = $derived(
     connectorStore.saveError && !connectorStore.saveErrorField ? connectorStore.saveError : ''
+  );
+
+  const apiKeyDescription = $derived(
+    !record
+      ? ''
+      : record.providerType === 'web_request'
+        ? 'Optional for public endpoints.'
+        : isAzureOcr
+          ? 'Required for Azure Document Intelligence.'
+          : ''
   );
 </script>
 
