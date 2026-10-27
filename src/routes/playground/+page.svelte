@@ -25,7 +25,7 @@
   });
 
   onDestroy(() => {
-    closeDialog();
+    connectorStore.saveNotice = '';
     disposePlayground();
   });
 
@@ -64,6 +64,10 @@
       Run one Document through a saved Azure Document Intelligence Connector and inspect the extracted text.
     </p>
   </header>
+
+  {#if connectorStore.saveNotice}
+    <p class="note" role="status">{connectorStore.saveNotice}</p>
+  {/if}
 
   {#if playgroundStore.listState === 'loading' || playgroundStore.listState === 'idle'}
     <Section title="Connectors" id="playground-loading">
