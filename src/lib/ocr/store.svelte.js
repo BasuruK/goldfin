@@ -85,6 +85,7 @@ export async function loadOcrConnectors() {
 
 export function disposePlayground() {
   invalidateOperation();
+  listOperation += 1;
   abortController?.abort();
   abortController = null;
   resetBusyUi();
