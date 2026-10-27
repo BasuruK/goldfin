@@ -9,7 +9,7 @@
     Select
   } from '$goldfin/lib/index.js';
   import ConnectorDialog from '#lib/connectors/ConnectorDialog.svelte';
-  import { connectorStore, openAddDialog } from '#lib/connectors/store.svelte.js';
+  import { closeDialog, connectorStore, openAddDialog } from '#lib/connectors/store.svelte.js';
   import { DOCUMENT_ACCEPT, validateDocument } from '#lib/ocr/documents.js';
   import {
     analyzeDocument,
@@ -136,6 +136,10 @@
             <dd>{playgroundStore.statusLabel}{playgroundStore.statusHint ? ` — ${playgroundStore.statusHint}` : ''}</dd>
           </div>
           <div>
+            <dt>Document</dt>
+            <dd>{playgroundStore.extraction?.sourceName ?? '—'}</dd>
+          </div>
+          <div>
             <dt>Pages</dt>
             <dd>{playgroundStore.extraction ? playgroundStore.extraction.pages : 0}</dd>
           </div>
@@ -152,7 +156,7 @@
         <div class="playground-output" aria-busy={playgroundStore.busy}>
           {#if playgroundStore.busy}
             <div class="playground-busy" role="status">
-              <Spinner tone="running" label="Running OCR" />
+              <Spinner tone="key" label="Running OCR" />
               <span>Running OCR…</span>
             </div>
           {/if}
@@ -269,6 +273,6 @@
   }
 
   .note.error {
-    color: var(--bad, #e85d5d);
+    color: var(--bad);
   }
 </style>

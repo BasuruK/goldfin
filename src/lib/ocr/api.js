@@ -92,6 +92,5 @@ function mapStatus(status) {
   if (status === 408 || status === 504) return MESSAGES.timeout;
   if (status >= 500) return MESSAGES.unavailable;
   if (status === 413) return 'Request is too large.';
-  if (status === 400) return MESSAGES.rejected;
   return MESSAGES.rejected;
 }
