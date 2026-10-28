@@ -7,11 +7,11 @@ Single-tenant tool for evaluating document-extraction prompts. **v1** (`docs/adr
 Every change keeps these two. The ADRs hold the reasons.
 
 - **Prompt as deployed** (ADR 0003, 0009): send the prompt exactly as deployed, with no output schema, format reminder, or retry of a malformed or cut-off answer. Show a cut-off answer as extracted, labelled with how it stopped.
-- **Credentials** (ADR 0005, 0013): a Credential is encrypted at rest, sent only over https, kept out of URLs, and never returned, logged, or derived into a response; credential-shaped query parameters are refused. Connector saves encrypt on write; only the synchronous probe path (`internal/probe`) decrypts, in-process, until a worker exists.
+- **Credentials** (ADR 0005, 0013): a Credential is encrypted at rest, sent only over https, kept out of URLs, and never returned, logged, or derived into a response; a Connector save refuses credential-shaped query parameters. Connector saves encrypt on write; only the synchronous probe path (`internal/probe`) decrypts, in-process, until a worker exists.
 
 ## Repository layout
 
-Three containers (ADR 0010; changing them needs an ADR): `web` (nginx + static SvelteKit), `api` (Go over Postgres), and `migrate` (`goose`, `db/migrations/`).
+Two containers over Postgres (ADR 0010 as amended by 0013; changing them needs an ADR): `web` (nginx + static SvelteKit) and `api` (Go). Migrations are `goose` files in `db/migrations/`, applied by `make migrate`, a one-shot Compose service. Local Compose runs `postgres`, `migrate` and `api`; the UI runs from `pnpm dev`.
 
 - `cmd/goldfin/` is the `api` entry point. `internal/handler` mounts the routes; `internal/api` saves and lists Connectors; `internal/probe` runs synchronous Probes; `internal/azureocr` is the Azure Document Intelligence client; `internal/secretbox` encrypts Credentials; `internal/testdb` gives each DB test a disposable schema.
 - `src/lib/<surface>/` holds each surface's API client and store (`connectors`, `ocr`); `src/routes/` holds pages; `Goldfin_Components/` is the design system.
@@ -27,7 +27,7 @@ Three containers (ADR 0010; changing them needs an ADR): `web` (nginx + static S
 Read the matching doc before editing that area:
 
 - **Landing a change** (`docs/agents/landing.md`): before starting a ticket, and again before opening its PR.
-- **Code standards** (`CODING_STANDARDS.md`): any code in `cmd/`, `internal/`, `db/`, `src/lib/`, or the `Makefile`. Read it while writing, not only at review.
+- **Code standards** (`CODING_STANDARDS.md`): any code in `cmd/`, `internal/`, `db/`, `src/lib/`, `src/routes/`, or the `Makefile`. Read it while writing, not only at review.
 - **Domain** (`GLOSSARY.md`, `docs/agents/domain.md`): naming, adding, or changing a domain concept or schema.
 - **Workflow execution** (ADR 0014, 0003, 0009, the prototype above): Workflow graphs, Probes, LLM calls, Prompt versions, fused gateways.
 - **Connectors** (ADR 0005 and 0013 banners, ADR 0011): Credentials, Connector saves, model catalogs. ADR 0013 lists each deferred mechanism with the trigger that brings it back.
