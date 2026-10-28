@@ -21,7 +21,7 @@ test('isCatalogEditable matches ready and unsupported only', () => {
 test('changing connection details blocks model use but retains selections for refresh', () => {
   const record = makeRecord({
     providerType: 'openai', baseUrl: 'https://example.com/v1', apiKey: 'test',
-    connectionStatus: 'ok', checkRequestId: 'pending', catalogState: 'ready', discoveryRevision: 1,
+    catalogState: 'ready', discoveryRevision: 1,
     models: [{ id: 'model-a', enabled: true, source: 'discovered', verified: true }]
   });
   assert.deepEqual(availableModelIds(record), ['model-a']);
@@ -35,8 +35,6 @@ test('changing connection details blocks model use but retains selections for re
   for (const patch of patches) {
     const changed = applyConnectorPatch(record, patch);
     assert.equal(changed.catalogState, 'idle');
-    assert.equal(changed.connectionStatus, 'idle');
-    assert.equal(changed.checkRequestId, null);
     assert.equal(changed.discoveryRevision, 2);
     assert.deepEqual(availableModelIds(changed), []);
     assert.equal(changed.models[0].enabled, true);
