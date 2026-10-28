@@ -6,12 +6,11 @@ node_modules/
 .pnpm-store/
 .svelte-kit/
 /build/
-goldfin/
-
+# Repo-root build output only. Anchored: a bare "goldfin/" also matched cmd/goldfin/.
+/goldfin
 
 # local agent runtime artefacts (canvas assets etc.)
 .mavis/
-.serena
 
 prototypes/UI improvement discussion.zip
 
@@ -28,4 +27,7 @@ prototypes/UI improvement discussion.zip
 .impeccable/live/inject-journal.json
 
 .commandcode
-.cursor
+
+# Cursor local runtime state; the shared settings file stays committed.
+.cursor/*
+!.cursor/settings.json
