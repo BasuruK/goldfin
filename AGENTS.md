@@ -1,48 +1,36 @@
 # Goldfin
 
-Single-tenant tool for evaluating document-extraction prompts. **v1** (`docs/adr/0014-v1-is-a-workflow-playground-without-scoring.md`) runs one Document through an operator-built Workflow of OCR, LLM and REST Connectors and shows what each node extracted. Nothing about an execution is stored. Datasets arrive in v2, and scoring after that. `prototypes/ocr only workflow/ocr-playground.html` and its tests are the v1 UI and request spec.
+Single-tenant tool for evaluating document-extraction prompts. **v1** (`docs/adr/0014-v1-is-a-workflow-playground-without-scoring.md`) runs one Document through an operator-built Workflow of OCR, LLM and REST Connectors and shows what each node extracted. Nothing about an execution is stored. Datasets arrive in v2, and scoring after that. `prototypes/ocr only workflow/ocr-playground.html` and its tests are the v1 UI and request spec. Use `GLOSSARY.md` terms verbatim.
 
-## Context pointers & invariants
+## Invariants
 
-Read the matching target on turn 1 before exploring or editing that branch:
+Every change keeps these two. The ADRs hold the reasons.
 
-- **Domain & vocabulary** (`GLOSSARY.md`, `docs/agents/domain.md`): Domain terms, schemas, or Workflow, Probe, Pipeline, Stage, State, Extraction, Match, Verdict, Validity, Coverage, Judge, Dataset, Prompt, Run, Comparison, Probe, Connector, or Credential logic. Use `GLOSSARY.md` terms verbatim.
-- **Workflows, Probes, & Prompts** (`docs/adr/0014-v1-is-a-workflow-playground-without-scoring.md`, `docs/adr/0003-goldfin-does-not-rescue-the-model.md`, `docs/adr/0009-a-fused-gateway-is-supported.md`, the prototype above): Workflow graphs, Probe execution, LLM calls, Prompt versions, or fused gateways. **Invariant**: send the prompt as deployed, with no output schema, format reminder, or retry of a malformed or cut-off answer. Show a cut-off answer as extracted, labelled with how it stopped.
-- **Deferred: scoring & Runs** (`docs/adr/0002-declare-formats-never-infer.md`, `docs/adr/0004-a-blank-cell-is-an-assertion.md`, `docs/adr/0006-judge-contract.md`, `docs/adr/0007-validity-is-structural-and-advisory.md`, `docs/adr/0008-a-re-attempt-is-a-new-run.md`): Read only when scoring or stored Runs start (v2 or later). Build none of it in v1.
-- **Topology, Credentials, & Connector saves** (`docs/adr/0013-walking-skeleton-synchronous-saves.md`, `docs/adr/0005-credential-handling.md`, `docs/adr/0010-go-api-postgres-three-containers.md`, `docs/adr/0011-model-selection-belongs-to-the-connector.md`): Containers (`web` nginx + static SvelteKit, `api` Go HTTP over Postgres + `goose`; changes require an ADR), Credentials (read the 0005 and 0013 banners), model catalogs, or Connector saves. 0013 lists each deferred mechanism with the trigger that brings it back. **Invariant**: a Credential is encrypted at rest, sent only over https, never sent in a URL, and never returned, logged, or derived into a response; credential-shaped query parameters are refused; Connector saves encrypt on write; only the synchronous probe/run outbound path decrypts in-process until a worker exists (ADR 0013).
-- **Outbound HTTP, migrations, & code standards** (`CODING_STANDARDS.md`): Outbound HTTP, migrations (`db/`), Go API (`cmd/`, `internal/`), frontend async/stores (`src/lib/`), or `Makefile`.
-- **UI & design system** (`DESIGN.md`, `PRODUCT.md`): Svelte components, CSS, `Goldfin_Components/`, or `src/routes/`. For live layout iteration, run `pnpm dev` and `/impeccable live` (remove `src/routes/+layout.svelte` markers via `impeccable live-inject --remove`).
-- **Issues & triage** (`docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`): GitHub issues or PRs via `gh`.
+- **Prompt as deployed** (ADR 0003, 0009): send the prompt exactly as deployed, with no output schema, format reminder, or retry of a malformed or cut-off answer. Show a cut-off answer as extracted, labelled with how it stopped.
+- **Credentials** (ADR 0005, 0013): a Credential is encrypted at rest, sent only over https, kept out of URLs, and never returned, logged, or derived into a response; a Connector save refuses credential-shaped query parameters. Connector saves encrypt on write; only the synchronous probe path (`internal/probe`) decrypts, in-process, until a worker exists.
 
-## Execution sequence
+## Repository layout
 
-### 1. Scope (`seam`)
+Two containers over Postgres (ADR 0010 as amended by 0013; changing them needs an ADR): `web` (nginx + static SvelteKit) and `api` (Go). Migrations are `goose` files in `db/migrations/`, applied by `make migrate`, a one-shot Compose service. Local Compose runs `postgres`, `migrate` and `api`; the UI runs from `pnpm dev`.
 
-1. Deliver one feature seam and one layer per ticket and PR (`/to-spec` → `/to-tickets` → `/implement`; split multi-layer work via `/split-to-prs`).
-2. **Door**: Classify the seam. **One-way** means it stores, transmits, or displays a Credential; writes Prompt versions, Run results, Verdicts, or Connector snapshots; or migrates data that already exists. Everything else is **two-way**: retries, timeouts, fences, queues, workers, caches, and UI async guards.
-3. End `/to-spec` and each one-way ticket with a **Failure table** (two writers, mid-flight crash, mid-flight shutdown, timeout, stale result, rollback after data exists) holding only the rows the path can reach. A two-way ticket ships the synchronous, single-process version and records each deferred mechanism as a `ponytail:` note naming the trigger that brings it back.
-4. **Product first**: Add no infrastructure seam (queue, worker, retry, fence, cache) until the walking-skeleton golden test passes: one real Document plus recorded provider responses, run through an OCR → LLM Workflow, produce a known displayed output. After that, each infrastructure ticket names the Run-path failure it prevents.
-5. Cut `/to-tickets` at a single layer (Workflow executor, storage/migrations, API, or frontend store).
-6. Implement UI strictly from `DESIGN.md` and OpenDesign handoffs; ask for the design artefact when absent.
-- **Criterion**: Single-layer seam, door class, design artefact, and (one-way only) failure table are pinned before coding.
+- `cmd/goldfin/` is the `api` entry point. `internal/handler` mounts the routes; `internal/api` saves and lists Connectors; `internal/probe` runs synchronous Probes; `internal/azureocr` is the Azure Document Intelligence client; `internal/secretbox` encrypts Credentials; `internal/testdb` gives each DB test a disposable schema.
+- `src/lib/<surface>/` holds each surface's API client and store (`connectors`, `ocr`); `src/routes/` holds pages; `Goldfin_Components/` is the design system.
 
-### 2. Build (`red` → green)
+## Commands
 
-1. Drive `/implement` with `/tdd`: write a failing test at the seam and watch it go *red* before writing implementation code. Note any trivial-glue exemption in the PR description.
-2. Verify module paths, config keys, and flags in `node_modules`, `go doc`, or Context7. Resolve dependency versions, action SHAs, and image digests via CLI commands.
-3. Fix compiler, type, and lint errors at the root declaration or call site while keeping strict type and lint checks intact.
-4. Migrate all callers and delete replaced functions in the same diff.
-5. Add no race or edge-case handling the failure table doesn't list. On a two-way seam, record it as a `ponytail:` note. On a one-way seam, ask first, stating the failure mode, likelihood, and complexity cost.
-- **Criterion**: Every new behavior has a test that went red then green, and all callers use the new contract.
+- `make run`: Postgres and `api` in Docker on `127.0.0.1:8080`, then `pnpm dev` on `127.0.0.1:5174`. `make logs` tails the `api`; read it when a request fails and the page shows only a mapped message.
+- **While iterating**, run only the tests that cover your change: `go test ./internal/probe/...`, `node --test tests/ocr/<file>.test.js`, `pnpm exec playwright test tests/<file>.spec.js`. DB-backed Go tests need `TEST_DATABASE_URL` pointing at a disposable database.
+- `make check` runs everything CI's `make check` job runs, and is green before you push. CI also runs the Playwright suite.
 
-### 3. Verify & review (`sweep`)
+## Context pointers
 
-1. **Sweep**: After a bug fix, grep Go and JS sides of the contract, the package, and sibling functions for the same defect and fix every match. Never sweep a mechanism into code that lacks it.
-2. **Visual**: Capture Playwright screenshots at `375px` and `1280px` for UI changes and verify spacing against `DESIGN.md` tokens.
-3. **Gate**: Run `make check` and resolve every failure until green.
-4. **Review**, by door. CodeRabbit (`.coderabbit.yaml`) is the only hosted reviewer; OpenCodeReview runs locally only.
-   - **One-way**: The local trio is the gate, run once each before push: self-review against `CODING_STANDARDS.md`, `/code-review` (Spec and Standards), `/open-code-review-delegate`.
-   - **Two-way**: `make check` plus CodeRabbit. Reject a finding that adds a defensive mechanism (retry, token, fence, lease, hardening) with "two-way door; deferred as a `ponytail:` trigger", unless it is a `bug` or `security` finding.
-   - **Both**: On the PR, fix `bug`/`security` findings and disposition every other finding in one batch (accept as a tracked issue, or reject with a one-line reason), in at most one fix round. Verify every applied finding against docs and `make check`, in commits touching only flagged lines. A finding that recurs after one round means the seam is wrong: simplify or ask.
-5. **Handoff**: If work *outside* the seam remains, end with one question: `"Fix X too?"`
-- **Criterion**: The door's review gate is green before push; external review closed after at most one fix round.
+Read the matching doc before editing that area:
+
+- **Landing a change** (`docs/agents/landing.md`): before starting a ticket, and again before opening its PR.
+- **Code standards** (`CODING_STANDARDS.md`): any code in `cmd/`, `internal/`, `db/`, `src/lib/`, `src/routes/`, or the `Makefile`. Read it while writing, not only at review.
+- **Domain** (`GLOSSARY.md`, `docs/agents/domain.md`): naming, adding, or changing a domain concept or schema.
+- **Workflow execution** (ADR 0014, 0003, 0009, the prototype above): Workflow graphs, Probes, LLM calls, Prompt versions, fused gateways.
+- **Connectors** (ADR 0005 and 0013 banners, ADR 0011): Credentials, Connector saves, model catalogs. ADR 0013 lists each deferred mechanism with the trigger that brings it back.
+- **UI** (`DESIGN.md`, `PRODUCT.md`): Svelte components, CSS, `Goldfin_Components/`, `src/routes/`. Build from `DESIGN.md` and the OpenDesign handoff; ask for the design artefact when it is absent. For live layout iteration run `pnpm dev` and `/impeccable live`, then remove the `src/routes/+layout.svelte` markers with `impeccable live-inject --remove`.
+- **Issues** (`docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`): GitHub issues and PRs via `gh`.
+- **Scoring & Runs** (ADR 0002, 0004, 0006, 0007, 0008): v2 and later. v1 builds none of it.

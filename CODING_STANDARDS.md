@@ -28,7 +28,7 @@ The operator supplies the destination (ADR 0013 threat model):
 
 ## State transitions (jobs, claims, migrations)
 
-When a ticket has a **Failure table** (`AGENTS.md`, one-way seams only), verify every transition against it:
+When a ticket has a **Failure table** (`docs/agents/landing.md`, one-way seams only), verify every transition against it:
 
 - **Claim token**: If a job claim exists, match the active claim token on completion writes and require `rowsAffected == 1`.
 - **Shutdown release**: If a job runs in the background, interrupt it on shutdown and release its claim for re-run.
