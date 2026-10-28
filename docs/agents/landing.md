@@ -44,6 +44,5 @@ CodeRabbit (`.coderabbit.yaml`) is the only hosted reviewer; OpenCodeReview runs
 2. **Summary**: the problem, then a before/after sketch of the state or data flow in a `diff` or `text` block.
 3. **Evidence**: before, then after, in the tests (their names as sentences) and in the browser (what you clicked and saw), or `No UI change`.
 4. **Merge Danger**: the door, the blast radius, known limits, and what was left out of scope.
-5. End with `🤖 Generated with [Claude Code](https://claude.com/claude-code)`.
 
 If work outside the seam remains, end your hand-off with one question: "Fix X too?"
