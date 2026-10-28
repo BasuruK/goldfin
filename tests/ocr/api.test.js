@@ -31,7 +31,14 @@ describe('submitOcr', () => {
     assert.deepEqual(result, { content: 'Hello', pages: 2 });
   });
 
-  it('maps timeout and unreachable failures distinctly', async () => {
+  it('maps HTTP 408 and 504 to timeout through the shared request core', async () => {
+    mock.method(globalThis, 'fetch', async () => jsonResponse(408, { message: 'internal detail' }));
+    await assert.rejects(submitOcr('c1', new File(['x'], 'a.pdf')), error => {
+      assert.ok(error instanceof OcrError);
+      assert.equal(error.kind, 'timeout');
+      assert.equal(error.message, 'OCR timed out.');
+      return true;
+    });
     mock.method(globalThis, 'fetch', async () => jsonResponse(504, { message: 'internal detail' }));
     await assert.rejects(submitOcr('c1', new File(['x'], 'a.pdf')), error => {
       assert.ok(error instanceof OcrError);
@@ -39,6 +46,24 @@ describe('submitOcr', () => {
       assert.equal(error.message, 'OCR timed out.');
       return true;
     });
+  });
+
+  it('maps caller abort to canceled through the shared request core', async () => {
+    mock.method(globalThis, 'fetch', async (/** @type {string} */ _url, /** @type {RequestInit} */ init) => {
+      assert.ok(init?.signal instanceof AbortSignal);
+      throw new DOMException('The operation was aborted.', 'AbortError');
+    });
+    await assert.rejects(
+      submitOcr('c1', new File(['x'], 'a.pdf'), new AbortController().signal),
+      error => {
+      assert.ok(error instanceof OcrError);
+      assert.equal(error.kind, 'canceled');
+      assert.equal(error.message, 'OCR was canceled.');
+      return true;
+    });
+  });
+
+  it('maps unavailable and unreachable failures distinctly', async () => {
     mock.method(globalThis, 'fetch', async () => jsonResponse(503, { message: 'raw db detail' }));
     await assert.rejects(submitOcr('c1', new File(['x'], 'a.pdf')), error => {
       assert.ok(error instanceof OcrError);

@@ -3,6 +3,8 @@
  * only in that request and is never persisted here.
  */
 
+import { fetchApiRequest } from './request-core.js';
+
 export const CONNECTORS_PATH = '/api/v1/connectors';
 
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -34,25 +36,13 @@ const MESSAGES = {
  * @returns {Promise<Record<string, unknown>>}
  */
 async function requestJSON(path, init = {}) {
-  let response;
-  try {
-    response = await fetch(path, { ...init, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
-  } catch (error) {
-    const kind = error instanceof Error && error.name === 'TimeoutError' ? 'timeout' : 'unreachable';
-    throw new ApiError(kind, MESSAGES[kind]);
-  }
-  /** @type {unknown} */
-  let body = null;
-  try {
-    body = await response.json();
-  } catch {
-    body = null;
-  }
-  const record = body && typeof body === 'object' ? /** @type {Record<string, unknown>} */ (body) : null;
-  if (!response.ok) {
-    if (response.status >= 500) throw new ApiError('unavailable', MESSAGES.unavailable);
-    throw new ApiError('rejected', typeof record?.message === 'string' ? record.message : MESSAGES.rejected);
-  }
+  const { record } = await fetchApiRequest({
+    path,
+    init,
+    timeoutMs: REQUEST_TIMEOUT_MS,
+    messages: MESSAGES,
+    createError: (kind, message) => new ApiError(/** @type {ApiErrorKind} */ (kind), message)
+  });
   if (!record) throw new ApiError('malformed', MESSAGES.malformed);
   return record;
 }
