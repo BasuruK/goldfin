@@ -24,7 +24,6 @@ export function applyConnectorPatch(record, patch) {
   if (!changed) return { ...record, ...patch };
   return {
     ...record, ...patch,
-    connectionStatus: 'idle', connectionMessage: '', lastCheckedAt: null, checkRequestId: null,
     catalogState: 'idle', catalogMessage: '',
     models: (record.models ?? []).map(model => ({ ...model, verified: false })),
     discoveryRevision: (record.discoveryRevision ?? 0) + 1
