@@ -3,26 +3,51 @@
  * only in that request and is never persisted here.
  */
 
-import { fetchApiRequest } from './request-core.js';
+import { fetchApiRequest } from './request-core.ts';
 
 export const CONNECTORS_PATH = '/api/v1/connectors';
 
 const REQUEST_TIMEOUT_MS = 10_000;
 
-/** @typedef {'timeout' | 'unreachable' | 'rejected' | 'unavailable' | 'malformed'} ApiErrorKind */
-/** @typedef {{ id: string, name: string, providerType: string, baseUrl: string, apiVersion?: string, credentialLabel?: string, credentialSetAt?: string }} SavedConnector */
-/** @typedef {{ name: string, providerType: string, baseUrl: string, apiVersion?: string, credential: string, credentialLabel: string }} SaveDraft */
+export type ApiErrorKind = 'timeout' | 'unreachable' | 'rejected' | 'unavailable' | 'malformed';
+
+export interface SavedConnector {
+  id: string;
+  name: string;
+  providerType: string;
+  baseUrl: string;
+  apiVersion?: string;
+  credentialLabel?: string;
+  credentialSetAt?: string;
+}
+
+export interface SaveDraft {
+  name: string;
+  providerType: string;
+  baseUrl: string;
+  apiVersion?: string;
+  credential: string;
+  credentialLabel: string;
+}
+
+type DraftValidationField = 'name' | 'baseUrl' | 'credential' | 'credentialLabel';
+
+export interface DraftValidationError {
+  field: DraftValidationField;
+  message: string;
+}
 
 export class ApiError extends Error {
-  /** @param {ApiErrorKind} kind @param {string} message */
-  constructor(kind, message) {
+  kind: ApiErrorKind;
+
+  constructor(kind: ApiErrorKind, message: string) {
     super(message);
     this.name = 'ApiError';
     this.kind = kind;
   }
 }
 
-const MESSAGES = {
+const MESSAGES: Record<ApiErrorKind, string> = {
   timeout: 'The request timed out. Try again.',
   unreachable: 'Could not reach the API. Check that Goldfin is running, then try again.',
   unavailable: 'Goldfin is unavailable right now. Try again.',
@@ -30,27 +55,60 @@ const MESSAGES = {
   rejected: 'The Connector was rejected.'
 };
 
-/**
- * @param {string} path
- * @param {RequestInit} [init]
- * @returns {Promise<Record<string, unknown>>}
- */
-async function requestJSON(path, init = {}) {
+function isApiErrorKind(kind: string): kind is ApiErrorKind {
+  return kind in MESSAGES;
+}
+
+function isJsonRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+async function requestJSON(path: string, init: RequestInit = {}): Promise<Record<string, unknown>> {
   const { record } = await fetchApiRequest({
     path,
     init,
     timeoutMs: REQUEST_TIMEOUT_MS,
     messages: MESSAGES,
-    createError: (kind, message) => new ApiError(/** @type {ApiErrorKind} */ (kind), message)
+    createError: (kind, message) =>
+      new ApiError(isApiErrorKind(kind) ? kind : 'malformed', message)
   });
   if (!record) throw new ApiError('malformed', MESSAGES.malformed);
   return record;
 }
 
-/** @param {SaveDraft} draft @returns {Promise<SavedConnector>} */
-export async function createConnector(draft) {
-  /** @type {Record<string, string>} */
-  const payload = { name: draft.name.trim(), providerType: draft.providerType, baseUrl: draft.baseUrl.trim() };
+function optionalStringField(body: Record<string, unknown>, key: string): string | undefined {
+  if (!(key in body)) return undefined;
+  const value = body[key];
+  if (typeof value !== 'string') throw new ApiError('malformed', MESSAGES.malformed);
+  return value;
+}
+
+function parseSavedConnector(body: Record<string, unknown>): SavedConnector {
+  if (typeof body.id !== 'string' || body.id === '') throw new ApiError('malformed', MESSAGES.malformed);
+  if (typeof body.name !== 'string') throw new ApiError('malformed', MESSAGES.malformed);
+  if (typeof body.providerType !== 'string') throw new ApiError('malformed', MESSAGES.malformed);
+  if (typeof body.baseUrl !== 'string') throw new ApiError('malformed', MESSAGES.malformed);
+  const connector: SavedConnector = {
+    id: body.id,
+    name: body.name,
+    providerType: body.providerType,
+    baseUrl: body.baseUrl
+  };
+  const apiVersion = optionalStringField(body, 'apiVersion');
+  if (apiVersion !== undefined) connector.apiVersion = apiVersion;
+  const credentialLabel = optionalStringField(body, 'credentialLabel');
+  if (credentialLabel !== undefined) connector.credentialLabel = credentialLabel;
+  const credentialSetAt = optionalStringField(body, 'credentialSetAt');
+  if (credentialSetAt !== undefined) connector.credentialSetAt = credentialSetAt;
+  return connector;
+}
+
+export async function createConnector(draft: SaveDraft): Promise<SavedConnector> {
+  const payload: Record<string, string> = {
+    name: draft.name.trim(),
+    providerType: draft.providerType,
+    baseUrl: draft.baseUrl.trim()
+  };
   if (draft.providerType === 'azure_document_intelligence' && draft.apiVersion?.trim()) {
     payload.apiVersion = draft.apiVersion.trim();
   }
@@ -63,23 +121,22 @@ export async function createConnector(draft) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
-  if (typeof body.id !== 'string' || body.id === '') throw new ApiError('malformed', MESSAGES.malformed);
-  return /** @type {SavedConnector} */ (/** @type {unknown} */ (body));
+  return parseSavedConnector(body);
 }
 
-/** @returns {Promise<SavedConnector[]>} */
-export async function listConnectors() {
+export async function listConnectors(): Promise<SavedConnector[]> {
   const body = await requestJSON(CONNECTORS_PATH);
   if (!Array.isArray(body.connectors)) throw new ApiError('malformed', MESSAGES.malformed);
-  return body.connectors;
+  return body.connectors.map(item => {
+    if (!isJsonRecord(item)) throw new ApiError('malformed', MESSAGES.malformed);
+    return parseSavedConnector(item);
+  });
 }
 
 /**
  * Mirrors the API's rules so a rejection is field-level rather than opaque.
- * @param {SaveDraft} draft
- * @returns {{ field: 'name' | 'baseUrl' | 'credential' | 'credentialLabel', message: string } | null}
  */
-export function validateDraft(draft) {
+export function validateDraft(draft: SaveDraft): DraftValidationError | null {
   if (!draft.name.trim()) return { field: 'name', message: 'Name is required.' };
   if (draft.providerType === 'azure_document_intelligence') {
     if (!draft.credential.trim()) {
@@ -87,7 +144,7 @@ export function validateDraft(draft) {
     }
   }
   if (!draft.baseUrl.trim()) return { field: 'baseUrl', message: 'Base URL is required.' };
-  let url;
+  let url: URL;
   try {
     url = new URL(draft.baseUrl.trim());
   } catch {

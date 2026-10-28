@@ -6,10 +6,9 @@ import {
   createConnector,
   listConnectors,
   validateDraft
-} from '../../src/lib/connectors/api.js';
+} from '../../src/lib/connectors/api.ts';
 
-/** @param {number} status @param {unknown} body */
-function jsonResponse(status, body) {
+function jsonResponse(status: number, body: unknown) {
   return {
     ok: status >= 200 && status < 300,
     status,
@@ -20,14 +19,12 @@ function jsonResponse(status, body) {
   };
 }
 
-/** @param {(url: string, init?: RequestInit) => Promise<unknown>} impl */
-function mockFetch(impl) {
+function mockFetch(impl: (url: string, init?: RequestInit) => Promise<unknown>) {
   mock.method(globalThis, 'fetch', impl);
-  return /** @type {import('node:test').Mock<(...args: any[]) => any>} */ (/** @type {unknown} */ (globalThis.fetch));
+  return globalThis.fetch as typeof fetch & { mock: { calls: { arguments: unknown[] }[] } };
 }
 
-/** @param {Promise<unknown>} promise @param {string} kind */
-async function rejectsWith(promise, kind) {
+async function rejectsWith(promise: Promise<unknown>, kind: ApiError['kind']) {
   await assert.rejects(promise, error => {
     assert.ok(error instanceof ApiError);
     assert.equal(error.kind, kind);
@@ -51,7 +48,7 @@ describe('createConnector', () => {
   it('posts only the API fields, omits an absent Credential, and returns the saved Connector', async () => {
     const fetchMock = mockFetch(async () => jsonResponse(201, saved));
     assert.deepEqual(await createConnector({ ...draft, name: ' Gateway ' }), saved);
-    const [url, init] = fetchMock.mock.calls[0].arguments;
+    const [url, init] = fetchMock.mock.calls[0].arguments as [string, RequestInit];
     assert.equal(url, CONNECTORS_PATH);
     assert.equal(init?.method, 'POST');
     assert.deepEqual(JSON.parse(String(init?.body)), {
@@ -65,14 +62,16 @@ describe('createConnector', () => {
   it('omits apiVersion for web_request even when a draft still carries one', async () => {
     const fetchMock = mockFetch(async () => jsonResponse(201, saved));
     await createConnector({ ...draft, apiVersion: '2024-11-30' });
-    const body = JSON.parse(String(fetchMock.mock.calls[0].arguments[1]?.body));
+    const init = fetchMock.mock.calls[0].arguments[1] as RequestInit | undefined;
+    const body = JSON.parse(String(init?.body));
     assert.equal(body.apiVersion, undefined);
   });
 
   it('sends Credential bytes untouched with their trimmed label', async () => {
     const fetchMock = mockFetch(async () => jsonResponse(201, { ...saved, credentialLabel: 'Prod key' }));
     await createConnector({ ...draft, credential: ' tok en ', credentialLabel: ' Prod key ' });
-    const body = JSON.parse(String(fetchMock.mock.calls[0].arguments[1]?.body));
+    const init = fetchMock.mock.calls[0].arguments[1] as RequestInit | undefined;
+    const body = JSON.parse(String(init?.body));
     assert.equal(body.credential, ' tok en ');
     assert.equal(body.credentialLabel, 'Prod key');
   });
@@ -97,12 +96,18 @@ describe('createConnector', () => {
     await rejectsWith(createConnector(draft), 'malformed');
     mockFetch(async () => jsonResponse(201, { id: 7 }));
     await rejectsWith(createConnector(draft), 'malformed');
+    mockFetch(async () => jsonResponse(201, { id: 'c1', name: 'Gateway', providerType: 'web_request' }));
+    await rejectsWith(createConnector(draft), 'malformed');
   });
 
   it('maps a network failure to unreachable and a timeout to timeout', async () => {
-    mockFetch(async () => { throw new TypeError('fetch failed'); });
+    mockFetch(async () => {
+      throw new TypeError('fetch failed');
+    });
     await rejectsWith(createConnector(draft), 'unreachable');
-    mockFetch(async () => { throw new DOMException('timed out', 'TimeoutError'); });
+    mockFetch(async () => {
+      throw new DOMException('timed out', 'TimeoutError');
+    });
     await rejectsWith(createConnector(draft), 'timeout');
   });
 });
@@ -112,6 +117,13 @@ describe('listConnectors', () => {
     mockFetch(async () => jsonResponse(200, { connectors: [saved] }));
     assert.deepEqual(await listConnectors(), [saved]);
     mockFetch(async () => jsonResponse(200, { connectors: null }));
+    await rejectsWith(listConnectors(), 'malformed');
+  });
+
+  it('rejects a list entry missing required Connector fields', async () => {
+    mockFetch(async () => jsonResponse(200, { connectors: [{ id: 'c1' }] }));
+    await rejectsWith(listConnectors(), 'malformed');
+    mockFetch(async () => jsonResponse(200, { connectors: [saved, 'not-a-record'] }));
     await rejectsWith(listConnectors(), 'malformed');
   });
 });

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { mockConnectorApi, selectProvider } from './support.js';
 
 const savedConnector = {
@@ -9,8 +9,7 @@ const savedConnector = {
   credentialLabel: 'Prod key'
 };
 
-/** @param {import('@playwright/test').Page} page */
-async function openWebRequestDraft(page) {
+async function openWebRequestDraft(page: Page) {
   await page.getByRole('button', { name: 'Add connector', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await selectProvider(dialog, 'Web Request');

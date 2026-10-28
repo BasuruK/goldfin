@@ -1,17 +1,16 @@
-<script>
+<script lang="ts">
   import { Button, Input, Switch } from '$goldfin/lib/index.js';
   import { isCatalogEditable } from './models.js';
   import { addDraftModel, previewDraftModels, setDraftModelEnabled } from './store.svelte.js';
+  import type { ConnectorRecord } from './storage.js';
 
-  /** @type {{ record: import('./storage.js').ConnectorRecord }} */
-  let { record } = $props();
+  let { record }: { record: ConnectorRecord } = $props();
   let manualId = $state('');
   const models = $derived(record.models ?? []);
   const enabledCount = $derived(models.filter(model => model.enabled).length);
   const editable = $derived(isCatalogEditable(record));
 
-  /** @param {Event} event */
-  function addModel(event) {
+  function addModel(event: SubmitEvent): void {
     event.preventDefault();
     addDraftModel(manualId);
     manualId = '';
@@ -39,7 +38,7 @@
           </th>
           <td class="model-toggle-cell">
             <Switch size="sm" label={model.id} checked={model.enabled} disabled={!editable}
-                    onCheckedChange={(/** @type {boolean} */ checked) => setDraftModelEnabled(model.id, checked)} />
+                    onCheckedChange={(checked: boolean) => setDraftModelEnabled(model.id, checked)} />
           </td>
         </tr>
       {:else}

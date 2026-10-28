@@ -2,52 +2,42 @@
  * Shared fetch transport for frontend API clients (CODING_STANDARDS Frontend async).
  */
 
-/**
- * @param {number} timeoutMs
- * @param {AbortSignal | undefined} callerSignal
- * @returns {AbortSignal}
- */
-function requestSignal(timeoutMs, callerSignal) {
+function requestSignal(timeoutMs: number, callerSignal: AbortSignal | undefined): AbortSignal {
   const timeoutSignal = AbortSignal.timeout(timeoutMs);
   if (!callerSignal) return timeoutSignal;
   return AbortSignal.any([callerSignal, timeoutSignal]);
 }
 
-/**
- * @param {Response} response
- * @returns {Promise<Record<string, unknown> | null>}
- */
-async function readJsonRecord(response) {
-  /** @type {unknown} */
-  let body = null;
+async function readJsonRecord(response: Response): Promise<Record<string, unknown> | null> {
+  let body: unknown = null;
   try {
     body = await response.json();
   } catch {
     body = null;
   }
-  return body && typeof body === 'object' ? /** @type {Record<string, unknown>} */ (body) : null;
+  if (body && typeof body === 'object') {
+    return body as Record<string, unknown>;
+  }
+  return null;
 }
 
-/**
- * @typedef {Object} FetchApiRequestOptions
- * @property {string} path
- * @property {RequestInit} init
- * @property {number} timeoutMs
- * @property {AbortSignal} [callerSignal]
- * @property {Record<string, string>} messages
- * @property {(kind: string, message: string) => Error} createError
- * @property {string} [canceledKind]
- * @property {string} [canceledMessage]
- * @property {boolean} [httpTimeoutStatuses]
- * @property {(status: number) => string} [statusMessage]
- */
+export interface FetchApiRequestOptions {
+  path: string;
+  init: RequestInit;
+  timeoutMs: number;
+  callerSignal?: AbortSignal;
+  messages: Record<string, string>;
+  createError: (kind: string, message: string) => Error;
+  canceledKind?: string;
+  canceledMessage?: string;
+  httpTimeoutStatuses?: boolean;
+  statusMessage?: (status: number) => string;
+}
 
-/**
- * @param {FetchApiRequestOptions} options
- * @returns {Promise<{ response: Response, record: Record<string, unknown> | null }>}
- */
-export async function fetchApiRequest(options) {
-  let response;
+export async function fetchApiRequest(
+  options: FetchApiRequestOptions
+): Promise<{ response: Response; record: Record<string, unknown> | null }> {
+  let response: Response;
   try {
     response = await fetch(options.path, {
       ...options.init,

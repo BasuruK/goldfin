@@ -1,14 +1,13 @@
-<script>
+<script lang="ts">
   import { Icon } from '$goldfin/lib/index.js';
   import { providerByType } from './providers.js';
+  import type { SavedConnector } from './api.js';
 
-  /** @type {{ connector: import('./api.js').SavedConnector }} */
-  let { connector } = $props();
+  let { connector }: { connector: SavedConnector } = $props();
 
-  const provider = $derived(providerByType(/** @type {import('./providers.js').ProviderType} */ (connector.providerType)));
+  const provider = $derived(providerByType(connector.providerType));
 
-  /** @param {string} url */
-  function hostFromUrl(url) {
+  function hostFromUrl(url: string): string {
     try {
       return new URL(url).host;
     } catch {

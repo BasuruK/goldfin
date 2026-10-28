@@ -1,4 +1,4 @@
-import { CONNECTORS_PATH } from '../src/lib/connectors/api.js';
+import { CONNECTORS_PATH } from '../src/lib/connectors/api.ts';
 import { OCR_PATH } from '../src/lib/ocr/api.js';
 
 /** @param {number | undefined} ms */
@@ -23,7 +23,7 @@ export async function boxOf(locator) {
  * reply back, for late-reply specs.
  * @param {import('@playwright/test').Page} page
  * @param {object} [options]
- * @param {import('../src/lib/connectors/api.js').SavedConnector[]} [options.saved]
+ * @param {import('../src/lib/connectors/api.ts').SavedConnector[]} [options.saved]
  * @param {{ status: number, message: string }} [options.reject]
  * @param {number} [options.saveDelayMs]
  */
@@ -41,7 +41,7 @@ export async function mockConnectorApi(page, options = {}) {
     state.posts.push(body);
     await mockRouteDelay(options.saveDelayMs);
     if (options.reject) return route.fulfill({ status: options.reject.status, json: { message: options.reject.message } });
-    /** @type {import('../src/lib/connectors/api.js').SavedConnector} */
+    /** @type {import('../src/lib/connectors/api.ts').SavedConnector} */
     const saved = {
       id: `c${state.posts.length}`,
       name: body.name,
