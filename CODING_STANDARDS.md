@@ -15,6 +15,17 @@ The operator supplies the destination (ADR 0013 threat model):
 - **URL construction**: Build URLs exclusively with `url.Parse` and `JoinPath`.
 - **Response shape**: Treat a malformed model response as a scored result, not a reason to retry (ADR 0003).
 
+## Go nil & error handling
+
+- **Validate only at public boundaries**: Nil-check at JSON unmarshal, `multipart` parts, and `pgx` scans. Trust constructor output and structs passed by value. On a slice or `[]byte`, use `len()`, not `!= nil`.
+- **Check once, delete the echo**: Do not re-check a value that this function already nil-checked, that a constructor validated, or that `pgx` scanned non-NULL two lines above. A guard kept as insurance against a value already proven is noise.
+- **Delete a guard only when the guarantee is structural**: "An earlier function checks it" is not a guarantee — Go has no non-null type, and any new caller can pass `nil` without a compile error. Remove the guard only when the guarantee is enforced by an unexported type with a validating constructor, a non-pointer value, or a single caller. Otherwise keep it and make the guarantee structural first.
+- **Nil is not a sentinel**: Never use `nil` to mean "absent" or "not yet set" when a zero-length value is legal, because a reader of zero bytes returns an empty, non-nil slice. Use an explicit `bool`.
+- **Collapse untrusted errors at the outbound boundary**: Map transport and provider errors to a fixed message (`requestFailure`). Never `%w`-wrap an error whose text can carry a DSN, a URL with its query, or a Credential (Outbound HTTP above, ADR 0013).
+- **Wrap with `%w` only for chain inspection**: Wrap where a caller inspects the cause with `errors.Is`/`errors.As`, and where neither the DSN nor the Credential can reach the message.
+- **Never log and continue**: Return or collapse an error at once; never carry on with partial state.
+- **No `recover()`**: Let a panic fail the process. A top-level HTTP middleware is the only place recovery is allowed.
+
 ## State transitions (jobs, claims, migrations)
 
 When a ticket has a **Failure table** (`AGENTS.md`, one-way seams only), verify every transition against it:

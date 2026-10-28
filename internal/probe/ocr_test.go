@@ -156,6 +156,7 @@ func TestOCRProbeRejectsInvalidRequests(t *testing.T) {
 		return nil, nil
 	}))
 	webID := createWebConnector(t, h)
+	azureID := createAzureConnector(t, h)
 	for _, tc := range []struct {
 		name string
 		req  *http.Request
@@ -176,6 +177,40 @@ func TestOCRProbeRejectsInvalidRequests(t *testing.T) {
 			writer := multipart.NewWriter(&buf)
 			_ = writer.WriteField("connectorId", webID)
 			_ = writer.WriteField("credential", testCredential)
+			_ = writer.Close()
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/probes/ocr", &buf)
+			req.Header.Set("Content-Type", writer.FormDataContentType())
+			return req
+		}()},
+		{"duplicate_connector_id", func() *http.Request {
+			var buf bytes.Buffer
+			writer := multipart.NewWriter(&buf)
+			_ = writer.WriteField("connectorId", azureID)
+			_ = writer.WriteField("connectorId", azureID)
+			_ = writer.WriteField("document", string(syntheticPDFDocument()))
+			_ = writer.Close()
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/probes/ocr", &buf)
+			req.Header.Set("Content-Type", writer.FormDataContentType())
+			return req
+		}()},
+		// An empty first part must still count as "seen"; a non-empty check would accept the second.
+		{"empty_then_duplicate_connector_id", func() *http.Request {
+			var buf bytes.Buffer
+			writer := multipart.NewWriter(&buf)
+			_ = writer.WriteField("connectorId", "")
+			_ = writer.WriteField("connectorId", azureID)
+			_ = writer.WriteField("document", string(syntheticPDFDocument()))
+			_ = writer.Close()
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/probes/ocr", &buf)
+			req.Header.Set("Content-Type", writer.FormDataContentType())
+			return req
+		}()},
+		{"duplicate_document", func() *http.Request {
+			var buf bytes.Buffer
+			writer := multipart.NewWriter(&buf)
+			_ = writer.WriteField("connectorId", azureID)
+			_ = writer.WriteField("document", string(syntheticPDFDocument()))
+			_ = writer.WriteField("document", string(syntheticPDFDocument()))
 			_ = writer.Close()
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/probes/ocr", &buf)
 			req.Header.Set("Content-Type", writer.FormDataContentType())

@@ -62,6 +62,8 @@ func (h *ocrHandler) serveOCR(w http.ResponseWriter, r *http.Request) {
 	var connectorID string
 	var document []byte
 	var documentMIME string
+	connectorIDSeen := false
+	documentSeen := false
 	for {
 		part, err := reader.NextPart()
 		if errors.Is(err, io.EOF) {
@@ -74,18 +76,20 @@ func (h *ocrHandler) serveOCR(w http.ResponseWriter, r *http.Request) {
 		name := part.FormName()
 		switch name {
 		case "connectorId":
-			if connectorID != "" {
+			if connectorIDSeen {
 				writeJSON(w, http.StatusBadRequest, map[string]string{"message": "Invalid OCR request."})
 				return
 			}
+			connectorIDSeen = true
 			var data []byte
 			data, err = readBoundedBytes(part, 256)
 			connectorID = string(data)
 		case "document":
-			if document != nil {
+			if documentSeen {
 				writeJSON(w, http.StatusBadRequest, map[string]string{"message": "Invalid OCR request."})
 				return
 			}
+			documentSeen = true
 			documentMIME = strings.TrimSpace(part.Header.Get("Content-Type"))
 			document, err = readBoundedBytes(part, maxDocumentBytes)
 		default:
