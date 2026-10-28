@@ -3,6 +3,8 @@
  * may run for up to five minutes.
  */
 
+import { fetchApiRequest } from '../connectors/request-core.js';
+
 export const OCR_PATH = '/api/v1/probes/ocr';
 
 /** Route processing budget (5m) plus server write headroom. */
@@ -18,16 +20,6 @@ export class OcrError extends Error {
     this.name = 'OcrError';
     this.kind = kind;
   }
-}
-
-/**
- * @param {AbortSignal | undefined} callerSignal
- * @returns {AbortSignal}
- */
-function ocrRequestSignal(callerSignal) {
-  const timeoutSignal = AbortSignal.timeout(OCR_REQUEST_TIMEOUT_MS);
-  if (!callerSignal) return timeoutSignal;
-  return AbortSignal.any([callerSignal, timeoutSignal]);
 }
 
 const MESSAGES = {
@@ -49,38 +41,18 @@ export async function submitOcr(connectorId, document, signal) {
   const form = new FormData();
   form.set('connectorId', connectorId);
   form.set('document', document, document.name);
-  let response;
-  try {
-    response = await fetch(OCR_PATH, {
-      method: 'POST',
-      body: form,
-      signal: ocrRequestSignal(signal)
-    });
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new OcrError('canceled', MESSAGES.canceled);
-    }
-    const kind = error instanceof Error && error.name === 'TimeoutError' ? 'timeout' : 'unreachable';
-    throw new OcrError(kind, MESSAGES[kind]);
-  }
-  /** @type {unknown} */
-  let body = null;
-  try {
-    body = await response.json();
-  } catch {
-    body = null;
-  }
-  const record = body && typeof body === 'object' ? /** @type {Record<string, unknown>} */ (body) : null;
-  if (!response.ok) {
-    if (response.status === 408 || response.status === 504) {
-      throw new OcrError('timeout', mapStatus(response.status));
-    }
-    if (response.status >= 500) {
-      throw new OcrError('unavailable', mapStatus(response.status));
-    }
-    const message = typeof record?.message === 'string' ? record.message : mapStatus(response.status);
-    throw new OcrError('rejected', message);
-  }
+  const { record } = await fetchApiRequest({
+    path: OCR_PATH,
+    init: { method: 'POST', body: form },
+    timeoutMs: OCR_REQUEST_TIMEOUT_MS,
+    callerSignal: signal,
+    canceledKind: 'canceled',
+    canceledMessage: MESSAGES.canceled,
+    messages: MESSAGES,
+    createError: (kind, message) => new OcrError(/** @type {OcrErrorKind} */ (kind), message),
+    httpTimeoutStatuses: true,
+    statusMessage: mapStatus
+  });
   if (typeof record?.content !== 'string' || typeof record?.pages !== 'number') {
     throw new OcrError('malformed', MESSAGES.malformed);
   }
