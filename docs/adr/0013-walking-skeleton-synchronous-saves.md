@@ -52,5 +52,5 @@ These are expensive or impossible to add after the fact, so they hold now:
 - **The staged-Save schema is dropped, not migrated.** It only ever held loopback development data.
 - **The ADR 0005 invariant narrows**: the `api` encrypts and never decrypts. "Only the worker decrypts" returns with the worker.
 - **A broken Connector is found by its first Run**, not at save. Every Run records what it called, so this is visible rather than silent.
-- **Process**: `AGENTS.md` classifies each seam as a one-way or two-way door. Failure tables and the full review trio
+- **Process**: `docs/agents/landing.md` classifies each seam as a one-way or two-way door. Failure tables and the full review trio
   apply only to one-way seams, and no infrastructure seam ships before the walking-skeleton golden test passes.
