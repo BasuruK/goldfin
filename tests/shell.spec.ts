@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator } from '@playwright/test';
 import { boxOf } from './support.js';
 
 /* The shell's own behaviour: focus return, theme application and the boundary
@@ -97,8 +97,7 @@ test('the theme button is compact, not stretched across the menu', async ({ page
   expect(button.width).toBeLessThan(menuBox.width / 2);
   // Start-aligned so it shares an optical line with the Settings icon below.
   // Compared on the glyphs, not the borders: the row below has its own pad.
-  /** @param {import('@playwright/test').Locator} locator */
-  const centre = async locator => {
+  const centre = async (locator: Locator) => {
     const box = await boxOf(locator);
     return box.x + box.width / 2;
   };
@@ -126,14 +125,12 @@ test('the collapsed rail centres every icon on the rail', async ({ page }) => {
     .toBe(64);
 
   const centres = await page.evaluate(() => {
-    /** @param {string} selector */
-    const find = selector => {
+    const find = (selector: string) => {
       const el = document.querySelector(selector);
       if (!el) throw new Error(`${selector} is missing`);
       return el;
     };
-    /** @param {Element} el */
-    const mid = el => {
+    const mid = (el: Element) => {
       const r = el.getBoundingClientRect();
       return +(r.x + r.width / 2).toFixed(1);
     };
@@ -228,8 +225,7 @@ test('the rail text exits on a transition rather than being removed from the DOM
     const toggle = document.querySelector('#primary-nav .brand > .btn-slot > .btn');
     if (!node || !(toggle instanceof HTMLElement)) throw new Error('nav label or brand toggle is missing');
     toggle.click();
-    /** @type {number[]} */
-    const seen = [];
+    const seen: number[] = [];
     for (let i = 0; i < 20; i++) {
       await new Promise(r => requestAnimationFrame(r));
       seen.push(+getComputedStyle(node).opacity);
@@ -323,13 +319,11 @@ test.describe('on a touch device', () => {
 /* The clickable area of a control, including any pseudo-element that extends it.
    `.nav-pill` and the toggle keep a small visible box and a larger target, so
    the visible box alone under-reports what the user can actually press. */
-/** @param {import('@playwright/test').Locator} locator */
-async function hitArea(locator) {
+async function hitArea(locator: Locator): Promise<{ width: number; height: number }> {
   return locator.evaluate(node => {
     const r = node.getBoundingClientRect();
     const after = getComputedStyle(node, '::after');
-    /** @param {string} value */
-    const px = value => parseFloat(value) || 0;
+    const px = (value: string) => parseFloat(value) || 0;
     return {
       width: r.width - px(after.left) - px(after.right),
       height: r.height - px(after.top) - px(after.bottom)

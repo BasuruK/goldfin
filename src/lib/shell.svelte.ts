@@ -7,8 +7,7 @@ import { browser } from '$app/env';
 
    Storage throws in a locked-down profile, and this module is also evaluated
    while prerendering, where there is no window at all. */
-/** @param {string} key @param {string} fallback */
-const read = (key, fallback) => {
+const read = (key: string, fallback: string): string => {
   if (!browser) return fallback;
   try {
     return localStorage.getItem(key) ?? fallback;
@@ -22,7 +21,39 @@ const read = (key, fallback) => {
    if you move this number, move those two with it. */
 const MOBILE_MAX = 767;
 
-export const SIDES = [
+type ShellTheme = 'light' | 'dark';
+type SidebarMode = 'expanded' | 'collapsed';
+
+interface ShellState {
+  theme: ShellTheme;
+  sidebarMode: SidebarMode;
+  mobile: boolean;
+  drawerOpen: boolean;
+  profileOpen: boolean;
+  integrationsOpen: boolean;
+  integrationsAnimate: boolean;
+}
+
+interface ShellHandles {
+  sidebarToggle: HTMLElement | null;
+  sidebar: HTMLElement | null;
+  profileButton: HTMLElement | null;
+}
+
+type NavIcon = 'home' | 'file' | 'plug';
+
+interface NavItem {
+  href: string;
+  label: string;
+  icon: NavIcon;
+}
+
+interface NavGroup {
+  label?: string;
+  items: NavItem[];
+}
+
+export const SIDES: ReadonlyArray<{ value: SidebarMode; label: string }> = [
   { value: 'expanded', label: 'Expanded' },
   { value: 'collapsed', label: 'Collapsed' }
 ];
@@ -30,14 +61,13 @@ export const SIDES = [
 /* Nav is grouped so the sidebar can head each block with a separator. The group
    label is not a second source of truth for what exists — only the sections
    below decide that. */
-/** @param {string} pathname */
-export function isGroupedNavPath(pathname) {
+export function isGroupedNavPath(pathname: string): boolean {
   return NAV.some(
     group => group.label && group.items.some(item => pathname.startsWith(item.href))
   );
 }
 
-export const NAV = [
+export const NAV: NavGroup[] = [
   { items: [{ href: '/', label: 'Home', icon: 'home' }] },
   {
     label: 'Integrations',
@@ -48,7 +78,7 @@ export const NAV = [
   }
 ];
 
-export const shell = $state({
+export const shell = $state<ShellState>({
   theme: read('goldfin.theme', 'dark') === 'light' ? 'light' : 'dark',
   sidebarMode: read('goldfin.sidebar', 'expanded') === 'collapsed' ? 'collapsed' : 'expanded',
   mobile: false,
@@ -60,16 +90,19 @@ export const shell = $state({
 
 /* Svelte will not export derived state from a module, so this stays a function.
    It is the one place that decides what a collapsed sidebar means. */
-function isExpanded() {
+function isExpanded(): boolean {
   return shell.sidebarMode === 'expanded';
 }
 
 /* The shell's own DOM handles. They exist so focus can go back where it came
    from, and so no route has to know they exist. */
-/** @type {{ sidebarToggle: HTMLElement | null, sidebar: HTMLElement | null, profileButton: HTMLElement | null }} */
-export const handles = $state({ sidebarToggle: null, sidebar: null, profileButton: null });
+export const handles = $state<ShellHandles>({
+  sidebarToggle: null,
+  sidebar: null,
+  profileButton: null
+});
 
-function persist() {
+function persist(): void {
   if (!browser) return;
   try {
     localStorage.setItem('goldfin.theme', shell.theme);
@@ -83,14 +116,14 @@ function persist() {
    attribute before first paint. It is applied from here rather than as a side
    effect of the top-bar toggle, so the profile menu and the Settings route
    change it as well. */
-export function syncShell() {
+export function syncShell(): void {
   document.body.dataset.theme = shell.theme;
   persist();
 }
 
-export function trackViewport() {
+export function trackViewport(): () => void {
   const mq = matchMedia(`(max-width: ${MOBILE_MAX}px)`);
-  const sync = () => {
+  const sync = (): void => {
     shell.mobile = mq.matches;
     // Leaving the breakpoint closes the drawer, so it cannot survive as an
     // invisible overlay over a screen it was never opened on.
@@ -102,14 +135,14 @@ export function trackViewport() {
 }
 
 /* Opening the drawer puts focus inside it, where Escape can then close it. */
-export function focusSidebar() {
+export function focusSidebar(): void {
   handles.sidebar?.querySelector('button')?.focus();
 }
 
 /* Escape closes whatever is open and hands focus back to the control that opened
    it. With nothing open it does nothing at all, so it can never pull focus off
    whatever the user is actually typing into. */
-export function closeLayers({ restoreFocus = false } = {}) {
+export function closeLayers({ restoreFocus = false }: { restoreFocus?: boolean } = {}): void {
   const wasDrawer = shell.drawerOpen;
   const wasProfile = shell.profileOpen;
   if (!wasDrawer && !wasProfile) return;
@@ -124,7 +157,7 @@ export function closeLayers({ restoreFocus = false } = {}) {
    below the breakpoint the rail is a drawer, so the same button opens it. When
    the drawer is closed from inside itself the control that opened it is off in
    the top bar, so focus has to go back there or it lands nowhere. */
-export function toggleSidebar() {
+export function toggleSidebar(): void {
   if (shell.mobile) {
     const wasOpen = shell.drawerOpen;
     shell.drawerOpen = !wasOpen;
@@ -134,14 +167,13 @@ export function toggleSidebar() {
   shell.sidebarMode = isExpanded() ? 'collapsed' : 'expanded';
 }
 
-export function toggleProfile() {
+export function toggleProfile(): void {
   shell.profileOpen = !shell.profileOpen;
   // A 64px rail cannot legibly host the submenu, so it opens the rail first.
   if (shell.profileOpen && !isExpanded() && !shell.mobile) shell.sidebarMode = 'expanded';
 }
 
-/** @param {{ detail: number }} event */
-export function toggleIntegrations(event) {
+export function toggleIntegrations(event: { detail: number }): void {
   shell.integrationsAnimate = event.detail > 0;
   if (!isExpanded() && !shell.mobile) {
     shell.sidebarMode = 'expanded';

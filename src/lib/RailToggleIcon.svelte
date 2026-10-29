@@ -1,7 +1,11 @@
-<script>
+<script lang="ts">
   /** Double chevron for the desktop rail toggle. `mirrored` points the pair right
    *  when the rail is collapsed (expand). */
-  let { mirrored = false } = $props();
+  interface Props {
+    mirrored?: boolean;
+  }
+
+  let { mirrored = false }: Props = $props();
 </script>
 
 <svg
