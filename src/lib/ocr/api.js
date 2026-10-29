@@ -3,7 +3,7 @@
  * may run for up to five minutes.
  */
 
-import { fetchApiRequest } from '../connectors/request-core.js';
+import { fetchApiRequest } from '../connectors/request-core.ts';
 
 export const OCR_PATH = '/api/v1/probes/ocr';
 

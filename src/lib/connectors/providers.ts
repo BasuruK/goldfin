@@ -1,9 +1,20 @@
-/** @typedef {'openai' | 'azure' | 'openai_compatible' | 'web_request' | 'azure_document_intelligence'} ProviderType */
+export type ProviderType =
+  | 'openai'
+  | 'azure'
+  | 'openai_compatible'
+  | 'web_request'
+  | 'azure_document_intelligence';
 
-/** @typedef {{ value: ProviderType, label: string, description: string, defaultBaseUrl: string, icon: string, modelProbePath?: string }} ProviderOption */
+export interface ProviderOption {
+  value: ProviderType;
+  label: string;
+  description: string;
+  defaultBaseUrl: string;
+  icon: string;
+  modelProbePath?: string;
+}
 
-/** @type {readonly ProviderOption[]} */
-const PROVIDERS = [
+const PROVIDERS: readonly ProviderOption[] = [
   {
     value: 'openai',
     label: 'OpenAI',
@@ -47,28 +58,26 @@ export const AZURE_OCR_PROVIDER_TYPE = 'azure_document_intelligence';
 
 export const DEFAULT_AZURE_OCR_API_VERSION = '2024-11-30';
 
-/** @param {string} providerType */
-export function isSavableProvider(providerType) {
+export function isSavableProvider(providerType: string): boolean {
   return providerType === 'web_request' || providerType === AZURE_OCR_PROVIDER_TYPE;
 }
 
 /** The provider a new or unreadable Connector gets; `providerByType` falls back to the same one. */
 export const DEFAULT_PROVIDER_TYPE = PROVIDERS[0].value;
 
-/** @param {ProviderType} type */
-export function providerByType(type) {
+export function providerByType(type: string): ProviderOption {
   return PROVIDERS.find(p => p.value === type) ?? PROVIDERS[0];
 }
 
-/** @param {ProviderType} type */
-export function defaultBaseUrlFor(type) {
+export function defaultBaseUrlFor(type: ProviderType): string {
   return providerByType(type).defaultBaseUrl;
 }
 
-/** @param {ProviderType} type */
-export function defaultNameFor(type) {
+export function defaultNameFor(type: ProviderType): string {
   return providerByType(type).label;
 }
 
-/** @type {readonly { value: ProviderType, label: string }[]} */
-export const PROVIDER_SELECT_ITEMS = PROVIDERS.map(p => ({ value: p.value, label: p.label }));
+export const PROVIDER_SELECT_ITEMS: readonly { value: ProviderType; label: string }[] = PROVIDERS.map(p => ({
+  value: p.value,
+  label: p.label
+}));

@@ -7,10 +7,9 @@ import {
   finishDiscovery,
   addManualModel,
   isCatalogEditable
-} from '../../src/lib/connectors/models.js';
-import { makeRecord } from './fixtures.js';
-
-/** @typedef {import('../../src/lib/connectors/storage.js').ConnectorRecord} ConnectorRecord */
+} from '../../src/lib/connectors/models.ts';
+import { makeRecord } from './fixtures.ts';
+import type { ConnectorRecord } from '../../src/lib/connectors/storage.ts';
 
 test('isCatalogEditable matches ready and unsupported only', () => {
   assert.equal(isCatalogEditable({ catalogState: 'ready' }), true);
@@ -20,13 +19,15 @@ test('isCatalogEditable matches ready and unsupported only', () => {
 
 test('changing connection details blocks model use but retains selections for refresh', () => {
   const record = makeRecord({
-    providerType: 'openai', baseUrl: 'https://example.com/v1', apiKey: 'test',
-    catalogState: 'ready', discoveryRevision: 1,
+    providerType: 'openai',
+    baseUrl: 'https://example.com/v1',
+    apiKey: 'test',
+    catalogState: 'ready',
+    discoveryRevision: 1,
     models: [{ id: 'model-a', enabled: true, source: 'discovered', verified: true }]
   });
   assert.deepEqual(availableModelIds(record), ['model-a']);
-  /** @type {Partial<ConnectorRecord>[]} */
-  const patches = [
+  const patches: Partial<ConnectorRecord>[] = [
     { baseUrl: 'https://other.example/v1' },
     { apiKey: 'changed' },
     { apiVersion: '2024-11-30' },
@@ -44,7 +45,10 @@ test('changing connection details blocks model use but retains selections for re
 
 test('refresh keeps matching selections and starts new models disabled', () => {
   const record = beginDiscovery(makeRecord({ models: [{ id: 'model-a', enabled: true, source: 'discovered' }] }));
-  const refreshed = finishDiscovery(record, record.discoveryRevision, { ids: ['model-a', 'model-b', 'model-a'], source: 'discovered' });
+  const refreshed = finishDiscovery(record, record.discoveryRevision, {
+    ids: ['model-a', 'model-b', 'model-a'],
+    source: 'discovered'
+  });
   assert.deepEqual(refreshed.models, [
     { id: 'model-a', enabled: true, source: 'discovered' },
     { id: 'model-b', enabled: false, source: 'discovered' }
@@ -75,8 +79,7 @@ test('sample and manual models never claim verified system access', () => {
 
 test('unsupported and failed discovery keep selections unavailable', () => {
   const loading = beginDiscovery(makeRecord({ models: [{ id: 'model-a', enabled: true, source: 'discovered' }] }));
-  /** @type {('unsupported' | 'failed')[]} */
-  const states = ['unsupported', 'failed'];
+  const states: ('unsupported' | 'failed')[] = ['unsupported', 'failed'];
   for (const state of states) {
     const result = finishDiscovery(loading, loading.discoveryRevision, { state, message: 'Try again' });
     assert.equal(result.catalogState, state);
@@ -94,7 +97,8 @@ test('being listed by a provider does not prove model access', () => {
 
 test('manual IDs become available only after verification and lose access on connection changes', () => {
   const record = makeRecord({
-    apiKey: 'test', catalogState: 'unsupported',
+    apiKey: 'test',
+    catalogState: 'unsupported',
     models: [{ id: 'deployment-a', enabled: true, source: 'manual', verified: true }]
   });
   assert.deepEqual(availableModelIds(record), ['deployment-a']);

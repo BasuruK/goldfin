@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { Dialog as Primitive } from 'bits-ui';
   import {
     DialogBody,
@@ -22,14 +22,15 @@
     DEFAULT_PROVIDER_TYPE,
     PROVIDER_SELECT_ITEMS,
     isSavableProvider,
-    providerByType
+    providerByType,
+    type ProviderType
   } from './providers.js';
+  import type { SaveErrorField } from './store.svelte.js';
 
   const record = $derived(connectorStore.draft);
   const provider = $derived(record ? providerByType(record.providerType) : null);
 
-  /** @type {import('./providers.js').ProviderType} */
-  let providerType = $state(DEFAULT_PROVIDER_TYPE);
+  let providerType = $state<ProviderType>(DEFAULT_PROVIDER_TYPE);
 
   $effect(() => {
     if (record) providerType = record.providerType;
@@ -40,13 +41,13 @@
     setDraftProviderType(providerType);
   });
 
-  /** @param {boolean} next */
-  function onOpenChange(next) {
+  function onOpenChange(next: boolean): void {
     if (!next) closeDialog();
   }
 
-  /** @param {string} field @param {Event} event */
-  function fieldInput(field, event) {
+  type DraftField = 'name' | 'baseUrl' | 'apiVersion' | 'apiKey' | 'credentialLabel';
+
+  function fieldInput(field: DraftField, event: Event): void {
     if (!record) return;
     const target = event.currentTarget;
     if (!(target instanceof HTMLInputElement)) return;
@@ -63,23 +64,12 @@
     && ((record?.catalogState ?? 'idle') !== 'idle' || (record?.models?.length ?? 0) > 0)
   );
 
-  /** @param {'name' | 'baseUrl' | 'credential' | 'credentialLabel'} field */
-  function fieldError(field) {
+  function fieldError(field: SaveErrorField): string {
     return connectorStore.saveErrorField === field ? connectorStore.saveError : '';
   }
 
   const generalSaveError = $derived(
     connectorStore.saveError && !connectorStore.saveErrorField ? connectorStore.saveError : ''
-  );
-
-  const apiKeyDescription = $derived(
-    !record
-      ? ''
-      : record.providerType === 'web_request'
-        ? 'Optional for public endpoints.'
-        : isAzureOcr
-          ? 'Required for Azure Document Intelligence.'
-          : ''
   );
 </script>
 
@@ -106,7 +96,7 @@
             <Input
               label="Name"
               value={record.name}
-              oninput={(/** @type {Event} */ e) => fieldInput('name', e)}
+              oninput={(e: Event) => fieldInput('name', e)}
               placeholder={provider.label}
               disabled={fieldsDisabled}
               error={fieldError('name')}
@@ -115,7 +105,7 @@
               label="Base URL"
               inlineMessage
               value={record.baseUrl}
-              oninput={(/** @type {Event} */ e) => fieldInput('baseUrl', e)}
+              oninput={(e: Event) => fieldInput('baseUrl', e)}
               type="url"
               autocomplete="off"
               spellcheck="false"
@@ -127,7 +117,7 @@
                 label="API version"
                 inlineMessage
                 value={record.apiVersion || DEFAULT_AZURE_OCR_API_VERSION}
-                oninput={(/** @type {Event} */ e) => fieldInput('apiVersion', e)}
+                oninput={(e: Event) => fieldInput('apiVersion', e)}
                 autocomplete="off"
                 spellcheck="false"
                 disabled={fieldsDisabled}
@@ -138,7 +128,7 @@
               label="API Key"
               inlineMessage
               value={record.apiKey}
-              oninput={(/** @type {Event} */ e) => fieldInput('apiKey', e)}
+              oninput={(e: Event) => fieldInput('apiKey', e)}
               type="password"
               autocomplete="off"
               placeholder={record.providerType === 'web_request' ? 'Optional' : 'Paste your key'}
@@ -151,7 +141,7 @@
                 label="Credential label"
                 inlineMessage
                 value={record.credentialLabel}
-                oninput={(/** @type {Event} */ e) => fieldInput('credentialLabel', e)}
+                oninput={(e: Event) => fieldInput('credentialLabel', e)}
                 autocomplete="off"
                 placeholder="e.g. Production key"
                 disabled={fieldsDisabled}

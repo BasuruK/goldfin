@@ -1,36 +1,34 @@
-import { applyConnectorPatch, beginDiscovery, finishDiscovery, addManualModel, isCatalogEditable } from './models.js';
+import { applyConnectorPatch, beginDiscovery, finishDiscovery, addManualModel, isCatalogEditable } from './models.ts';
 import {
   AZURE_OCR_PROVIDER_TYPE,
   DEFAULT_AZURE_OCR_API_VERSION,
   DEFAULT_PROVIDER_TYPE,
   defaultBaseUrlFor,
   defaultNameFor,
-  isSavableProvider
-} from './providers.js';
-import { clearLegacyConnectors, createEmptyConnector } from './storage.js';
-import { previewModelCatalog } from './model-preview.js';
-import { ApiError, createConnector, listConnectors, validateDraft } from './api.js';
+  isSavableProvider,
+  type ProviderType
+} from './providers.ts';
+import { clearLegacyConnectors, createEmptyConnector, type ConnectorRecord } from './storage.ts';
+import { previewModelCatalog } from './model-preview.ts';
+import { ApiError, createConnector, listConnectors, validateDraft, type SavedConnector } from './api.ts';
 
-/** @typedef {import('./storage.js').ConnectorRecord} ConnectorRecord */
-/** @typedef {import('./providers.js').ProviderType} ProviderType */
-/** @typedef {import('./api.js').SavedConnector} SavedConnector */
+export type SaveErrorField = 'name' | 'baseUrl' | 'credential' | 'credentialLabel';
+
+export interface ConnectorStoreState {
+  connectors: SavedConnector[];
+  listState: 'idle' | 'loading' | 'loaded' | 'failed';
+  listError: string;
+  dialogOpen: boolean;
+  draft: ConnectorRecord | null;
+  saving: boolean;
+  saveError: string;
+  saveErrorField: SaveErrorField | null;
+  saveNotice: string;
+}
 
 clearLegacyConnectors();
 
-/**
- * @type {{
- *   connectors: SavedConnector[],
- *   listState: 'idle' | 'loading' | 'loaded' | 'failed',
- *   listError: string,
- *   dialogOpen: boolean,
- *   draft: ConnectorRecord | null,
- *   saving: boolean,
- *   saveError: string,
- *   saveErrorField: 'name' | 'baseUrl' | 'credential' | 'credentialLabel' | null,
- *   saveNotice: string
- * }}
- */
-export const connectorStore = $state({
+export const connectorStore = $state<ConnectorStoreState>({
   connectors: [],
   listState: 'idle',
   listError: '',
@@ -42,7 +40,7 @@ export const connectorStore = $state({
   saveNotice: ''
 });
 
-export async function loadConnectorList() {
+export async function loadConnectorList(): Promise<void> {
   connectorStore.listState = 'loading';
   connectorStore.listError = '';
   try {
@@ -50,11 +48,12 @@ export async function loadConnectorList() {
     connectorStore.listState = 'loaded';
   } catch (error) {
     connectorStore.listState = 'failed';
-    connectorStore.listError = error instanceof ApiError ? error.message : 'Could not load Connectors. Try again.';
+    connectorStore.listError =
+      error instanceof ApiError ? error.message : 'Could not load Connectors. Try again.';
   }
 }
 
-export function openAddDialog() {
+export function openAddDialog(): void {
   const draft = createEmptyConnector(DEFAULT_PROVIDER_TYPE);
   draft.name = defaultNameFor(DEFAULT_PROVIDER_TYPE);
   draft.baseUrl = defaultBaseUrlFor(DEFAULT_PROVIDER_TYPE);
@@ -66,7 +65,7 @@ export function openAddDialog() {
   connectorStore.dialogOpen = true;
 }
 
-export function closeDialog() {
+export function closeDialog(): void {
   connectorStore.dialogOpen = false;
   connectorStore.draft = null;
   connectorStore.saving = false;
@@ -75,26 +74,25 @@ export function closeDialog() {
 }
 
 /** Leaving the page drops the draft and the notice. */
-export function disposeConnectorsPage() {
+export function disposeConnectorsPage(): void {
   closeDialog();
   connectorStore.saveNotice = '';
 }
 
-/** @param {Partial<ConnectorRecord>} patch */
-export function patchDraft(patch) {
+export function patchDraft(patch: Partial<ConnectorRecord>): void {
   const draft = connectorStore.draft;
   if (!draft) return;
   connectorStore.draft = { ...applyConnectorPatch(draft, patch), updatedAt: new Date().toISOString() };
   // The draft calls the Credential field `apiKey`; validation calls it `credential`.
-  const errorField = connectorStore.saveErrorField === 'credential' ? 'apiKey' : connectorStore.saveErrorField;
+  const errorField =
+    connectorStore.saveErrorField === 'credential' ? 'apiKey' : connectorStore.saveErrorField;
   if (errorField && errorField in patch) {
     connectorStore.saveError = '';
     connectorStore.saveErrorField = null;
   }
 }
 
-/** @param {ProviderType} providerType */
-export function setDraftProviderType(providerType) {
+export function setDraftProviderType(providerType: ProviderType): void {
   const draft = connectorStore.draft;
   if (!draft || draft.providerType === providerType) return;
   const wasDefault = draft.baseUrl === defaultBaseUrlFor(draft.providerType);
@@ -102,11 +100,11 @@ export function setDraftProviderType(providerType) {
     providerType,
     name: draft.name === defaultNameFor(draft.providerType) ? defaultNameFor(providerType) : draft.name,
     baseUrl: wasDefault || !draft.baseUrl.trim() ? defaultBaseUrlFor(providerType) : draft.baseUrl,
-    apiVersion: providerType === 'azure_document_intelligence' ? DEFAULT_AZURE_OCR_API_VERSION : ''
+    apiVersion: providerType === AZURE_OCR_PROVIDER_TYPE ? DEFAULT_AZURE_OCR_API_VERSION : ''
   });
 }
 
-export async function saveDraft() {
+export async function saveDraft(): Promise<void> {
   const draft = connectorStore.draft;
   if (!draft || connectorStore.saving) return;
   if (!isSavableProvider(draft.providerType)) {
@@ -118,9 +116,10 @@ export async function saveDraft() {
     name: draft.name,
     providerType: draft.providerType,
     baseUrl: draft.baseUrl,
-    apiVersion: draft.providerType === 'azure_document_intelligence'
-      ? (draft.apiVersion.trim() || DEFAULT_AZURE_OCR_API_VERSION)
-      : undefined,
+    apiVersion:
+      draft.providerType === AZURE_OCR_PROVIDER_TYPE
+        ? draft.apiVersion.trim() || DEFAULT_AZURE_OCR_API_VERSION
+        : undefined,
     credential: draft.apiKey,
     credentialLabel: draft.credentialLabel
   };
@@ -145,21 +144,21 @@ export async function saveDraft() {
   } catch (error) {
     if (!stillOpen()) return;
     connectorStore.saving = false;
-    connectorStore.saveError = error instanceof ApiError ? error.message : 'Could not save the Connector. Try again.';
+    connectorStore.saveError =
+      error instanceof ApiError ? error.message : 'Could not save the Connector. Try again.';
   }
 }
 
-export async function previewDraftModels() {
+export async function previewDraftModels(): Promise<void> {
   const draft = connectorStore.draft;
   if (!draft) return;
   const loading = beginDiscovery(draft);
   connectorStore.draft = loading;
-  /** @type {import('./models.js').CatalogResult} */
   let result;
   try {
     result = await previewModelCatalog(draft.providerType);
   } catch {
-    result = { state: 'failed', message: 'Could not load the preview. Try again.' };
+    result = { state: 'failed' as const, message: 'Could not load the preview. Try again.' };
   }
   const current = connectorStore.draft;
   if (!current || current.id !== draft.id) return;
@@ -167,8 +166,7 @@ export async function previewDraftModels() {
   if (finished !== current) connectorStore.draft = finished;
 }
 
-/** @param {string} modelId @param {boolean} enabled */
-export function setDraftModelEnabled(modelId, enabled) {
+export function setDraftModelEnabled(modelId: string, enabled: boolean): void {
   const draft = connectorStore.draft;
   if (!draft || !isCatalogEditable(draft)) return;
   connectorStore.draft = {
@@ -177,8 +175,7 @@ export function setDraftModelEnabled(modelId, enabled) {
   };
 }
 
-/** @param {string} value */
-export function addDraftModel(value) {
+export function addDraftModel(value: string): void {
   const draft = connectorStore.draft;
   if (!draft || draft.catalogState === 'loading') return;
   const next = addManualModel(draft, value);
