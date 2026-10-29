@@ -2,7 +2,7 @@
  * Shared fetch transport for frontend API clients (CODING_STANDARDS Frontend async).
  */
 
-export type RequestErrorKind =
+type RequestErrorKind =
   | 'timeout'
   | 'unreachable'
   | 'rejected'
