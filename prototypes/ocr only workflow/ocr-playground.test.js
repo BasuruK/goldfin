@@ -25,11 +25,12 @@ async function playground(t) {
   return page;
 }
 
-async function configure(page, region, base, key) {
+async function configure(page, region, base, key, deployment) {
   await page.getByRole('button', { name: 'Connectors', exact: true }).click();
   await page.getByLabel('Edit connector').selectOption(region);
   await page.getByLabel('Base URL', { exact: true }).fill(base);
   await page.getByLabel('API key', { exact: true }).fill(key);
+  if (deployment) await page.getByLabel('Deployment', { exact: true }).fill(deployment);
   await page.getByRole('button', { name: 'Save connector', exact: true }).click();
   await expect(page.getByRole('status')).toHaveText('Connector saved in this browser.');
 }
@@ -591,6 +592,39 @@ test('saves independent EU/US connectors across reload and sends the selected Fo
   }
 });
 
+test('Foundry deployment is a saved per-connector field sent as the OCR model', async (t) => {
+  const page = await playground(t);
+  await configure(page, 'eu', 'https://eu.services.ai.azure.com', 'eu-test-key', 'ocr3-eu-prod');
+  await configure(page, 'us', 'https://us.services.ai.azure.com', 'us-test-key', 'ocr3-us-prod');
+  await page.reload();
+  await page.getByRole('button', { name: 'Connectors', exact: true }).click();
+  await page.getByLabel('Edit connector').selectOption('eu');
+  await expect(page.getByLabel('Deployment', { exact: true })).toHaveValue('ocr3-eu-prod');
+  await page.getByLabel('Edit connector').selectOption('us');
+  await expect(page.getByLabel('Deployment', { exact: true })).toHaveValue('ocr3-us-prod');
+  await page.getByLabel('Edit connector').selectOption('di');
+  await expect(page.getByLabel('Deployment', { exact: true })).toBeHidden();
+  await page.getByLabel('Edit connector').selectOption('new');
+  await expect(page.getByLabel('Deployment', { exact: true })).toBeHidden();
+  await page.getByLabel('Edit connector').selectOption('eu');
+  await page.getByLabel('Deployment', { exact: true }).fill('');
+  await page.getByRole('button', { name: 'Save connector', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Deployment is required');
+  await page.getByRole('button', { name: 'Playground', exact: true }).click();
+  await page.getByLabel('Connector', { exact: true }).selectOption('eu');
+  await expect(page.locator('#contractNote')).toContainText('Deployment: ocr3-eu-prod');
+  await page.locator('#file').setInputFiles({ name: 'invoice.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-test') });
+  let calls = 0;
+  await page.route('https://eu.services.ai.azure.com/**', async (route) => {
+    calls++;
+    assert.equal(route.request().postDataJSON().model, 'ocr3-eu-prod');
+    await route.fulfill({ json: { pages: [{ markdown: '# Invoice' }] } });
+  });
+  await page.getByRole('button', { name: 'Analyze', exact: true }).click();
+  await expect(page.locator('#sStatus')).toHaveText('Succeeded');
+  assert.equal(calls, 1);
+});
+
 test('JPEG and PNG use image data URLs in workflows, Playground and connector tests', async (t) => {
   const page = await runnableWorkflow(t);
   await configure(page, 'us', 'https://us.services.ai.azure.com', 'us-test-key');
@@ -883,4 +917,117 @@ test('all prototype pages fit mobile and desktop, and workflows survive narrow, 
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${view} overflow: ${JSON.stringify(settings)}`);
     }
   }
+});
+
+test('every surface reads a token, and dark and light both resolve', async (t) => {
+  const page = await playground(t);
+  const surface = () => page.evaluate(() => {
+    const body = getComputedStyle(document.body);
+    const root = getComputedStyle(document.documentElement);
+    const input = document.querySelector('#base');
+    return {
+      scheme: body.colorScheme,
+      bodyBg: body.backgroundColor,
+      bodyColor: body.color,
+      selectScheme: getComputedStyle(document.querySelector('#connector')).colorScheme,
+      inputBg: getComputedStyle(input).backgroundColor,
+      avatarBg: getComputedStyle(document.querySelector('.avatar')).backgroundColor,
+      blueIcon: getComputedStyle(document.querySelector('.ic.blue')).color,
+      placeholder: getComputedStyle(input, '::placeholder').color,
+      sans: root.getPropertyValue('--sans').trim(),
+      mono: root.getPropertyValue('--mono').trim(),
+      radius: root.getPropertyValue('--r').trim()
+    };
+  });
+
+  const dark = await surface();
+  assert.equal(dark.scheme, 'dark');
+  assert.equal(dark.bodyBg, 'rgb(29, 29, 28)');
+  assert.equal(dark.bodyColor, 'rgb(240, 239, 236)');
+  assert.equal(dark.selectScheme, 'dark');
+  assert.equal(dark.inputBg, 'rgb(21, 21, 20)');
+  assert.equal(dark.avatarBg, 'rgb(35, 35, 34)');
+  assert.equal(dark.blueIcon, 'rgb(91, 141, 239)');
+  assert.match(dark.sans, /^'Geist'/);
+  assert.match(dark.mono, /^'Geist Mono'/);
+  assert.equal(dark.radius, '8px');
+
+  await page.evaluate(() => { document.body.dataset.theme = 'light'; });
+  const light = await surface();
+  assert.equal(light.scheme, 'light');
+  assert.equal(light.bodyBg, 'rgb(242, 242, 240)');
+  assert.equal(light.bodyColor, 'rgb(27, 27, 25)');
+  assert.equal(light.selectScheme, 'light');
+  assert.equal(light.inputBg, 'rgb(233, 233, 230)');
+  assert.equal(light.avatarBg, 'rgb(255, 255, 255)');
+  assert.equal(light.blueIcon, 'rgb(59, 111, 208)');
+  assert.notEqual(light.placeholder, dark.placeholder);
+
+  // The focus surface follows the theme instead of staying on one hand-written colour.
+  await page.getByRole('button', { name: 'Connectors', exact: true }).click();
+  const base = page.getByLabel('Base URL', { exact: true });
+  await base.focus();
+  await expect(base).toHaveCSS('background-color', 'rgb(247, 247, 245)');
+  await page.evaluate(() => { document.body.dataset.theme = 'dark'; });
+  await expect(base).toHaveCSS('background-color', 'rgb(26, 26, 25)');
+
+  // The header texture is inlined, so the prototype cannot lose an asset it never had.
+  const css = html.slice(html.indexOf('<style>') + 7, html.indexOf('</style>'));
+  assert.doesNotMatch(css, /url\(\s*["']?(?!data:)[^"')]*\.(png|jpe?g|gif|webp|svg)\b/i, 'stylesheet references an external image file');
+});
+
+test('the sidebar foot opens a menu that swaps the theme and remembers it', async (t) => {
+  const page = await playground(t);
+  const foot = page.locator('#userButton');
+  const menu = page.locator('#userMenu');
+  await expect(foot).toHaveAttribute('aria-expanded', 'false');
+  await expect(menu).toBeHidden();
+
+  await foot.click();
+  await expect(foot).toHaveAttribute('aria-expanded', 'true');
+  await expect(foot).toHaveAttribute('aria-controls', 'userMenu');
+  await expect(menu).toBeVisible();
+  await expect(page.locator('#themeMoon')).toBeVisible();
+  await expect(page.locator('#themeSun')).toBeHidden();
+
+  await page.getByRole('button', { name: 'Switch to light theme' }).click();
+  await expect(page.locator('body')).toHaveAttribute('data-theme', 'light');
+  await expect(page.getByRole('button', { name: 'Switch to dark theme' })).toBeVisible();
+  await expect(page.locator('#themeSun')).toBeVisible();
+  await expect(page.locator('#themeMoon')).toBeHidden();
+
+  // The choice survives a reload: the stored theme lands before the first paint.
+  await page.reload();
+  await expect(page.locator('body')).toHaveAttribute('data-theme', 'light');
+});
+
+test('dropdowns open a menu in the page palette instead of the system popup', async (t) => {
+  const page = await playground(t);
+  const select = page.getByLabel('Connector', { exact: true });
+  const menu = page.locator('#selectMenu');
+  // The native arrow is gone, so the control is already the page's.
+  await expect(select).toHaveCSS('appearance', 'none');
+
+  await select.click();
+  await expect(menu).toBeVisible();
+  await expect(menu.getByRole('option')).toHaveCount(3);
+  await expect(menu.getByRole('option', { name: 'Document Intelligence' })).toHaveAttribute('aria-selected', 'true');
+  await expect(menu.getByRole('option', { name: 'Foundry EU' })).toHaveAttribute('aria-selected', 'false');
+  // The menu wears the page tokens, not the operating system's.
+  await expect(menu).toHaveCSS('background-color', 'rgb(35, 35, 34)');
+  await expect(menu.getByRole('option', { name: 'Foundry EU' })).toHaveCSS('color', 'rgb(240, 239, 236)');
+
+  await menu.getByRole('option', { name: 'Foundry EU' }).click();
+  await expect(menu).toBeHidden();
+  await expect(select).toHaveValue('eu');
+  await expect(page.locator('#contractNote')).toContainText('Foundry:');
+
+  // The keyboard path reaches the same place.
+  await select.focus();
+  await select.press('ArrowDown');
+  await expect(menu).toBeVisible();
+  await select.press('Home');
+  await select.press('Enter');
+  await expect(menu).toBeHidden();
+  await expect(select).toHaveValue('di');
 });
