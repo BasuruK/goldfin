@@ -20,7 +20,7 @@ Done when the seam, its layer, its door, its design artefact (UI only) and its F
 - Handle exactly the cases the Failure table lists. A further case on a two-way seam becomes a `ponytail:` note; on a one-way seam, ask first, stating the failure mode, its likelihood and its complexity cost.
 - Look up module paths, config keys and flags in `node_modules`, `go doc` or Context7, and resolve versions, action SHAs and image digests with CLI commands.
 - Fix a type or lint error at its declaration or call site, with strict checks left on.
-- Move every caller to the new contract and delete the replaced function in the same diff.
+- Reach for deletion first: within the seam, remove or reuse an existing function, guard or option before adding one. Move every caller to the new contract and delete the replaced function in the same diff.
 
 Done when every new behaviour has a test that went red then green, and no caller uses the old contract.
 
