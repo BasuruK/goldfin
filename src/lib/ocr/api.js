@@ -49,7 +49,7 @@ export async function submitOcr(connectorId, document, signal) {
     canceledKind: 'canceled',
     canceledMessage: MESSAGES.canceled,
     messages: MESSAGES,
-    createError: (kind, message) => new OcrError(/** @type {OcrErrorKind} */ (kind), message),
+    createError: (kind, message) => new OcrError(kind, message),
     httpTimeoutStatuses: true,
     statusMessage: mapStatus
   });
