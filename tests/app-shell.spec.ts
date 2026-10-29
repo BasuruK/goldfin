@@ -2,8 +2,7 @@ import { expect, test } from '@playwright/test';
 import { boxOf } from './support.js';
 
 test('static app shell loads with the approved dark theme', async ({ page }) => {
-  /** @type {string[]} */
-  const errors = [];
+  const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
 
   await page.goto('/');

@@ -3,7 +3,7 @@ import { browser } from '$app/env';
 /** Matches `--duration-menu` in tokens.css. */
 const MENU_MS = 200;
 
-export function menuFadeMs() {
+export function menuFadeMs(): number {
   if (!browser) return 0;
   return matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : MENU_MS;
 }
