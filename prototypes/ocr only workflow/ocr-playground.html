@@ -9,25 +9,30 @@
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #1d1d1c;
-    --rail: #151514;
-    --panel: #232322;
-    --panel-2: #2a2a28;
-    --panel-3: #323230;
-    --line: #302f2d;
-    --line-2: #3b3b38;
-    --tx: #f0efec;
-    --tx-2: #b0b0aa;
-    --tx-3: #8a8a84;
-    --accent: #5b5bdf;
-    --accent-2: #6b6bec;
-    --green: #4cb782;
-    --red: #eb5757;
-    --amber: #d99a3c;
+    color-scheme: dark;
+    --bg: light-dark(#f2f2f0, #1d1d1c);
+    --rail: light-dark(#e9e9e6, #151514);
+    --panel: light-dark(#ffffff, #232322);
+    --panel-2: light-dark(#f0f0ee, #2a2a28);
+    --panel-3: light-dark(#e3e3df, #323230);
+    --line: light-dark(#d5d5cf, #302f2d);
+    --line-2: light-dark(#b9b9b2, #3b3b38);
+    --tx: light-dark(#1b1b19, #f0efec);
+    --tx-2: light-dark(#4a4a46, #b0b0aa);
+    --tx-3: light-dark(#62625c, #8a8a84);
+    --accent: light-dark(#4a4acf, #5b5bdf);
+    --accent-2: light-dark(#3d3dbe, #6b6bec);
+    --green: light-dark(#177a4e, #4cb782);
+    --red: light-dark(#cc3333, #eb5757);
+    --amber: light-dark(#96690f, #d99a3c);
+    --focus: light-dark(#f7f7f5, #1a1a19);
+    --blue: light-dark(#3b6fd0, #5b8def);
     --sans: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
     --mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
     --r: 8px;
   }
+  body[data-theme="light"] { color-scheme: light; }
+  body[data-theme="dark"] { color-scheme: dark; }
 
   * { box-sizing: border-box; }
   body {
@@ -35,7 +40,7 @@
     font-family: var(--sans); font-size: 13px; line-height: 1.5;
     -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
   }
-  ::selection { background: rgba(91, 91, 223, 0.35); }
+  ::selection { background: color-mix(in oklch, var(--accent) 35%, transparent); }
   svg { display: block; flex: 0 0 auto; }
 
   /* ---------- shell ---------- */
@@ -73,11 +78,11 @@
   }
   .pill .mono { font-family: var(--mono); font-size: 11px; color: var(--tx-3); }
   .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--tx-3); flex: 0 0 auto; }
-  .pill.run { color: var(--amber); border-color: rgba(217, 154, 60, 0.28); background: rgba(217, 154, 60, 0.08); }
+  .pill.run { color: var(--amber); border-color: color-mix(in oklch, var(--amber) 28%, transparent); background: color-mix(in oklch, var(--amber) 8%, transparent); }
   .pill.run .dot { background: var(--amber); animation: pulse 1.3s ease-in-out infinite; }
-  .pill.ok { color: var(--green); border-color: rgba(76, 183, 130, 0.28); background: rgba(76, 183, 130, 0.08); }
+  .pill.ok { color: var(--green); border-color: color-mix(in oklch, var(--green) 28%, transparent); background: color-mix(in oklch, var(--green) 8%, transparent); }
   .pill.ok .dot { background: var(--green); }
-  .pill.bad { color: var(--red); border-color: rgba(235, 87, 87, 0.28); background: rgba(235, 87, 87, 0.08); }
+  .pill.bad { color: var(--red); border-color: color-mix(in oklch, var(--red) 28%, transparent); background: color-mix(in oklch, var(--red) 8%, transparent); }
   .pill.bad .dot { background: var(--red); }
   @keyframes pulse { 50% { opacity: 0.35; } }
 
@@ -88,7 +93,7 @@
     display: flex; flex-direction: column; min-height: 0; overflow-y: auto;
   }
   .side-scroll { padding: 14px 12px 0; flex: 0 0 auto; }
-  .side-foot { margin-top: auto; padding: 12px; flex: 0 0 auto; }
+  .side-foot { margin-top: auto; padding: 12px; flex: 0 0 auto; position: relative; }
   .rail-head {
     font-size: 11px; font-weight: 500; color: var(--tx-3);
     letter-spacing: 0.04em; text-transform: uppercase;
@@ -115,8 +120,8 @@
     border-radius: 6px; outline: none;
     transition: border-color 140ms ease, background 140ms ease;
   }
-  input::placeholder { color: #6b6b66; }
-  input:focus { border-color: var(--line-2); background: #1a1a19; }
+  input::placeholder { color: color-mix(in oklch, var(--tx-3) 85%, transparent); }
+  input:focus { border-color: var(--line-2); background: var(--focus); }
   .in-wrap.mono input { font-family: var(--mono); font-size: 12px; }
   .peek {
     position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
@@ -131,7 +136,7 @@
     padding: 14px 12px; text-align: center; overflow: hidden;
     transition: border-color 140ms ease, background 140ms ease;
   }
-  .drop:hover, .drop.over { border-color: var(--line-2); background: #1a1a19; }
+  .drop:hover, .drop.over { border-color: var(--line-2); background: var(--focus); }
   .drop.over { border-color: var(--accent); }
   .drop input { display: none; }
   .drop svg { margin: 0 auto 8px; color: var(--tx-3); }
@@ -144,7 +149,7 @@
     padding: 10px 11px; overflow-y: auto; height: 100%;
   }
   .log .row { display: flex; gap: 9px; }
-  .log .t { color: #6e6e68; flex: 0 0 auto; }
+  .log .t { color: color-mix(in oklch, var(--tx-3) 80%, transparent); flex: 0 0 auto; }
   .log .m { min-width: 0; word-break: break-word; }
   .log .m.err { color: var(--red); }
   .log .m.ok { color: var(--green); }
@@ -152,15 +157,39 @@
 
   .user {
     display: flex; align-items: center; gap: 9px; padding: 7px 8px;
-    border-radius: 6px; border-top: 1px solid var(--line); margin-top: 10px; padding-top: 11px;
+    border: 0; border-top: 1px solid var(--line); border-radius: 6px;
+    margin-top: 10px; padding-top: 11px;
+    width: 100%; background: none; font: inherit; color: inherit;
+    text-align: start; cursor: pointer;
   }
+  .user:hover { background: var(--panel-2); }
   .avatar {
     width: 22px; height: 22px; border-radius: 50%; flex: 0 0 auto;
-    background: #232328; color: var(--tx-2);
+    background: var(--panel); color: var(--tx-2);
     display: grid; place-items: center; font-size: 10px; font-weight: 600; letter-spacing: 0.02em;
   }
-  .user .who { font-size: 12.5px; color: var(--tx-2); }
+  .user .who { font-size: 12.5px; color: var(--tx-2); min-width: 0; }
   .user .who small { display: block; font-size: 11px; color: var(--tx-3); }
+  .user .chev { margin-inline-start: auto; width: 13px; height: 13px; color: var(--tx-3); transition: transform 180ms ease; }
+  .user[aria-expanded="true"] .chev { transform: rotate(180deg); }
+
+  /* The foot menu is an ordinary disclosure: no portal, no focus trap. It opens
+     upward because the foot is the last thing in the rail. */
+  .user-menu {
+    position: absolute; inset-inline: 12px; bottom: calc(100% - 6px);
+    background: var(--panel); border: 1px solid var(--line-2); border-radius: 8px;
+    padding: 5px; z-index: 30;
+    box-shadow: 0 8px 24px oklch(0% 0 none / 0.35);
+  }
+  .theme-row {
+    display: flex; align-items: center; gap: 9px; width: 100%;
+    padding: 7px 8px; border: 0; border-radius: 6px;
+    background: none; color: var(--tx); font: inherit; font-size: 12.5px;
+    text-align: start; cursor: pointer;
+  }
+  .theme-row:hover { background: var(--panel-2); }
+  .theme-icon { position: relative; display: grid; place-items: center; width: 15px; height: 15px; flex: 0 0 auto; color: var(--tx-2); }
+  .theme-icon .ic { grid-area: 1 / 1; }
 
   /* ---------- main ---------- */
   .main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
@@ -171,15 +200,16 @@
   }
   .pagehead::before {
     content: ""; position: absolute; inset: 0;
-    background: url("hero.png") 50% -430px / 1900px auto no-repeat;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Crect x='2' y='2' width='9' height='9' rx='1.5' fill='%23627bfc' opacity='0.9'/%3E%3Crect x='22' y='12' width='9' height='9' rx='1.5' fill='%238fa4ff' opacity='0.55'/%3E%3Crect x='42' y='2' width='9' height='9' rx='1.5' fill='%234a5fd4' opacity='0.75'/%3E%3Crect x='62' y='22' width='9' height='9' rx='1.5' fill='%23b9c6ff' opacity='0.45'/%3E%3Crect x='82' y='12' width='9' height='9' rx='1.5' fill='%23627bfc' opacity='0.85'/%3E%3Crect x='12' y='42' width='9' height='9' rx='1.5' fill='%238fa4ff' opacity='0.6'/%3E%3Crect x='32' y='32' width='9' height='9' rx='1.5' fill='%234a5fd4' opacity='0.4'/%3E%3Crect x='52' y='52' width='9' height='9' rx='1.5' fill='%23b9c6ff' opacity='0.7'/%3E%3Crect x='72' y='42' width='9' height='9' rx='1.5' fill='%23627bfc' opacity='0.95'/%3E%3Crect x='22' y='72' width='9' height='9' rx='1.5' fill='%238fa4ff' opacity='0.5'/%3E%3Crect x='42' y='62' width='9' height='9' rx='1.5' fill='%234a5fd4' opacity='0.65'/%3E%3Crect x='82' y='72' width='9' height='9' rx='1.5' fill='%23b9c6ff' opacity='0.8'/%3E%3C/svg%3E");
+    background-size: 96px 96px;
     opacity: .12; z-index: -1; pointer-events: none;
     -webkit-mask-image: linear-gradient(180deg, #000 0%, rgba(0,0,0,.55) 62%, transparent 100%);
             mask-image: linear-gradient(180deg, #000 0%, rgba(0,0,0,.55) 62%, transparent 100%);
     animation: pagehead-drift 26s ease-in-out infinite alternate;
   }
   @keyframes pagehead-drift {
-    from { background-size: 1900px auto; background-position: 50% -430px; }
-    to   { background-size: 2020px auto; background-position: 50% -458px; }
+    from { background-position: 0 0; }
+    to   { background-position: 96px -96px; }
   }
   @media (prefers-reduced-motion: reduce) { .pagehead::before { animation: none; } }
   .pagehead h1 { font-size: 22px; font-weight: 500; letter-spacing: -0.015em; margin: 0; }
@@ -202,8 +232,38 @@
   select {
     width: 100%; padding: 7px 10px; border: 1px solid var(--line);
     border-radius: 6px; background: var(--rail); color: var(--tx); font: inherit;
-    color-scheme: dark;
+    appearance: none; -webkit-appearance: none;
   }
+
+  /* ---------- dropdown ---------- */
+  /* A native select popup is drawn by the OS, so it keeps the system colours
+     whatever the page says. The select stays the labelled control and the
+     value holder; only the menu is ours, and it reads the page tokens. The
+     menu lives on the body because a form or a scroll area would clip it. */
+  .select { position: relative; width: 100%; }
+  .select select { padding-inline-end: 30px; }
+  .select-caret {
+    position: absolute; inset-inline-end: 10px; top: 50%; transform: translateY(-50%);
+    display: grid; place-items: center; width: 14px; height: 14px;
+    color: var(--tx-3); pointer-events: none;
+  }
+  .select-caret svg { width: 14px; height: 14px; }
+  .select-menu {
+    position: fixed; z-index: 60;
+    display: flex; flex-direction: column; gap: 2px;
+    padding: 4px; border: 1px solid var(--line-2); border-radius: 8px;
+    background: var(--panel); box-shadow: 0 8px 24px oklch(0% 0 none / 0.35);
+    max-height: 280px; overflow-y: auto;
+  }
+  .select-opt {
+    display: grid; grid-template-columns: 16px minmax(0, 1fr); align-items: center; gap: 8px;
+    padding: 7px 9px; border-radius: 6px; font-size: 13px; color: var(--tx);
+    cursor: pointer; white-space: nowrap;
+  }
+  .select-opt .check { color: var(--tx-2); font-size: 12px; text-align: center; }
+  .select-opt .text { overflow: hidden; text-overflow: ellipsis; }
+  .select-opt.is-active { background: var(--panel-2); }
+  .select-opt[aria-disabled="true"] { color: var(--tx-3); cursor: not-allowed; }
   :is(button, input, select):focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
   .btn:active:not(:disabled) { background: var(--panel-3); }
   .nav-button { width: 100%; background: none; border: 0; cursor: pointer; font: inherit; text-align: start; }
@@ -319,7 +379,7 @@
   .stat .sub { font-size: 11.5px; color: var(--tx-3); margin-top: 1px; }
   .stat .sub.warn { color: var(--amber); }
   .ic { width: 14px; height: 14px; color: var(--tx-3); }
-  .ic.blue { color: #5b8def; }
+  .ic.blue { color: var(--blue); }
   .ic.amber { color: var(--amber); }
   .ic.green { color: var(--green); }
   .ic.red { color: var(--red); }
@@ -329,7 +389,7 @@
     color: var(--tx-2); white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere;
     height: 100%; overflow-y: auto;
   }
-  pre.text:empty::before { content: 'No document analyzed yet. Select a document and run Analyze.'; color: #6e6e68; }
+  pre.text:empty::before { content: 'No document analyzed yet. Select a document and run Analyze.'; color: color-mix(in oklch, var(--tx-3) 80%, transparent); }
   .outwrap { padding: 0; display: flex; min-height: 0; position: relative; flex: 1 1 auto; }
   .outwrap pre { flex: 1 1 auto; min-height: 0; }
   .outwrap.busy pre.text:empty::before { content: ''; }
@@ -348,8 +408,8 @@
 
   ::-webkit-scrollbar { width: 9px; height: 9px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #3a3a36; border-radius: 5px; border: 2px solid var(--bg); }
-  ::-webkit-scrollbar-thumb:hover { background: #4a4a45; }
+  ::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 5px; border: 2px solid var(--bg); }
+  ::-webkit-scrollbar-thumb:hover { background: color-mix(in oklch, var(--line-2) 85%, var(--tx-3)); }
 
   /* ---------- stack on small screens ---------- */
   @media (max-width: 900px) {
@@ -370,7 +430,16 @@
   }
 </style>
 </head>
-<body>
+<body data-theme="dark">
+<script>
+  /* The stored theme has to land before the first paint, or a light-theme visitor
+     gets a dark flash before the toggle hydrates. The hard-coded attribute above
+     stays as the fallback; storage can throw, so the read is guarded. */
+  try {
+    var stored = localStorage.getItem('goldfin.theme');
+    if (stored === 'light' || stored === 'dark') document.body.dataset.theme = stored;
+  } catch (e) {}
+</script>
 
 <div class="app">
 
@@ -438,10 +507,22 @@
     </div>
 
     <div class="side-foot">
-      <div class="user">
-        <div class="avatar">DI</div>
-        <div class="who">Local prototype<small>Saved keys are unencrypted</small></div>
+      <div class="user-menu" id="userMenu" hidden>
+        <!-- The icon states the theme you are in; the accessible name states the
+             action, because a picture cannot say "switch to". -->
+        <button class="theme-row" type="button" id="themeSwap" aria-label="Switch to light theme" title="Switch to light theme">
+          <span class="theme-icon">
+            <svg class="ic" id="themeMoon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            <svg class="ic" id="themeSun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" hidden><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+          </span>
+          <span id="themeLabel">Use light theme</span>
+        </button>
       </div>
+      <button class="user" type="button" id="userButton" aria-expanded="false">
+        <span class="avatar">DI</span>
+        <span class="who">Local prototype<small>Saved keys are unencrypted</small></span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
+      </button>
     </div>
   </aside>
 
@@ -543,7 +624,11 @@
         <label for="ver">API version</label>
         <div class="in-wrap mono"><input type="text" id="ver" spellcheck="false" value="2024-11-30"></div>
       </div>
-      <p id="deploymentNote" hidden>Deployment: <code>ocr3-pilot</code>. PDF limit: 30 pages / 30 MB; Azure validates page count.</p>
+      <div class="field" id="deploymentField" hidden>
+        <label for="deployment">Deployment</label>
+        <div class="in-wrap mono"><input type="text" id="deployment" spellcheck="false" placeholder="ocr3-pilot"></div>
+      </div>
+      <p id="deploymentNote" hidden>PDF limit: 30 pages / 30 MB; Azure validates page count.</p>
       <p>Requests go directly to the configured service. Browser CORS restrictions apply.</p>
       <p>Test sends a small LLM request, or the selected document for OCR. Calls may be billed. Test timeout: 30 seconds.</p>
       <div class="actions"><button class="btn btn-primary" type="submit">Save connector</button><button class="btn" type="button" id="connectionTest">Test connection</button><span id="connectorMessage" role="status"></span></div>
@@ -608,8 +693,8 @@
   var storageKey = 'ocr-playground.connectors';
   var connectors = {
     di: { base: '', key: '', version: '2024-11-30' },
-    eu: { base: '', key: '' },
-    us: { base: '', key: '' }
+    eu: { base: '', key: '', deployment: 'ocr3-pilot' },
+    us: { base: '', key: '', deployment: 'ocr3-pilot' }
   };
 
   var nebula = (function () {
@@ -717,8 +802,8 @@
     var saved = JSON.parse(localStorage.getItem(storageKey) || '{}');
     Object.keys(connectors).forEach(function (id) {
       if (!saved || !saved[id]) return;
-      ['base', 'key', 'version'].forEach(function (field) {
-        if (typeof saved[id][field] === 'string') connectors[id][field] = saved[id][field];
+      ['base', 'key', 'version', 'deployment'].forEach(function (field) {
+        if (field in connectors[id] && typeof saved[id][field] === 'string') connectors[id][field] = saved[id][field];
       });
     });
     Object.keys(saved || {}).forEach(function (id) {
@@ -748,6 +833,7 @@
   function loadEditor() {
     var config = editorEl.value === 'new' ? { kind: 'llm', name: '', base: 'https://api.openai.com/v1', key: '', model: '', protocol: 'responses' } : connectors[editorEl.value];
     var llm = config.kind === 'llm';
+    var foundry = !llm && editorEl.value !== 'di';
     baseEl.value = config.base;
     keyEl.value = config.key;
     keyEl.type = 'password';
@@ -755,7 +841,9 @@
     $('peek').setAttribute('aria-label', 'Show key');
     verEl.value = config.version || '2024-11-30';
     $('versionField').hidden = editorEl.value !== 'di';
-    $('deploymentNote').hidden = llm || editorEl.value === 'di';
+    $('deploymentField').hidden = !foundry;
+    $('deploymentNote').hidden = !foundry;
+    $('deployment').value = config.deployment || '';
     $('llmFields').hidden = !llm;
     $('connectorName').value = config.name || '';
     $('modelId').value = config.model || '';
@@ -766,8 +854,9 @@
   }
   function updateConnection() {
     var di = connectorEl.value === 'di';
-    $('connectionSummary').textContent = connectors[connectorEl.value].key ? 'Key saved locally' : 'Key unset — open Connectors';
-    $('contractNote').textContent = di ? 'Document Intelligence: PDF, JPEG, PNG, or DOCX. Binary upload and two-second polling.' : 'Foundry: PDF, JPEG, or PNG → Markdown. Deployment: ocr3-pilot. PDF limit: 30 pages / 30 MB.';
+    var config = connectors[connectorEl.value];
+    $('connectionSummary').textContent = config.key ? 'Key saved locally' : 'Key unset — open Connectors';
+    $('contractNote').textContent = di ? 'Document Intelligence: PDF, JPEG, PNG, or DOCX. Binary upload and two-second polling.' : 'Foundry: PDF, JPEG, or PNG → Markdown. Deployment: ' + config.deployment + '. PDF limit: 30 pages / 30 MB.';
     $('pagesSource').textContent = di ? 'analyzeResult.pages' : 'usage_info.pages_processed';
     $('textSource').textContent = di ? 'analyzeResult.content' : 'pages[].markdown';
   }
@@ -809,6 +898,199 @@
   $('promptsNav').addEventListener('click', function () { showPage('prompts'); });
   editorEl.addEventListener('change', loadEditor);
   connectorEl.addEventListener('change', updateConnection);
+
+  /* ---------- theme ---------- */
+  var themeKey = 'goldfin.theme';
+  var userButton = $('userButton'), userMenu = $('userMenu'), themeSwap = $('themeSwap');
+  function themeNow() { return document.body.dataset.theme === 'light' ? 'light' : 'dark'; }
+  function syncThemeControl() {
+    var next = themeNow() === 'dark' ? 'light' : 'dark';
+    themeSwap.setAttribute('aria-label', 'Switch to ' + next + ' theme');
+    themeSwap.setAttribute('title', 'Switch to ' + next + ' theme');
+    $('themeLabel').textContent = 'Use ' + next + ' theme';
+    $('themeMoon').hidden = themeNow() !== 'dark';
+    $('themeSun').hidden = themeNow() !== 'light';
+  }
+  function applyTheme(theme) {
+    document.body.dataset.theme = theme;
+    // A private-mode browser refuses the write; the theme still applies for this session.
+    try { localStorage.setItem(themeKey, theme); } catch (e) {}
+    syncThemeControl();
+  }
+  function setFootMenu(open) {
+    userMenu.hidden = !open;
+    userButton.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) userButton.setAttribute('aria-controls', 'userMenu');
+    else userButton.removeAttribute('aria-controls');
+  }
+  userButton.addEventListener('click', function () { setFootMenu(userMenu.hidden); });
+  themeSwap.addEventListener('click', function () { applyTheme(themeNow() === 'dark' ? 'light' : 'dark'); });
+  document.addEventListener('click', function (event) {
+    if (userMenu.hidden) return;
+    if (userMenu.contains(event.target) || userButton.contains(event.target)) return;
+    setFootMenu(false);
+  });
+  document.addEventListener('keydown', function (event) {
+    if (event.key !== 'Escape' || userMenu.hidden) return;
+    setFootMenu(false);
+    userButton.focus();
+  });
+  syncThemeControl();
+
+  /* ---------- dropdowns ---------- */
+  /* A native select popup is drawn by the OS, so it keeps the system colours
+     whatever the page says. The select stays the labelled control and the
+     value holder; only the menu is ours, and it reads the page tokens. One
+     menu serves every select, so only one can be open at a time. */
+  var selectMenu = document.createElement('div');
+  selectMenu.className = 'select-menu';
+  selectMenu.id = 'selectMenu';
+  selectMenu.setAttribute('role', 'listbox');
+  selectMenu.hidden = true;
+  document.body.appendChild(selectMenu);
+  var openSelect = null, activeOption = -1, typeahead = '', typeaheadTimer = 0;
+  function selectOptions(select) { return Array.prototype.slice.call(select.options); }
+  function selectItems() { return Array.prototype.slice.call(selectMenu.querySelectorAll('.select-opt')); }
+  function buildSelectMenu(select) {
+    selectMenu.replaceChildren();
+    selectOptions(select).forEach(function (option, index) {
+      var item = document.createElement('div');
+      item.className = 'select-opt';
+      item.id = select.id + '-opt-' + index;
+      item.setAttribute('role', 'option');
+      item.setAttribute('aria-selected', option.selected ? 'true' : 'false');
+      if (option.disabled) item.setAttribute('aria-disabled', 'true');
+      var check = document.createElement('span');
+      check.className = 'check';
+      check.setAttribute('aria-hidden', 'true');
+      check.textContent = option.selected ? '✓' : '';
+      var text = document.createElement('span');
+      text.className = 'text';
+      text.textContent = option.textContent;
+      item.appendChild(check); item.appendChild(text);
+      item.dataset.value = option.value;
+      selectMenu.appendChild(item);
+    });
+  }
+  function placeSelectMenu(select) {
+    var rect = select.getBoundingClientRect();
+    selectMenu.style.minWidth = rect.width + 'px';
+    selectMenu.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - rect.width - 8)) + 'px';
+    var height = Math.min(selectMenu.scrollHeight, 280);
+    var below = window.innerHeight - rect.bottom;
+    if (below < height + 16 && rect.top > below) selectMenu.style.top = Math.max(8, rect.top - height - 4) + 'px';
+    else selectMenu.style.top = (rect.bottom + 4) + 'px';
+  }
+  function highlightSelect(index) {
+    var items = selectItems();
+    if (!items.length) return;
+    if (index < 0) index = items.length - 1;
+    if (index >= items.length) index = 0;
+    activeOption = index;
+    items.forEach(function (item, i) { item.classList.toggle('is-active', i === index); });
+    var active = items[index];
+    if (openSelect) openSelect.setAttribute('aria-activedescendant', active.id);
+    active.scrollIntoView({ block: 'nearest' });
+  }
+  function openSelectMenu(select) {
+    if (openSelect && openSelect !== select) closeSelectMenu();
+    openSelect = select;
+    buildSelectMenu(select);
+    selectMenu.hidden = false;
+    placeSelectMenu(select);
+    select.setAttribute('aria-expanded', 'true');
+    var selected = selectOptions(select).findIndex(function (option) { return option.selected; });
+    highlightSelect(selected >= 0 ? selected : 0);
+  }
+  function closeSelectMenu() {
+    if (!openSelect) return;
+    openSelect.setAttribute('aria-expanded', 'false');
+    openSelect.removeAttribute('aria-activedescendant');
+    openSelect = null;
+    activeOption = -1;
+    selectMenu.hidden = true;
+  }
+  function chooseSelectOption(value) {
+    var select = openSelect;
+    if (!select) return;
+    select.value = value;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    closeSelectMenu();
+  }
+  function typeaheadSelect() {
+    // The label, not the rendered row: the check glyph sits in the text too.
+    var match = selectItems().findIndex(function (item) {
+      return item.querySelector('.text').textContent.trim().toLowerCase().indexOf(typeahead) === 0;
+    });
+    if (match >= 0) highlightSelect(match);
+  }
+  [].slice.call(document.querySelectorAll('select')).forEach(function (select) {
+    var wrap = document.createElement('div');
+    wrap.className = 'select';
+    select.parentNode.insertBefore(wrap, select);
+    wrap.appendChild(select);
+    var caret = document.createElement('span');
+    caret.className = 'select-caret';
+    caret.setAttribute('aria-hidden', 'true');
+    caret.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+    wrap.appendChild(caret);
+    select.setAttribute('aria-haspopup', 'listbox');
+    select.setAttribute('aria-expanded', 'false');
+    select.setAttribute('aria-controls', 'selectMenu');
+    // The mousedown is what opens the native popup, so stopping it is what
+    // keeps the system menu off the screen.
+    select.addEventListener('mousedown', function (event) {
+      event.preventDefault();
+      select.focus();
+      if (openSelect === select) closeSelectMenu();
+      else openSelectMenu(select);
+    });
+    select.addEventListener('keydown', function (event) {
+      var key = event.key;
+      var isOpen = openSelect === select;
+      if (key === 'ArrowDown' || key === 'ArrowUp') {
+        event.preventDefault();
+        if (!isOpen) openSelectMenu(select);
+        highlightSelect(activeOption + (key === 'ArrowDown' ? 1 : -1));
+        return;
+      }
+      if (key === 'Home' && isOpen) { event.preventDefault(); highlightSelect(0); return; }
+      if (key === 'End' && isOpen) { event.preventDefault(); highlightSelect(selectItems().length - 1); return; }
+      if (key === 'Enter' || key === ' ') {
+        event.preventDefault();
+        if (!isOpen) { openSelectMenu(select); return; }
+        var item = selectItems()[activeOption];
+        if (item && item.getAttribute('aria-disabled') !== 'true') chooseSelectOption(item.dataset.value);
+        else closeSelectMenu();
+        return;
+      }
+      if (key === 'Escape' && isOpen) { event.preventDefault(); closeSelectMenu(); return; }
+      if (key === 'Tab' && isOpen) { closeSelectMenu(); return; }
+      if (key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey) {
+        typeahead += key.toLowerCase();
+        clearTimeout(typeaheadTimer);
+        typeaheadTimer = setTimeout(function () { typeahead = ''; }, 600);
+        if (!isOpen) openSelectMenu(select);
+        typeaheadSelect();
+      }
+    });
+    select.addEventListener('change', function () { closeSelectMenu(); });
+  });
+  selectMenu.addEventListener('mousedown', function (event) {
+    var item = event.target.closest('.select-opt');
+    if (!item) return;
+    event.preventDefault();
+    if (item.getAttribute('aria-disabled') === 'true') return;
+    chooseSelectOption(item.dataset.value);
+  });
+  document.addEventListener('click', function (event) {
+    if (!openSelect) return;
+    if (selectMenu.contains(event.target) || event.target.closest('.select')) return;
+    closeSelectMenu();
+  });
+  window.addEventListener('resize', function () { closeSelectMenu(); });
+  document.addEventListener('scroll', function () { closeSelectMenu(); }, true);
+
   function connectorDraft() {
     var llm = editorEl.value === 'new' || connectors[editorEl.value].kind === 'llm';
     var config = { base: baseURL(baseEl.value, llm), key: keyEl.value.trim() };
@@ -820,6 +1102,10 @@
     if (editorEl.value === 'di') {
       config.version = verEl.value.trim();
       if (!config.version) throw new Error('API version is required.');
+    }
+    if (!llm && editorEl.value !== 'di') {
+      config.deployment = $('deployment').value.trim();
+      if (!config.deployment) throw new Error('Deployment is required.');
     }
     return config;
   }
@@ -1326,6 +1612,7 @@
         if (!step.config.key) throw new Error('API key is empty. Open Connectors and save a key.');
         baseURL(step.config.base, llm);
         if (llm && !step.config.model.trim()) throw new Error('Model ID is empty. Open Connectors and save a model.');
+        if (!llm && step.id !== 'di' && !String(step.config.deployment || '').trim()) throw new Error('Deployment is empty. Open Connectors and save a deployment.');
         if (!llm) documentType(current, step.id);
       });
     } catch (e) { fail(e.message); runningWorkflow = false; return; }
@@ -1389,7 +1676,7 @@
       headers = { 'Authorization': 'Bearer ' + config.key, 'Content-Type': 'application/json' };
       var source = 'data:' + mime + ';base64,' + dataURL.split(',')[1];
       var ocrDocument = mime.startsWith('image/') ? { type: 'image_url', image_url: source } : { type: 'document_url', document_url: source };
-      payload = JSON.stringify({ model: 'ocr3-pilot', document: ocrDocument, include_image_base64: false });
+      payload = JSON.stringify({ model: config.deployment, document: ocrDocument, include_image_base64: false });
     }
     log('POST ' + url);
     var response = await fetch(url, { method: 'POST', headers: headers, body: payload, credentials: 'omit', redirect: 'error', signal: signal });
