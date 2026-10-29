@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { mockConnectorApi, mockOcrApi } from './support.js';
+import { mockConnectorApi, mockOcrApi } from './support.ts';
 
 const fixtureDir = path.dirname(fileURLToPath(import.meta.url));
 const blankPdf = path.join(fixtureDir, 'fixtures', 'blank.pdf');

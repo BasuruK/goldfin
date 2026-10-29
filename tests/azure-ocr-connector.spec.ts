@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { mockConnectorApi, selectProvider } from './support.js';
+import { mockConnectorApi, selectProvider } from './support.ts';
 
 async function openAzureOcrDraft(page: Page) {
   await page.getByRole('button', { name: 'Add connector', exact: true }).click();

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { apiProxyTarget } from '../api-proxy-target.js';
+import { apiProxyTarget } from '../api-proxy-target.ts';
 
 describe('apiProxyTarget', () => {
   it('accepts an http(s) origin', () => {

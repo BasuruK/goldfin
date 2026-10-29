@@ -1,15 +1,16 @@
 {
   "extends": "$app/tsconfig",
   "compilerOptions": {
-    "allowJs": true,
-    "checkJs": true,
+    "allowJs": false,
+    "checkJs": false,
     "strict": true,
     "paths": {
       "$goldfin": ["./Goldfin_Components/src"],
       "$goldfin/*": ["./Goldfin_Components/src/*"],
       "$lib": ["./src/lib"],
-      "$lib/*": ["./src/lib/*"]
+      "$lib/*": ["./src/lib/*"],
+      "#lib/*": ["./src/lib/*"]
     }
   },
-  "include": ["src", "tests", "*.js"]
+  "include": ["src", "tests", "api-proxy-target.ts", "vite.config.ts", "playwright.config.ts"]
 }

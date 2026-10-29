@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { Section, SegmentedControl } from '$goldfin/lib/index.js';
   import { SIDES, shell } from '#lib/shell.svelte.js';
 </script>

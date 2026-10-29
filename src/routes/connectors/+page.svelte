@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { onDestroy, onMount } from 'svelte';
   import { Button, Icon, Section } from '$goldfin/lib/index.js';
   import ConnectorCard from '#lib/connectors/ConnectorCard.svelte';

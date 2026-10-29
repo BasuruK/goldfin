@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { boxOf, mockConnectorApi, selectProvider } from './support.js';
+import { boxOf, mockConnectorApi, selectProvider } from './support.ts';
 
 test('Integrations expands without navigation and opens Connectors from the rail', async ({ page }) => {
   await page.goto('/');
@@ -21,8 +21,7 @@ test('Integrations expands without navigation and opens Connectors from the rail
 });
 
 test('model preview starts disabled, toggles in the draft, and blocks after connection changes', async ({ page }) => {
-  /** @type {string[]} */
-  const outbound = [];
+  const outbound: string[] = [];
   page.on('request', request => {
     if (request.url().includes('api.openai.com')) outbound.push(request.url());
   });
@@ -68,8 +67,7 @@ test('model panel reveals through intermediate frames when motion is allowed', a
     const opener = [...document.querySelectorAll('button')].find(button => button.textContent?.trim() === 'Preview models');
     if (!opener) throw new Error('Preview models button is missing');
     opener.click();
-    /** @type {number[]} */
-    const seen = [];
+    const seen: number[] = [];
     for (let frame = 0; frame < 20; frame++) {
       await new Promise(resolve => requestAnimationFrame(resolve));
       const panel = document.querySelector('.model-panel');

@@ -1,4 +1,5 @@
-<script>
+<script lang="ts">
+  import type { Snippet } from 'svelte';
   import { page } from '$app/state';
   import { Avatar } from 'bits-ui';
   import { Button, Icon, ThemeToggle } from '$goldfin/lib/index.js';
@@ -21,13 +22,12 @@
   import { fade } from 'svelte/transition';
   import '../app.css';
 
-  let { children } = $props();
+  let { children }: { children: Snippet } = $props();
 
   const expanded = $derived(shell.sidebarMode === 'expanded');
   const integrationsOpen = $derived(shell.integrationsOpen && (expanded || shell.mobile));
 
-  /** @param {string} href */
-  const isActive = href =>
+  const isActive = (href: string) =>
     href === '/' ? page.url.pathname === '/' : page.url.pathname.startsWith(href);
 
   $effect(() => trackViewport());
@@ -47,8 +47,7 @@
   });
 
   $effect(() => {
-    /** @param {KeyboardEvent} event */
-    const onKey = event => {
+    const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') closeLayers({ restoreFocus: true });
     };
     document.addEventListener('keydown', onKey);

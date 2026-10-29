@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { mockConnectorApi, selectProvider } from './support.js';
+import { mockConnectorApi, selectProvider } from './support.ts';
 
 const savedConnector = {
   id: 'c9',

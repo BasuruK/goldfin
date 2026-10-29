@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { boxOf } from './support.js';
+import { boxOf } from './support.ts';
 
 test('static app shell loads with the approved dark theme', async ({ page }) => {
   const errors: string[] = [];

@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { Chip, Section } from '$goldfin/lib/index.js';
 </script>
 
