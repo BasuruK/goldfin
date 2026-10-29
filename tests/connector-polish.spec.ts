@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { boxOf, mockConnectorApi, selectProvider } from './support.js';
+import { boxOf, mockConnectorApi, selectProvider } from './support.ts';
 
 test('Integrations opens and closes through intermediate sizes and keyboard activation is instant', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });

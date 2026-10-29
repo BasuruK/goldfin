@@ -2,7 +2,7 @@ import { fileURLToPath } from 'node:url';
 import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig, loadEnv } from 'vite';
-import { apiProxyTarget } from './api-proxy-target.js';
+import { apiProxyTarget } from './api-proxy-target.ts';
 
 // The component library is referenced from its source, never copied. `$goldfin`
 // points at the library's src, so `$goldfin/lib/index.js` and

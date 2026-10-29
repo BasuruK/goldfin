@@ -1,48 +1,39 @@
-import { CONNECTORS_PATH } from '../src/lib/connectors/api.ts';
+import type { Locator, Page } from '@playwright/test';
+import { CONNECTORS_PATH, type SavedConnector } from '../src/lib/connectors/api.ts';
 import { OCR_PATH } from '../src/lib/ocr/api.ts';
 
-/** @param {number | undefined} ms */
-async function mockRouteDelay(ms) {
+async function mockRouteDelay(ms: number | undefined): Promise<void> {
   if (ms) await new Promise(resolve => setTimeout(resolve, ms));
 }
 
-/**
- * The element's bounding box; throws when it has none, so a test fails at the lookup.
- * @param {import('@playwright/test').Locator} locator
- */
-export async function boxOf(locator) {
+/** The element's bounding box; throws when it has none, so a test fails at the lookup. */
+export async function boxOf(locator: Locator) {
   const box = await locator.boundingBox();
   if (!box) throw new Error(`${locator} has no bounding box`);
   return box;
 }
 
-/**
- * Intercepts the Connector API so specs never need a live server. A POST is recorded in
- * `state.posts` and answered 201 with the saved Connector, which then joins the list;
- * `reject` answers it with that status and message instead. `saveDelayMs` holds the POST
- * reply back, for late-reply specs.
- * @param {import('@playwright/test').Page} page
- * @param {object} [options]
- * @param {import('../src/lib/connectors/api.ts').SavedConnector[]} [options.saved]
- * @param {{ status: number, message: string }} [options.reject]
- * @param {number} [options.saveDelayMs]
- */
-export async function mockConnectorApi(page, options = {}) {
+interface MockConnectorApiOptions {
+  saved?: SavedConnector[];
+  reject?: { status: number; message: string };
+  saveDelayMs?: number;
+}
+
+/** Intercepts the Connector API so specs never need a live server. */
+export async function mockConnectorApi(page: Page, options: MockConnectorApiOptions = {}) {
   const state = {
     connectors: [...(options.saved ?? [])],
-    /** @type {Record<string, string>[]} */
-    posts: []
+    posts: [] as Record<string, string>[]
   };
   await page.route(`**${CONNECTORS_PATH}`, async route => {
     const request = route.request();
     if (request.method() === 'GET') return route.fulfill({ json: { connectors: state.connectors } });
     if (request.method() !== 'POST') return route.fulfill({ status: 405, json: { message: 'Method not allowed.' } });
-    const body = /** @type {Record<string, string>} */ (JSON.parse(request.postData() ?? '{}'));
+    const body = JSON.parse(request.postData() ?? '{}') as Record<string, string>;
     state.posts.push(body);
     await mockRouteDelay(options.saveDelayMs);
     if (options.reject) return route.fulfill({ status: options.reject.status, json: { message: options.reject.message } });
-    /** @type {import('../src/lib/connectors/api.ts').SavedConnector} */
-    const saved = {
+    const saved: SavedConnector = {
       id: `c${state.posts.length}`,
       name: body.name,
       providerType: body.providerType,
@@ -56,24 +47,19 @@ export async function mockConnectorApi(page, options = {}) {
   return state;
 }
 
-/**
- * @param {import('@playwright/test').Locator} dialog
- * @param {string} label
- */
-export async function selectProvider(dialog, label) {
+export async function selectProvider(dialog: Locator, label: string) {
   await dialog.getByLabel('Provider', { exact: true }).click();
   await dialog.page().getByRole('option', { name: label, exact: true }).click();
 }
 
-/**
- * @param {import('@playwright/test').Page} page
- * @param {object} [options]
- * @param {string} [options.content]
- * @param {number} [options.pages]
- * @param {number} [options.delayMs]
- * @param {{ status: number, message: string }} [options.reject]
- */
-export async function mockOcrApi(page, options = {}) {
+interface MockOcrApiOptions {
+  content?: string;
+  pages?: number;
+  delayMs?: number;
+  reject?: { status: number; message: string };
+}
+
+export async function mockOcrApi(page: Page, options: MockOcrApiOptions = {}) {
   await page.route(`**${OCR_PATH}`, async route => {
     await mockRouteDelay(options.delayMs);
     if (options.reject) {

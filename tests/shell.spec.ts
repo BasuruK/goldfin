@@ -1,5 +1,5 @@
 import { expect, test, type Locator } from '@playwright/test';
-import { boxOf } from './support.js';
+import { boxOf } from './support.ts';
 
 /* The shell's own behaviour: focus return, theme application and the boundary
    between a rail and a drawer. These are the rules the shell module owns, so
