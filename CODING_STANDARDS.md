@@ -38,12 +38,12 @@ When a ticket has a **Failure table** (`docs/agents/landing.md`, one-way seams o
 
 ## Frontend async
 
-- **Guarded fetch**: Pass a timeout signal to every `fetch`, guard `.json()`, and route failures through the single error mapper in `src/lib/connectors/api.js`, with distinct timeout and reachability messages.
+- **Guarded fetch**: Pass a timeout signal to every `fetch`, guard `.json()`, and route failures through the shared fetch transport and error mapper in `src/lib/connectors/request-core.ts`, with distinct timeout and reachability messages.
 - **Late replies**: Before a completion mutates UI, check that the draft it belongs to is still open. Add a per-request token only where a slow reply can overwrite a newer one.
 - **Reactive state**: Hold UI-driving state in reactive Svelte state (`$state` / `$derived`).
 - **Optimistic rollback**: Pair every optimistic update with a rollback path and clear prior failure messages on success.
 - **Mapped errors**: Surface only mapped user-facing messages in the UI.
-- **Client credentials** (`docs/adr/0005-credential-handling.md`): Keep Credential plaintext in the creating request only. `storage.js` clears the legacy `localStorage` store on every load.
+- **Client credentials** (`docs/adr/0005-credential-handling.md`): Keep Credential plaintext in the creating request only. `src/lib/connectors/storage.ts` clears the legacy `localStorage` store on every load.
 
 ## Contracts across layers
 

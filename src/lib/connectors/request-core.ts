@@ -2,6 +2,13 @@
  * Shared fetch transport for frontend API clients (CODING_STANDARDS Frontend async).
  */
 
+type RequestErrorKind =
+  | 'timeout'
+  | 'unreachable'
+  | 'rejected'
+  | 'unavailable'
+  | 'canceled';
+
 function requestSignal(timeoutMs: number, callerSignal: AbortSignal | undefined): AbortSignal {
   const timeoutSignal = AbortSignal.timeout(timeoutMs);
   if (!callerSignal) return timeoutSignal;
@@ -27,8 +34,8 @@ export interface FetchApiRequestOptions {
   timeoutMs: number;
   callerSignal?: AbortSignal;
   messages: Record<string, string>;
-  createError: (kind: string, message: string) => Error;
-  canceledKind?: string;
+  createError: (kind: RequestErrorKind, message: string) => Error;
+  canceledKind?: RequestErrorKind;
   canceledMessage?: string;
   httpTimeoutStatuses?: boolean;
   statusMessage?: (status: number) => string;

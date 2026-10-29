@@ -4,10 +4,7 @@ export const DOCUMENT_ACCEPT =
 
 export const MAX_DOCUMENT_BYTES = 30_000_000;
 
-const EXTENSIONS = new Set(['pdf', 'jpg', 'jpeg', 'png', 'docx']);
-
-/** @type {Record<string, readonly string[]>} */
-const MIME_FOR_EXTENSION = {
+const MIME_FOR_EXTENSION: Record<string, readonly string[]> = {
   pdf: ['application/pdf'],
   jpg: ['image/jpeg'],
   jpeg: ['image/jpeg'],
@@ -15,27 +12,19 @@ const MIME_FOR_EXTENSION = {
   docx: ['application/vnd.openxmlformats-officedocument.wordprocessingml.document']
 };
 
-/**
- * @param {File} file
- * @param {string} ext
- * @returns {boolean}
- */
-function mimeMatchesExtension(file, ext) {
+function mimeMatchesExtension(file: File, ext: string): boolean {
   if (!file.type) return true;
   const allowed = MIME_FOR_EXTENSION[ext];
   if (!allowed) return false;
   return allowed.includes(file.type.toLowerCase());
 }
 
-/**
- * @param {File | null | undefined} file
- * @returns {string | null} A user-facing message, or null when valid.
- */
-export function validateDocument(file) {
+/** @returns A user-facing message, or null when valid. */
+export function validateDocument(file: File | null | undefined): string | null {
   if (!file || file.size === 0) return 'Choose a PDF, JPEG, PNG, or DOCX file.';
   if (file.size > MAX_DOCUMENT_BYTES) return 'Request is too large.';
   const ext = file.name.includes('.') ? file.name.split('.').pop()?.toLowerCase() : '';
-  if (!ext || !EXTENSIONS.has(ext)) {
+  if (!ext || !Object.hasOwn(MIME_FOR_EXTENSION, ext)) {
     return 'Choose a PDF, JPEG, PNG, or DOCX file.';
   }
   if (!mimeMatchesExtension(file, ext)) {
