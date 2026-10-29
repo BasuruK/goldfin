@@ -99,7 +99,7 @@ test('Cancel discards the draft without saving', async ({ page }) => {
   await expect(reopened.getByLabel('Name', { exact: true })).toHaveValue('Web Request');
 });
 
-test('an unsupported provider cannot be saved but keeps the simulated preview', async ({ page }) => {
+test('an unsupported provider cannot be saved but still shows manual model entry', async ({ page }) => {
   await mockConnectorApi(page);
   await page.goto('/connectors/');
   await page.getByRole('button', { name: 'Add connector', exact: true }).click();
@@ -107,8 +107,8 @@ test('an unsupported provider cannot be saved but keeps the simulated preview', 
   await expect(dialog.getByRole('button', { name: 'Delete connector', exact: true })).toHaveCount(0);
   await expect(dialog.getByText(/Saving is not available for OpenAI yet/)).toBeVisible();
   await expect(dialog.getByRole('button', { name: 'Save', exact: true })).toBeDisabled();
-  await dialog.getByRole('button', { name: 'Preview models', exact: true }).click();
-  await expect(dialog.getByText(/Simulated catalog/)).toBeVisible();
+  await expect(dialog.getByRole('heading', { name: 'Models', exact: true })).toBeVisible();
+  await expect(dialog.getByLabel('Model ID', { exact: true })).toBeVisible();
 });
 
 test('an unreachable API reports and retries', async ({ page }) => {

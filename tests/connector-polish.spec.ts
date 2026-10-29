@@ -47,13 +47,12 @@ test('menu items never shrink while pressed', async ({ page }) => {
 });
 
 for (const providerLabel of ['OpenAI', 'Azure', 'OpenAI Compatible', 'Web Request']) {
-  test(`custom models are available for ${providerLabel} and survive refresh`, async ({ page }) => {
+  test(`custom models are available for ${providerLabel} and keep toggle state`, async ({ page }) => {
     await mockConnectorApi(page);
     await page.goto('/connectors/');
     await page.getByRole('button', { name: 'Add connector', exact: true }).click();
     const dialog = page.getByRole('dialog');
     await selectProvider(dialog, providerLabel);
-    await dialog.getByRole('button', { name: 'Preview models', exact: true }).click();
     const entry = dialog.getByLabel('Model ID', { exact: true });
     await entry.fill('custom-model');
     await entry.press('Enter');
@@ -61,7 +60,6 @@ for (const providerLabel of ['OpenAI', 'Azure', 'OpenAI Compatible', 'Web Reques
     const toggle = dialog.getByRole('switch', { name: 'custom-model', exact: true });
     await expect(toggle).toHaveAttribute('aria-checked', 'false');
     await toggle.click();
-    await dialog.getByRole('button', { name: 'Refresh preview', exact: true }).click();
     await expect(toggle).toHaveAttribute('aria-checked', 'true');
     await expect(dialog.getByRole('row', { name: /custom-model/ })).toContainText('Unverified');
   });
@@ -72,7 +70,6 @@ test('model table puts names before small toggles and scrolls without growing th
   await page.goto('/connectors/');
   await page.getByRole('button', { name: 'Add connector', exact: true }).click();
   const draftDialog = page.getByRole('dialog');
-  await draftDialog.getByRole('button', { name: 'Preview models', exact: true }).click();
   const entry = draftDialog.getByLabel('Model ID', { exact: true });
   for (let index = 0; index < 60; index++) {
     await entry.fill(`model-${index}`);
@@ -131,7 +128,6 @@ for (const theme of ['light', 'dark']) {
       if (viewport.width < 768) await page.getByRole('link', { name: 'Connectors', exact: true }).click();
       await page.getByRole('button', { name: 'Add connector', exact: true }).click();
       const dialog = page.getByRole('dialog');
-      await dialog.getByRole('button', { name: 'Preview models', exact: true }).click();
       await expect(dialog.getByRole('button', { name: 'Add model ID', exact: true })).toHaveCount(0);
       await expect(dialog.getByText('Sample and unverified IDs cannot be used in a Run.', { exact: true })).toHaveCount(0);
       const entry = dialog.getByLabel('Model ID', { exact: true });

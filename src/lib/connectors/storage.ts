@@ -9,7 +9,7 @@ const STORAGE_KEY = 'goldfin.connectors.v1';
 export interface ConnectorModel {
   id: string;
   enabled: boolean;
-  source: 'sample' | 'manual' | 'discovered';
+  source: 'manual' | 'discovered';
   verified?: boolean;
 }
 
@@ -24,9 +24,8 @@ export interface ConnectorRecord {
   apiVersion: string;
   updatedAt: string;
   models: ConnectorModel[];
-  catalogState: 'idle' | 'loading' | 'ready' | 'unsupported' | 'failed';
+  catalogState: 'idle' | 'ready';
   catalogMessage: string;
-  discoveryRevision: number;
 }
 
 /** Clears the legacy store on every load; the Credentials in it must not stay at rest. */
@@ -49,9 +48,8 @@ export function createEmptyConnector(providerType: ProviderType = DEFAULT_PROVID
     credentialLabel: '',
     apiVersion: '',
     models: [],
-    catalogState: 'idle',
+    catalogState: 'ready',
     catalogMessage: '',
-    discoveryRevision: 0,
     updatedAt: now
   };
 }
