@@ -10,19 +10,30 @@ export const OCR_PATH = '/api/v1/probes/ocr';
 /** Route processing budget (5m) plus server write headroom. */
 const OCR_REQUEST_TIMEOUT_MS = 5 * 60 * 1000 + 35 * 1000;
 
-/** @typedef {'timeout' | 'unreachable' | 'rejected' | 'unavailable' | 'malformed' | 'canceled'} OcrErrorKind */
-/** @typedef {{ content: string, pages: number }} OcrResult */
+type OcrErrorKind =
+  | 'timeout'
+  | 'unreachable'
+  | 'rejected'
+  | 'unavailable'
+  | 'malformed'
+  | 'canceled';
+
+interface OcrResult {
+  content: string;
+  pages: number;
+}
 
 export class OcrError extends Error {
-  /** @param {OcrErrorKind} kind @param {string} message */
-  constructor(kind, message) {
+  readonly kind: OcrErrorKind;
+
+  constructor(kind: OcrErrorKind, message: string) {
     super(message);
     this.name = 'OcrError';
     this.kind = kind;
   }
 }
 
-const MESSAGES = {
+const MESSAGES: Record<OcrErrorKind, string> = {
   timeout: 'OCR timed out.',
   unreachable: 'Could not reach the API. Check that Goldfin is running, then try again.',
   unavailable: 'Goldfin is unavailable right now. Try again.',
@@ -31,13 +42,11 @@ const MESSAGES = {
   canceled: 'OCR was canceled.'
 };
 
-/**
- * @param {string} connectorId
- * @param {File} document
- * @param {AbortSignal} [signal]
- * @returns {Promise<OcrResult>}
- */
-export async function submitOcr(connectorId, document, signal) {
+export async function submitOcr(
+  connectorId: string,
+  document: File,
+  signal?: AbortSignal
+): Promise<OcrResult> {
   const form = new FormData();
   form.set('connectorId', connectorId);
   form.set('document', document, document.name);
@@ -49,7 +58,20 @@ export async function submitOcr(connectorId, document, signal) {
     canceledKind: 'canceled',
     canceledMessage: MESSAGES.canceled,
     messages: MESSAGES,
-    createError: (kind, message) => new OcrError(kind, message),
+    createError: (kind, message) => {
+      switch (kind) {
+        case 'timeout':
+        case 'unreachable':
+        case 'rejected':
+        case 'unavailable':
+        case 'canceled':
+          return new OcrError(kind, message);
+        default: {
+          const unreachable: never = kind;
+          return new OcrError(unreachable, message);
+        }
+      }
+    },
     httpTimeoutStatuses: true,
     statusMessage: mapStatus
   });
@@ -59,8 +81,7 @@ export async function submitOcr(connectorId, document, signal) {
   return { content: record.content, pages: record.pages };
 }
 
-/** @param {number} status */
-function mapStatus(status) {
+function mapStatus(status: number): string {
   if (status === 408 || status === 504) return MESSAGES.timeout;
   if (status >= 500) return MESSAGES.unavailable;
   if (status === 413) return 'Request is too large.';

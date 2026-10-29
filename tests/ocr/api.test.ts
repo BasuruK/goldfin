@@ -1,9 +1,8 @@
 import assert from 'node:assert/strict';
 import { afterEach, describe, it, mock } from 'node:test';
-import { OcrError, OCR_PATH, submitOcr } from '../../src/lib/ocr/api.js';
+import { OcrError, OCR_PATH, submitOcr } from '../../src/lib/ocr/api.ts';
 
-/** @param {number} status @param {unknown} body */
-function jsonResponse(status, body) {
+function jsonResponse(status: number, body: unknown) {
   return {
     ok: status >= 200 && status < 300,
     status,
@@ -17,11 +16,11 @@ afterEach(() => mock.restoreAll());
 
 describe('submitOcr', () => {
   it('posts multipart fields to the OCR route', async () => {
-    mock.method(globalThis, 'fetch', async (/** @type {string} */ url, /** @type {RequestInit} */ init) => {
+    mock.method(globalThis, 'fetch', async (url: string, init?: RequestInit) => {
       assert.equal(url, OCR_PATH);
       assert.equal(init?.method, 'POST');
       assert.ok(init?.body instanceof FormData);
-      const form = /** @type {FormData} */ (init.body);
+      const form = init.body as FormData;
       assert.equal(form.get('connectorId'), 'c1');
       assert.ok(form.get('document') instanceof File);
       return jsonResponse(200, { content: 'Hello', pages: 2 });
@@ -49,18 +48,19 @@ describe('submitOcr', () => {
   });
 
   it('maps caller abort to canceled through the shared request core', async () => {
-    mock.method(globalThis, 'fetch', async (/** @type {string} */ _url, /** @type {RequestInit} */ init) => {
+    mock.method(globalThis, 'fetch', async (_url: string, init?: RequestInit) => {
       assert.ok(init?.signal instanceof AbortSignal);
       throw new DOMException('The operation was aborted.', 'AbortError');
     });
     await assert.rejects(
       submitOcr('c1', new File(['x'], 'a.pdf'), new AbortController().signal),
       error => {
-      assert.ok(error instanceof OcrError);
-      assert.equal(error.kind, 'canceled');
-      assert.equal(error.message, 'OCR was canceled.');
-      return true;
-    });
+        assert.ok(error instanceof OcrError);
+        assert.equal(error.kind, 'canceled');
+        assert.equal(error.message, 'OCR was canceled.');
+        return true;
+      }
+    );
   });
 
   it('maps unavailable and unreachable failures distinctly', async () => {

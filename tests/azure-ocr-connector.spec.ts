@@ -1,8 +1,7 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { mockConnectorApi, selectProvider } from './support.js';
 
-/** @param {import('@playwright/test').Page} page */
-async function openAzureOcrDraft(page) {
+async function openAzureOcrDraft(page: Page) {
   await page.getByRole('button', { name: 'Add connector', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await selectProvider(dialog, 'Azure Document Intelligence');

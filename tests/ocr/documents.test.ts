@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { MAX_DOCUMENT_BYTES, validateDocument } from '../../src/lib/ocr/documents.js';
+import { MAX_DOCUMENT_BYTES, validateDocument } from '../../src/lib/ocr/documents.ts';
 
 describe('validateDocument', () => {
   it('rejects empty and unsupported files', () => {

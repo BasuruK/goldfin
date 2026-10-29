@@ -1,5 +1,5 @@
 import { CONNECTORS_PATH } from '../src/lib/connectors/api.ts';
-import { OCR_PATH } from '../src/lib/ocr/api.js';
+import { OCR_PATH } from '../src/lib/ocr/api.ts';
 
 /** @param {number | undefined} ms */
 async function mockRouteDelay(ms) {
