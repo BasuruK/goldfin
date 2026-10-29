@@ -33,7 +33,10 @@ export function availableModelIds(record: ConnectorRecord): string[] {
 
 export function addManualModel(record: ConnectorRecord, value: string): ConnectorRecord {
   const id = value.trim();
-  if (!id || (record.models ?? []).some(model => model.id === id)) return record;
+  if (!id) return record;
+  if ((record.models ?? []).some(model => model.id === id)) {
+    return record.catalogState === 'ready' ? record : { ...record, catalogState: 'ready' };
+  }
   return {
     ...record,
     catalogState: 'ready',

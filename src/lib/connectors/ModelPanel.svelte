@@ -23,7 +23,7 @@
     <span class="model-panel-count">{enabledCount} enabled · unverified until checked</span>
   </header>
   <p class="model-panel-notice" role="status">
-    {record.catalogMessage || (editable ? 'Add model IDs manually. Unverified IDs cannot be used in a Run.' : 'Connection changed. Model toggles stay off until you save with stable connection details.')}
+    {record.catalogMessage || (editable ? 'Add model IDs manually. Unverified IDs cannot be used in a Run.' : 'Connection changed. Model toggles stay off until you add a model ID.')}
   </p>
   <!-- svelte-ignore a11y_no_noninteractive_tabindex (The scroll region needs keyboard access.) -->
   <div class="model-list" role="region" aria-label="Model list" tabindex="0">

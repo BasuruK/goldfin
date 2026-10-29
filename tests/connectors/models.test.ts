@@ -54,6 +54,20 @@ test('being listed by a provider does not prove model access', () => {
   assert.deepEqual(availableModelIds(record), ['model-a']);
 });
 
+test('re-entering an existing model ID restores catalog readiness without reviving verification', () => {
+  const record = makeRecord({
+    catalogState: 'idle',
+    models: [{ id: 'deployment-a', enabled: true, source: 'manual', verified: false }]
+  });
+  assert.equal(isCatalogEditable(record), false);
+  const restored = addManualModel(record, 'deployment-a');
+  assert.equal(restored.catalogState, 'ready');
+  assert.equal(isCatalogEditable(restored), true);
+  assert.equal(restored.models[0].verified, false);
+  assert.equal(restored.models[0].enabled, true);
+  assert.equal(addManualModel(restored, 'deployment-a'), restored);
+});
+
 test('manual IDs become available only after verification and lose access on connection changes', () => {
   const record = makeRecord({
     apiKey: 'test',

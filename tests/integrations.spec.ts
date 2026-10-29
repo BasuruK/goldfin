@@ -58,19 +58,25 @@ test('model panel reveals through intermediate frames when motion is allowed', a
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await mockConnectorApi(page);
   await page.goto('/connectors/');
-  await page.getByRole('button', { name: 'Add connector', exact: true }).click();
+  const frames = await page.evaluate(async () => {
+    const addButton = Array.from(document.querySelectorAll('button')).find(
+      button => button.textContent?.trim() === 'Add connector'
+    );
+    if (!(addButton instanceof HTMLElement)) throw new Error('Add connector button is missing');
+    const readOpacityFrames = async () => {
+      const seen: number[] = [];
+      for (let frame = 0; frame < 20; frame++) {
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        const panel = document.querySelector('.model-panel');
+        seen.push(panel ? Number(getComputedStyle(panel).opacity) : Number.NaN);
+      }
+      return seen;
+    };
+    addButton.click();
+    return readOpacityFrames();
+  });
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByRole('heading', { name: 'Models', exact: true })).toBeVisible();
-  const frames = await page.evaluate(async () => {
-    const panel = document.querySelector('.model-panel');
-    if (!panel) throw new Error('Model panel is missing');
-    const seen: number[] = [];
-    for (let frame = 0; frame < 20; frame++) {
-      await new Promise(resolve => requestAnimationFrame(resolve));
-      seen.push(Number(getComputedStyle(panel).opacity));
-    }
-    return seen;
-  });
   expect(frames.some(opacity => opacity > 0 && opacity < 1)).toBe(true);
   expect(frames.at(-1)).toBe(1);
 });
