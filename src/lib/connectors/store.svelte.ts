@@ -1,4 +1,4 @@
-import { applyConnectorPatch, beginDiscovery, finishDiscovery, addManualModel, isCatalogEditable } from './models.ts';
+import { applyConnectorPatch, addManualModel, isCatalogEditable } from './models.ts';
 import {
   AZURE_OCR_PROVIDER_TYPE,
   DEFAULT_AZURE_OCR_API_VERSION,
@@ -9,7 +9,6 @@ import {
   type ProviderType
 } from './providers.ts';
 import { clearLegacyConnectors, createEmptyConnector, type ConnectorRecord } from './storage.ts';
-import { previewModelCatalog } from './model-preview.ts';
 import { ApiError, createConnector, listConnectors, validateDraft, type SavedConnector } from './api.ts';
 
 export type SaveErrorField = 'name' | 'baseUrl' | 'credential' | 'credentialLabel';
@@ -149,23 +148,6 @@ export async function saveDraft(): Promise<void> {
   }
 }
 
-export async function previewDraftModels(): Promise<void> {
-  const draft = connectorStore.draft;
-  if (!draft) return;
-  const loading = beginDiscovery(draft);
-  connectorStore.draft = loading;
-  let result;
-  try {
-    result = await previewModelCatalog(draft.providerType);
-  } catch {
-    result = { state: 'failed' as const, message: 'Could not load the preview. Try again.' };
-  }
-  const current = connectorStore.draft;
-  if (!current || current.id !== draft.id) return;
-  const finished = finishDiscovery(current, loading.discoveryRevision, result);
-  if (finished !== current) connectorStore.draft = finished;
-}
-
 export function setDraftModelEnabled(modelId: string, enabled: boolean): void {
   const draft = connectorStore.draft;
   if (!draft || !isCatalogEditable(draft)) return;
@@ -177,7 +159,7 @@ export function setDraftModelEnabled(modelId: string, enabled: boolean): void {
 
 export function addDraftModel(value: string): void {
   const draft = connectorStore.draft;
-  if (!draft || draft.catalogState === 'loading') return;
+  if (!draft) return;
   const next = addManualModel(draft, value);
   if (next !== draft) connectorStore.draft = next;
 }

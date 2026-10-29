@@ -13,7 +13,6 @@
     closeDialog,
     connectorStore,
     patchDraft,
-    previewDraftModels,
     saveDraft,
     setDraftProviderType
   } from './store.svelte.js';
@@ -59,10 +58,7 @@
   const savableProvider = $derived(record ? isSavableProvider(record.providerType) : false);
   const saveUnavailable = $derived(record !== null && !savableProvider);
   const isAzureOcr = $derived(record?.providerType === 'azure_document_intelligence');
-  const showModels = $derived(
-    !isAzureOcr
-    && ((record?.catalogState ?? 'idle') !== 'idle' || (record?.models?.length ?? 0) > 0)
-  );
+  const showModels = $derived(!isAzureOcr);
 
   function fieldError(field: SaveErrorField): string {
     return connectorStore.saveErrorField === field ? connectorStore.saveError : '';
@@ -150,7 +146,7 @@
             {/if}
             {#if saveUnavailable}
               <p class="connector-save-note">
-                Saving is not available for {provider.label} yet; the model preview below stays simulated.
+                Saving is not available for {provider.label} yet.
               </p>
             {/if}
             {#if generalSaveError}
@@ -159,13 +155,6 @@
           </div>
         </DialogBody>
         <div class="modal-foot connector-dialog-foot">
-          {#if !isAzureOcr}
-            <div class="connector-test-wrap">
-              <Button type="button" disabled={record.catalogState === 'loading' || fieldsDisabled} onclick={() => previewDraftModels()}>
-                Preview models
-              </Button>
-            </div>
-          {/if}
           <div class="modal-foot-actions connector-dialog-actions">
             <Button type="button" onclick={closeDialog}>Cancel</Button>
             <LoadingButton
@@ -242,26 +231,14 @@
   .connector-dialog-foot {
     flex-direction: row;
     flex-wrap: wrap;
-    justify-content: space-between;
+    justify-content: flex-end;
     align-items: center;
     gap: 12px 16px;
     padding-block: 14px 16px;
   }
 
-  .connector-test-wrap {
-    flex: none;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .connector-test-wrap :global(.btn) {
-    min-inline-size: 4.75rem;
-  }
-
   .connector-dialog-actions {
     flex: none;
-    margin-inline-start: auto;
   }
 
   .sr-only {

@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { Button, Input, Switch } from '$goldfin/lib/index.js';
+  import { Input, Switch } from '$goldfin/lib/index.js';
   import { isCatalogEditable } from './models.js';
-  import { addDraftModel, previewDraftModels, setDraftModelEnabled } from './store.svelte.js';
+  import { addDraftModel, setDraftModelEnabled } from './store.svelte.js';
   import type { ConnectorRecord } from './storage.js';
 
   let { record }: { record: ConnectorRecord } = $props();
@@ -17,13 +17,13 @@
   }
 </script>
 
-<section class="model-panel modal" aria-labelledby="model-panel-title" aria-busy={record.catalogState === 'loading'}>
+<section class="model-panel modal" aria-labelledby="model-panel-title">
   <header class="model-panel-head">
     <h2 id="model-panel-title">Models</h2>
-    <span class="model-panel-count">{enabledCount} enabled · preview only</span>
+    <span class="model-panel-count">{enabledCount} enabled · unverified until checked</span>
   </header>
   <p class="model-panel-notice" role="status">
-    {record.catalogMessage || 'Connection changed. Refresh the preview before enabling models.'}
+    {record.catalogMessage || (editable ? 'Add model IDs manually. Unverified IDs cannot be used in a Run.' : 'Connection changed. Model toggles stay off until you save with stable connection details.')}
   </p>
   <!-- svelte-ignore a11y_no_noninteractive_tabindex (The scroll region needs keyboard access.) -->
   <div class="model-list" role="region" aria-label="Model list" tabindex="0">
@@ -34,7 +34,7 @@
         <tr>
           <th scope="row">
             <span class="model-name">{model.id}</span>
-            <span class="model-source">{model.source === 'sample' ? 'Sample' : model.source === 'manual' ? 'Unverified' : 'Discovered'}</span>
+            <span class="model-source">{model.source === 'manual' ? 'Unverified' : 'Discovered'}</span>
           </th>
           <td class="model-toggle-cell">
             <Switch size="sm" label={model.id} checked={model.enabled} disabled={!editable}
@@ -48,11 +48,8 @@
     </table>
   </div>
   <form class="model-manual" onsubmit={addModel}>
-    <Input label="Model ID" bind:value={manualId} placeholder="Type an ID, then press Enter" disabled={record.catalogState === 'loading'} />
+    <Input label="Model ID" bind:value={manualId} placeholder="Type an ID, then press Enter" />
   </form>
-  <footer class="model-panel-foot">
-    <Button type="button" disabled={record.catalogState === 'loading'} onclick={() => previewDraftModels()}>Refresh preview</Button>
-  </footer>
 </section>
 
 <style>
@@ -87,8 +84,6 @@
   @media (hover: hover) and (pointer: fine) { .model-table tbody tr:hover > * { background: var(--hover); } }
   @media (pointer: coarse) { .model-table th, .model-table td { padding-block: 13px; } }
   .model-manual { display: grid; gap: 10px; }
-  .model-panel-foot { display: grid; }
-  .model-panel-foot :global(.btn) { justify-self: start; }
   @media (prefers-reduced-motion: no-preference) {
     .model-panel { opacity: 1; transform: translateX(0); transition: opacity var(--duration-menu) var(--ease-out), transform var(--duration-menu) var(--ease-out); }
     @starting-style { .model-panel { opacity: 0; transform: translateX(-12px); } }

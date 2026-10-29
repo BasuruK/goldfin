@@ -20,7 +20,7 @@ test('Integrations expands without navigation and opens Connectors from the rail
   await expect(group).toHaveAttribute('aria-expanded', 'true');
 });
 
-test('model preview starts disabled, toggles in the draft, and blocks after connection changes', async ({ page }) => {
+test('manual models start disabled, toggle in the draft, and block after connection changes', async ({ page }) => {
   const outbound: string[] = [];
   page.on('request', request => {
     if (request.url().includes('api.openai.com')) outbound.push(request.url());
@@ -29,28 +29,25 @@ test('model preview starts disabled, toggles in the draft, and blocks after conn
   await page.goto('/connectors/');
   await page.getByRole('button', { name: 'Add connector', exact: true }).click();
   const dialog = page.getByRole('dialog');
-  await dialog.getByRole('button', { name: 'Preview models', exact: true }).click();
+  await expect(dialog.getByRole('button', { name: 'Preview models', exact: true })).toHaveCount(0);
   await expect(dialog.getByRole('heading', { name: 'Models', exact: true })).toBeVisible();
-  await expect(dialog.getByText(/Simulated catalog/)).toBeVisible();
-  const model = dialog.getByRole('switch', { name: 'sample-chat-small', exact: true });
+  await dialog.getByLabel('Model ID', { exact: true }).fill('my-deployment');
+  await dialog.getByLabel('Model ID', { exact: true }).press('Enter');
+  const model = dialog.getByRole('switch', { name: 'my-deployment', exact: true });
   await expect(model).toHaveAttribute('aria-checked', 'false');
   await model.click();
   await expect(model).toHaveAttribute('aria-checked', 'true');
   await dialog.getByLabel('Base URL', { exact: true }).fill('https://changed.example/v1');
   await expect(model).toBeDisabled();
-  await dialog.getByRole('button', { name: 'Refresh preview', exact: true }).click();
-  await expect(model).toBeEnabled();
-  await expect(model).toHaveAttribute('aria-checked', 'true');
   expect(outbound).toEqual([]);
 });
 
-test('unsupported discovery allows explicit unverified manual IDs', async ({ page }) => {
+test('web request allows explicit unverified manual IDs', async ({ page }) => {
   await mockConnectorApi(page);
   await page.goto('/connectors/');
   await page.getByRole('button', { name: 'Add connector', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await selectProvider(dialog, 'Web Request');
-  await dialog.getByRole('button', { name: 'Preview models', exact: true }).click();
   await dialog.getByLabel('Model ID', { exact: true }).fill('custom-model');
   await dialog.getByLabel('Model ID', { exact: true }).press('Enter');
   await expect(dialog.getByRole('switch', { name: 'custom-model', exact: true })).toHaveAttribute('aria-checked', 'false');
@@ -62,16 +59,15 @@ test('model panel reveals through intermediate frames when motion is allowed', a
   await mockConnectorApi(page);
   await page.goto('/connectors/');
   await page.getByRole('button', { name: 'Add connector', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Preview models', exact: true })).toBeVisible();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByRole('heading', { name: 'Models', exact: true })).toBeVisible();
   const frames = await page.evaluate(async () => {
-    const opener = [...document.querySelectorAll('button')].find(button => button.textContent?.trim() === 'Preview models');
-    if (!opener) throw new Error('Preview models button is missing');
-    opener.click();
+    const panel = document.querySelector('.model-panel');
+    if (!panel) throw new Error('Model panel is missing');
     const seen: number[] = [];
     for (let frame = 0; frame < 20; frame++) {
       await new Promise(resolve => requestAnimationFrame(resolve));
-      const panel = document.querySelector('.model-panel');
-      if (panel) seen.push(Number(getComputedStyle(panel).opacity));
+      seen.push(Number(getComputedStyle(panel).opacity));
     }
     return seen;
   });
@@ -87,7 +83,8 @@ for (const viewport of [{ width: 1280, height: 800 }, { width: 375, height: 720 
     await page.goto('/connectors/');
     await page.getByRole('button', { name: 'Add connector', exact: true }).click();
     const dialog = page.getByRole('dialog');
-    await dialog.getByRole('button', { name: 'Preview models', exact: true }).click();
+    await dialog.getByLabel('Model ID', { exact: true }).fill('my-deployment');
+    await dialog.getByLabel('Model ID', { exact: true }).press('Enter');
     const panel = dialog.locator('.model-panel');
     await expect(panel).toHaveCSS('transform', 'none');
     const formBox = await boxOf(dialog.locator('.connector-form-panel'));
@@ -96,7 +93,7 @@ for (const viewport of [{ width: 1280, height: 800 }, { width: 375, height: 720 
     else expect(panelBox.y).toBeGreaterThanOrEqual(formBox.y + formBox.height);
     expect(panelBox.x).toBeGreaterThanOrEqual(0);
     expect(panelBox.x + panelBox.width).toBeLessThanOrEqual(viewport.width);
-    const model = dialog.getByRole('switch', { name: 'sample-chat-small', exact: true });
+    const model = dialog.getByRole('switch', { name: 'my-deployment', exact: true });
     await model.focus();
     await page.keyboard.press('Space');
     await expect(model).toHaveAttribute('aria-checked', 'true');
