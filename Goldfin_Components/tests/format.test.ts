@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatValue, safeStringify } from '../src/lib/format.js';
+import { formatValue, safeStringify } from '../src/lib/format.ts';
 test('slider values preserve decimal precision and integer grouping', () => {
   assert.equal(formatValue(0, 'decimal'), '0.0');
   assert.equal(formatValue(1.3, 'decimal'), '1.3');

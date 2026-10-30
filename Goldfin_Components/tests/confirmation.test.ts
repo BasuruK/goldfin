@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createConfirmation, validSuiteName } from '../src/lib/confirmation.js';
-import { createMosaicTiles, mosaicPeak } from '../src/lib/mosaic.js';
+import { createConfirmation, validSuiteName } from '../src/lib/confirmation.ts';
+import { createMosaicTiles, mosaicPeak } from '../src/lib/mosaic.ts';
 test('confirmation reports once and clears a previous successful result on reopen', () => {
   const results = []; const dialog = createConfirmation(result => results.push(result));
   dialog.begin(); dialog.confirm(); dialog.close(); dialog.close(); dialog.begin(); dialog.close();

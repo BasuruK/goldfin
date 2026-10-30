@@ -1,4 +1,4 @@
-import test from 'node:test'; import assert from 'node:assert/strict'; import { createCopyTask, clipboardWrite } from '../src/lib/copy.js';
+import test from 'node:test'; import assert from 'node:assert/strict'; import { createCopyTask, clipboardWrite } from '../src/lib/copy.ts';
 
 const fakeClock = () => {
   const timers = []; const delays = [];

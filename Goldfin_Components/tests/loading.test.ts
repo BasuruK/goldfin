@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createLoadingTask, sampleSuiteMatches } from '../src/lib/loading.js';
+import { createLoadingTask, sampleSuiteMatches } from '../src/lib/loading.ts';
 
 test('createLoadingTask ignores duplicate starts, stale callbacks, and cancel paths', () => {
   const timers = [];

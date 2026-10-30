@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { modelError, suiteError, matchesAccept } from '../src/lib/validation.js';
+import { modelError, suiteError, matchesAccept } from '../src/lib/validation.ts';
 test('sample registry rejects misspellings and trims valid IDs', () => {
   assert.notEqual(modelError('gpt-4o-minii'), '');
   assert.equal(modelError(' gpt-4o-mini '), '');

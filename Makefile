@@ -30,6 +30,7 @@ lint:
 	go vet ./...
 	golangci-lint run
 	pnpm check
+	pnpm --dir Goldfin_Components check
 	pnpm knip
 
 check: lint

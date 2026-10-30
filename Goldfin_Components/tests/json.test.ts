@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { tokenizeJsonLine, isNullLine, countChildItems, nodeRange, toggleFold, hiddenLines } from '../src/lib/json.js';
+import { tokenizeJsonLine, isNullLine, countChildItems, nodeRange, toggleFold, hiddenLines } from '../src/lib/json.ts';
 
 const classesOf = (line) => tokenizeJsonLine(line).filter((t) => t.cls).map((t) => `${t.text}|${t.cls}`);
 const roundTrip = (line) => tokenizeJsonLine(line).map((t) => t.text).join('');
