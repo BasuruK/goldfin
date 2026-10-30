@@ -1,9 +1,9 @@
 const NO_CLIPBOARD = 'Clipboard requires localhost or HTTPS.';
 const FALLBACK = 'Copy failed. Select and copy the text manually.';
 
-export function clipboardWrite(text: string): Promise<void> {
+export async function clipboardWrite(text: string): Promise<void> {
   if (!globalThis.navigator?.clipboard) throw new Error(NO_CLIPBOARD);
-  return globalThis.navigator.clipboard.writeText(text);
+  await globalThis.navigator.clipboard.writeText(text);
 }
 
 export interface CopyState {

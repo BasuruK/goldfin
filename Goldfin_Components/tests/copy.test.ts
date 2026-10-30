@@ -107,6 +107,6 @@ test('destroy() cancels a pending reset', async () => {
   assert.equal(clock.timers[0], null);
 });
 
-test('the default writer names the browser requirement when there is no clipboard', () => {
-  assert.throws(() => clipboardWrite('x'), /localhost or HTTPS/);
+test('the default writer names the browser requirement when there is no clipboard', async () => {
+  await assert.rejects(() => clipboardWrite('x'), /localhost or HTTPS/);
 });

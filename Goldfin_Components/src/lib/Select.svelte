@@ -10,10 +10,32 @@
     note?: string;
   }
 
+  type SelectSharedProps = {
+    id?: string;
+    items: readonly SelectItem[];
+    label: string;
+    placeholder?: string;
+    disabled?: boolean;
+    tone?: boolean;
+    summary?: (count: number) => string;
+  };
+
+  export type SelectSingleProps = SelectSharedProps & {
+    type?: 'single';
+    value?: string;
+  };
+
+  export type SelectMultipleProps = SelectSharedProps & {
+    type: 'multiple';
+    value?: string[];
+  };
+
+  export type SelectProps = SelectSingleProps | SelectMultipleProps;
+
   let {
     id = useId(),
     type = 'single',
-    value = $bindable<string | string[]>(type === 'multiple' ? [] : ''),
+    value = $bindable(type === 'multiple' ? ([] as string[]) : ('' as string)),
     items,
     label,
     placeholder = 'Select an option',
@@ -21,17 +43,7 @@
     tone = false,
     summary = (count: number) => count + ' selected',
     ...rest
-  }: {
-    id?: string;
-    type?: 'single' | 'multiple';
-    value?: string | string[];
-    items: readonly SelectItem[];
-    label: string;
-    placeholder?: string;
-    disabled?: boolean;
-    tone?: boolean;
-    summary?: (count: number) => string;
-  } = $props();
+  }: SelectProps = $props();
   const picked = $derived(items.find((item) => item.value === value));
   const selected = $derived(
     type === 'multiple' ? summary(Array.isArray(value) ? value.length : 0) : picked?.label || placeholder
