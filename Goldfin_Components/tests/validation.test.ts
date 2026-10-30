@@ -14,7 +14,7 @@ test('missing values are rejected without throwing', () => {
   assert.notEqual(suiteError(undefined), '');
 });
 
-const file = (name, type) => ({ name, type });
+const file = (name: string, type: string) => ({ name, type });
 test('an extension matches the end of the name and ignores case', () => {
   assert.equal(matchesAccept(file('INV-1.PDF', 'application/pdf'), '.pdf'), true);
   assert.equal(matchesAccept(file('notes.txt', 'text/plain'), '.pdf,.json,.txt'), true);

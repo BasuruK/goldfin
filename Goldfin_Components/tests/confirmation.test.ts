@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { createConfirmation, validSuiteName } from '../src/lib/confirmation.ts';
 import { createMosaicTiles, mosaicPeak } from '../src/lib/mosaic.ts';
 test('confirmation reports once and clears a previous successful result on reopen', () => {
-  const results = []; const dialog = createConfirmation(result => results.push(result));
+  const results: string[] = [];
+  const dialog = createConfirmation((result) => results.push(result));
   dialog.begin(); dialog.confirm(); dialog.close(); dialog.close(); dialog.begin(); dialog.close();
   assert.deepEqual(results, ['confirmed', 'canceled']);
 });

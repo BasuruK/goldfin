@@ -12,7 +12,8 @@ test('slider values coerce strings and group decimals in en-US', () => {
   assert.equal(formatValue('16384'), '16,384');
 });
 test('JSON output falls back to a placeholder instead of throwing', () => {
-  const circular = {}; circular.self = circular;
+  const circular: { self?: unknown } = {};
+  circular.self = circular;
   assert.equal(safeStringify(circular), '[Unserializable value]');
   assert.equal(safeStringify(undefined), 'null');
   assert.equal(safeStringify({ a: 1 }), '{\n  "a": 1\n}');
