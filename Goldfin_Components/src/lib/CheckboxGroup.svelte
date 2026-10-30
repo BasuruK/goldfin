@@ -1,23 +1,19 @@
-<script>
+<script lang="ts">
   import Checkbox from './Checkbox.svelte';
   import { selectionState, toggleAll } from './selection.js';
   let { label = 'Select all', items, selected = $bindable([]), selectAll = true, card = false } = $props();
   const state = $derived(selectionState(selected, items));
-  /**
-   * @param {string} value
-   * @param {boolean} checked
-   */
-  function toggle(value, checked) {
+  function toggle(value: string, checked: boolean) {
     selected = checked ? [...selected.filter(v => v !== value), value] : selected.filter(v => v !== value);
   }
 </script>
 <div class={['ctl-list', card && 'gf-check-cards']}>
   {#if selectAll}<Checkbox {label} checked={state.checked} indeterminate={state.indeterminate}
-    onCheckedChange={(/** @type {boolean} */ checked) => selected = toggleAll(selected, items, checked)} />{/if}
+    onCheckedChange={(checked: boolean) => (selected = toggleAll(selected, items, checked))} />{/if}
   {#each items as item (item.value)}
     <Checkbox label={item.label} description={item.description || ''} disabled={item.disabled || false}
       checked={selected.includes(item.value)} invalid={item.invalid || false}
-      onCheckedChange={(/** @type {boolean} */ checked) => toggle(item.value, checked)} />
+      onCheckedChange={(checked: boolean) => toggle(item.value, checked)} />
   {/each}
   <p class="field-desc field-count" role="status">{state.count} of {items.length} selected</p>
 </div>

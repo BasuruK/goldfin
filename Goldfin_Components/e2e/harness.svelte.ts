@@ -1,4 +1,4 @@
-import { mount } from 'svelte';
+import { mount, type Component } from 'svelte';
 import Select from '../src/lib/Select.svelte';
 import Tabs from '../src/lib/Tabs.svelte';
 import JSONViewer from '../src/lib/JSONViewer.svelte';
@@ -8,39 +8,61 @@ import SwitchCard from '../src/lib/SwitchCard.svelte';
 import HarnessTimelines from './HarnessTimelines.svelte';
 import '../src/goldfin.css';
 
+function mountAt(
+  id: string,
+  component: Component,
+  props?: Record<string, unknown>
+) {
+  const target = document.getElementById(id);
+  if (!target) throw new Error(`Missing #${id} mount target.`);
+  mount(component, { target, props });
+}
+
 // Mutable on purpose: the harness swaps value to test how each component reacts to new input.
 const jsonProps = $state({ label: 'Harness JSON', value: { first: { a: 1 }, second: { b: 2 } } });
 
-mount(Select, {
-  target: document.getElementById('select'),
-  props: { label: 'Harness multi', type: 'multiple', items: [{ value: 'a', label: 'Alpha' }, { value: 'b', label: 'Beta' }] }
+mountAt('select', Select as Component<Record<string, unknown>>, {
+  label: 'Harness multi',
+  type: 'multiple',
+  items: [
+    { value: 'a', label: 'Alpha' },
+    { value: 'b', label: 'Beta' }
+  ]
 });
-mount(Tabs, {
-  target: document.getElementById('tabs'),
-  props: { label: 'Harness tabs', items: [{ value: 'one', label: 'One', content: 'First panel' }, { value: 'two', label: 'Two', content: 'Second panel' }] }
+mountAt('tabs', Tabs as Component<Record<string, unknown>>, {
+  label: 'Harness tabs',
+  items: [
+    { value: 'one', label: 'One', content: 'First panel' },
+    { value: 'two', label: 'Two', content: 'Second panel' }
+  ]
 });
-mount(JSONViewer, { target: document.getElementById('json'), props: jsonProps });
+mountAt('json', JSONViewer as Component<Record<string, unknown>>, jsonProps);
 
-const pendingRuns = [];
-mount(RunButton, {
-  target: document.getElementById('run'),
-  props: { onRun: () => new Promise(resolve => pendingRuns.push(resolve)) }
+const pendingRuns: Array<() => void> = [];
+mountAt('run', RunButton as Component<Record<string, unknown>>, {
+  onRun: () => new Promise<void>((resolve) => pendingRuns.push(resolve))
 });
-mount(SegmentedControl, {
-  target: document.getElementById('seg'),
-  props: { label: 'Harness segments', value: 'missing', items: [{ value: 'one', label: 'One' }, { value: 'two', label: 'Two' }] }
+mountAt('seg', SegmentedControl as Component<Record<string, unknown>>, {
+  label: 'Harness segments',
+  value: 'missing',
+  items: [
+    { value: 'one', label: 'One' },
+    { value: 'two', label: 'Two' }
+  ]
 });
-mount(HarnessTimelines, { target: document.getElementById('timelines') });
+mountAt('timelines', HarnessTimelines as Component<Record<string, unknown>>);
 // Outside any .switch-card-grid on purpose: the card must carry its own spacing.
-mount(SwitchCard, {
-  target: document.getElementById('switch-card'),
-  props: { label: 'Harness card', description: 'Standalone' }
+mountAt('switch-card', SwitchCard as Component<Record<string, unknown>>, {
+  label: 'Harness card',
+  description: 'Standalone'
 });
 
 window.harness = {
-  setJson(value) { jsonProps.value = value; },
+  setJson(value: unknown) {
+    jsonProps.value = value as typeof jsonProps.value;
+  },
   async finishOldestRun() {
     pendingRuns.shift()?.();
-    await new Promise(resolve => setTimeout(resolve));
+    await new Promise((resolve) => setTimeout(resolve));
   }
 };

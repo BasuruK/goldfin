@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { Dialog as Primitive } from 'bits-ui';
   import DialogHeader from './DialogHeader.svelte';
   import DialogBody from './DialogBody.svelte';

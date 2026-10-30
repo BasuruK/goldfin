@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import Icon from './Icon.svelte';
   // Marker plus the connector below it; icon === 'spinner' draws the ring loader.
   let { icon = '' } = $props();

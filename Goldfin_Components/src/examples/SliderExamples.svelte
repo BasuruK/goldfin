@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import Slider from '../lib/Slider.svelte';
   import Section from '../lib/Section.svelte';
   let temperature = $state(0);

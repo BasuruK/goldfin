@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   let { tone = 'ok', children, ...rest } = $props();
 </script>
 

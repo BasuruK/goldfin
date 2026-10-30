@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { useId } from 'bits-ui';
   import Icon from './Icon.svelte';
   import SwitchControl from './SwitchControl.svelte';

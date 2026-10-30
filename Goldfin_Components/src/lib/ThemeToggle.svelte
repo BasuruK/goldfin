@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   let { theme = $bindable('dark') } = $props();
   $effect(() => { document.body.dataset.theme = theme; });
 </script>

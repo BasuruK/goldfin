@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   let { text = 'No rows to display.' } = $props();
 </script>
 <p class="field-desc table-empty">{text}</p>

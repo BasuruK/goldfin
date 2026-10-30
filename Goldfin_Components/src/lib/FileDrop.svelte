@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { useId } from 'bits-ui';
   import Icon from './Icon.svelte';
   import { matchesAccept } from './validation.js';
@@ -12,8 +12,7 @@
     disabled = false
   } = $props();
   const id = useId();
-  /** @type {HTMLInputElement | undefined} */
-  let input;
+  let input: HTMLInputElement | undefined = $state(undefined);
   let error = $state('');
 
   function syncInput() {
@@ -24,8 +23,7 @@
   }
 
   /* Local only: FileDrop selects a file, it never uploads one. */
-  /** @param {File | null | undefined} candidate */
-  function choose(candidate) {
+  function choose(candidate: File | null | undefined) {
     if (!candidate || disabled) return;
     if (!matchesAccept(candidate, accept)) {
       error = 'Choose a file matching ' + accept + '.';
@@ -37,8 +35,7 @@
     if (input?.files?.[0] !== candidate) syncInput();
   }
 
-  /** @param {DragEvent} event */
-  function drop(event) {
+  function drop(event: DragEvent) {
     event.preventDefault();
     if (disabled) return;
     choose(event.dataTransfer?.files[0]);

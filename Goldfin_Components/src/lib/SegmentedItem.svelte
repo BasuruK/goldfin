@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { ToggleGroup as Primitive } from 'bits-ui';
   let { value, active = false, disabled = false, children } = $props();
 </script>

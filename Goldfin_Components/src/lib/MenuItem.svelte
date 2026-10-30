@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { DropdownMenu as Primitive } from 'bits-ui';
   let { disabled = false, onSelect, children } = $props();
 </script>

@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   let { variant = '', class: className = '', children, ...rest } = $props();
 </script>
 <span {...rest} class={['pill', variant, className]}>{@render children?.()}</span>

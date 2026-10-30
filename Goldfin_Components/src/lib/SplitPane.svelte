@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { useId } from 'bits-ui';
   let { open = $bindable(true), first, second, label = 'result pane' } = $props();
   const id = useId();

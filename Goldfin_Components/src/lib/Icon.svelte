@@ -1,7 +1,9 @@
-<script>
+<script lang="ts">
   import { glyphForName } from './icons.js';
 
-  let { name = 'chevron', size = undefined } = $props();
+  import type { IconName } from './icons.js';
+
+  let { name = 'chevron', size = undefined }: { name?: IconName | string; size?: number } = $props();
 
   const glyph = $derived(glyphForName(name));
 </script>

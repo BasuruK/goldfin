@@ -1,9 +1,25 @@
-<script>
+<script lang="ts">
   import { onDestroy } from 'svelte';
-  import { createLoadingTask } from './loading.js';
-  /** @type {{ children?: import('svelte').Snippet<[{ busy: boolean, state: string, start: () => void, cancel: () => void }]>, delay?: number, onComplete?: () => void }} */
-  let { children, delay = 1600, onComplete = () => {} } = $props();
-  let state = $state('idle');
+  import type { Snippet } from 'svelte';
+  import { createLoadingTask, type LoadingState } from './loading.js';
+
+  type LoadingTaskSnippetArgs = {
+    busy: boolean;
+    state: LoadingState;
+    start: () => void;
+    cancel: () => void;
+  };
+
+  let {
+    children,
+    delay = 1600,
+    onComplete = () => {}
+  }: {
+    children?: Snippet<[LoadingTaskSnippetArgs]>;
+    delay?: number;
+    onComplete?: () => void;
+  } = $props();
+  let state = $state<LoadingState>('idle');
   const task = createLoadingTask(next => state = next);
   const busy = $derived(state === 'running');
   function start() { task.start(delay, onComplete); }

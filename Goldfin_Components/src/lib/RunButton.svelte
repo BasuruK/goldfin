@@ -1,23 +1,30 @@
-<script>
+<script lang="ts">
   import { onDestroy } from 'svelte';
   import Sea from './Sea.svelte';
-  let { onRun, disabled = false, label = 'Run', sample = false } = $props();
+  let {
+    onRun,
+    disabled = false,
+    label = 'Run',
+    sample = false
+  }: {
+    onRun?: () => void | Promise<void>;
+    disabled?: boolean;
+    label?: string;
+    sample?: boolean;
+  } = $props();
   let busy = $state(false);
   let sinking = $state(false);
   let status = $state('');
   let alive = true;
-  /** @type {ReturnType<typeof setTimeout> | undefined} */
-  let timer;
-  /** @type {ReturnType<typeof setTimeout> | undefined} */
-  let sinkTimer;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let sinkTimer: ReturnType<typeof setTimeout> | undefined;
   let currentRun = 0;
   onDestroy(() => {
     alive = false;
     clearTimeout(timer);
     clearTimeout(sinkTimer);
   });
-  /** @param {string} message */
-  function settle(message) {
+  function settle(message: string) {
     if (!alive) return;
     busy = false;
     status = message;

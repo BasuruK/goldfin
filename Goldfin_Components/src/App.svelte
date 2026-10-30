@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import TokenGallery from './examples/TokenGallery.svelte';
   import TableExamples from './examples/TableExamples.svelte';
   import LoadingGallery from './examples/LoadingGallery.svelte';

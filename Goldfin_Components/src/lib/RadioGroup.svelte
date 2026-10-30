@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { RadioGroup as Primitive, Label, useId } from 'bits-ui';
   let {
     id = useId(),

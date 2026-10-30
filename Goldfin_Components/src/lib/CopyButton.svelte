@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { onDestroy } from 'svelte';
   import { createCopyTask } from './copy.js';
   import Icon from './Icon.svelte';

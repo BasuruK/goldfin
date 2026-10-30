@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { Checkbox as Primitive, Label, useId } from 'bits-ui';
   import Icon from './Icon.svelte';
   let {

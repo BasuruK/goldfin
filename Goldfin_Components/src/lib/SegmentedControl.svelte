@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { ToggleGroup as Primitive } from 'bits-ui';
   import SegmentedItem from './SegmentedItem.svelte';
   import { resolveValue } from './segment.js';

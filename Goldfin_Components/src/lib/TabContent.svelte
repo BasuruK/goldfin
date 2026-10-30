@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { Tabs as Primitive } from 'bits-ui';
   let { value, children } = $props();
 </script>

@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { Tabs as Primitive } from 'bits-ui';
   import TabList from './TabList.svelte';
   import TabTrigger from './TabTrigger.svelte';

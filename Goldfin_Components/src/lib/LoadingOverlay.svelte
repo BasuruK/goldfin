@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import Skeleton from './Skeleton.svelte';
   /* `loading-demo` carries the `[hidden]` rule that takes the overlay out of the flow, so a
      stage dropped into a product screen hides its overlay without extra CSS at the call site. */

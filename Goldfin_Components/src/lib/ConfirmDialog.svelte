@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { AlertDialog as Primitive } from 'bits-ui';
   import DialogHeader from './DialogHeader.svelte';
   import DialogBody from './DialogBody.svelte';
@@ -17,8 +17,7 @@
   let busy = $state(false);
   let error = $state('');
   const result = createConfirmation(value => onResult?.(value));
-  /** @param {boolean} next */
-  function changed(next) {
+  function changed(next: boolean) {
     if (next) {
       result.begin();
       error = '';
@@ -39,8 +38,9 @@
       error = 'The action failed. Try again or cancel.';
     } finally { busy = false; }
   }
-  /** @param {Event} event */
-  function holdWhileBusy(event) { if (busy) event.preventDefault(); }
+  function holdWhileBusy(event: Event) {
+    if (busy) event.preventDefault();
+  }
 </script>
 <Primitive.Root {...rest} bind:open onOpenChange={changed}>
   <Primitive.Trigger class={triggerClass} aria-label={iconTrigger ? trigger : undefined}>

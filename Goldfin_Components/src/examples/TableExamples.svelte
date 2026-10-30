@@ -1,5 +1,9 @@
-<script>
-import Table from '../lib/Table.svelte';import Icon from '../lib/Icon.svelte';import Pill from '../lib/Pill.svelte';import Section from '../lib/Section.svelte';
+<script lang="ts">
+import Table from '../lib/Table.svelte';
+import Icon from '../lib/Icon.svelte';
+import Pill from '../lib/Pill.svelte';
+import Section from '../lib/Section.svelte';
+import type { Column } from '../lib/table.js';
 const files = [
   {
     "id": 0,
@@ -77,7 +81,7 @@ const fileColumns=[{key:'name',label:'Name',width:'44%'},{key:'sharing',label:'S
 const caseColumns=[{key:'id',label:'ID',width:'16%'},{key:'name',label:'Test case',width:'44%'},{key:'type',label:'Type',width:'20%'},{key:'status',label:'Status',width:'20%'}];
 </script><Section title="Table" reference="Sortable · compact · no avatars" id="tables"><div class="table-stack">
 <Table rows={files} columns={fileColumns} label="Plain · file listing" variant="plain" caption="Sample files, sharing permissions, sizes and modification times">
-{#snippet cell(row, column)}{#if column.key === 'name'}<span class="table-name"><Icon name="file" size={20}/>{row.name}</span>{:else if column.key === 'sharing'}<Pill class="table-badge">{row.sharing}</Pill>{:else if column.key === 'size'}<span class="table-number">{row.sizeLabel}</span>{:else}<span class="table-muted">{row.modifiedLabel}</span>{/if}{/snippet}</Table>
+{#snippet cell(row: Record<string, string>, column: Column)}{#if column.key === 'name'}<span class="table-name"><Icon name="file" size={20}/>{row.name}</span>{:else if column.key === 'sharing'}<Pill class="table-badge">{row.sharing}</Pill>{:else if column.key === 'size'}<span class="table-number">{row.sizeLabel}</span>{:else}<span class="table-muted">{row.modifiedLabel}</span>{/if}{/snippet}</Table>
 <Table rows={cases} columns={caseColumns} label="Contained · test cases" caption="Sample test cases and evaluation states">
-{#snippet cell(row, column)}{#if column.key === 'status'}<Pill variant={row.status === 'Passed' ? 'ok-pill' : row.status === 'Failed' ? 'missing' : row.status === 'Running' ? 'running-pill' : ''} class="table-badge">{row.status}</Pill>{:else if column.key === 'type'}<Pill class="table-badge">{row.type}</Pill>{:else}{row[column.key]}{/if}{/snippet}</Table>
+{#snippet cell(row: Record<string, string>, column: Column)}{#if column.key === 'status'}<Pill variant={row.status === 'Passed' ? 'ok-pill' : row.status === 'Failed' ? 'missing' : row.status === 'Running' ? 'running-pill' : ''} class="table-badge">{row.status}</Pill>{:else if column.key === 'type'}<Pill class="table-badge">{row.type}</Pill>{:else}{row[column.key]}{/if}{/snippet}</Table>
 </div></Section>

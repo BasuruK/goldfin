@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   let { rows = 3 } = $props();
 </script>
 <div class="loading-skeleton" aria-hidden="true">

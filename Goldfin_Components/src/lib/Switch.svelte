@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { useId } from 'bits-ui';
   import SwitchControl from './SwitchControl.svelte';
   let { id = useId(), checked = $bindable(false), label, description = '',

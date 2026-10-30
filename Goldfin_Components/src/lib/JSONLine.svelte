@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { tokenizeJsonLine, isNullLine } from './json.js';
   let { line, index, opens = false, folded = false, count = null, ontoggle } = $props();
   const nullLine = $derived(isNullLine(line));

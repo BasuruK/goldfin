@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { Switch as Primitive, Label } from 'bits-ui';
   // Shared by Switch and SwitchCard: the switch, its thumb and the label/badge block.
   let {
