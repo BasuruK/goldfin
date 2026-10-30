@@ -1,6 +1,8 @@
 <script lang="ts">
   import { Tabs as Primitive } from 'bits-ui';
-  let { label = 'Views', children } = $props();
+  import type { Snippet } from 'svelte';
+
+  let { label = 'Views', children }: { label?: string; children?: Snippet } = $props();
 </script>
 <Primitive.List class="tabs" aria-label={label}>{@render children?.()}</Primitive.List>
 

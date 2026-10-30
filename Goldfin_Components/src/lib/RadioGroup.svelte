@@ -1,5 +1,26 @@
 <script lang="ts">
+  import type { ComponentProps } from 'svelte';
   import { RadioGroup as Primitive, Label, useId } from 'bits-ui';
+
+  type RadioItem = {
+    value: string;
+    label: string;
+    description?: string;
+    disabled?: boolean;
+  };
+
+  type RadioRootProps = ComponentProps<typeof Primitive.Root>;
+
+  type Props = Omit<RadioRootProps, 'id' | 'value' | 'disabled'> & {
+    id?: string;
+    value?: string;
+    label: string;
+    items: readonly RadioItem[];
+    disabled?: boolean;
+    invalid?: boolean;
+    card?: boolean;
+  };
+
   let {
     id = useId(),
     value = $bindable(''),
@@ -9,7 +30,7 @@
     invalid = false,
     card = false,
     ...rest
-  } = $props();
+  }: Props = $props();
 </script>
 <Primitive.Root {...rest} bind:value {disabled} aria-label={label} class={['ctl-list', card && 'gf-radio-cards']}>
   {#each items as item, index (item.value)}

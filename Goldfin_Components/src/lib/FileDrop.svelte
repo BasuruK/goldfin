@@ -10,6 +10,13 @@
     name = 'No file chosen',
     description = 'Click to browse or drop a file here',
     disabled = false
+  }: {
+    file?: File | null;
+    accept?: string;
+    label?: string;
+    name?: string;
+    description?: string;
+    disabled?: boolean;
   } = $props();
   const id = useId();
   let input: HTMLInputElement | undefined = $state(undefined);

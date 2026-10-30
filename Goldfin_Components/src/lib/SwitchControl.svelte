@@ -1,5 +1,19 @@
 <script lang="ts">
+  import type { ComponentProps } from 'svelte';
   import { Switch as Primitive, Label } from 'bits-ui';
+
+  type SwitchRootProps = ComponentProps<typeof Primitive.Root>;
+
+  export type SwitchControlProps = Omit<SwitchRootProps, 'id' | 'checked' | 'disabled'> & {
+    id: string;
+    checked?: boolean;
+    label: string;
+    description?: string;
+    disabled?: boolean;
+    invalid?: boolean;
+    badge?: boolean;
+  };
+
   // Shared by Switch and SwitchCard: the switch, its thumb and the label/badge block.
   let {
     id,
@@ -10,7 +24,7 @@
     invalid = false,
     badge = false,
     ...rest
-  } = $props();
+  }: SwitchControlProps = $props();
 </script>
 <Primitive.Root {...rest} {id} bind:checked {disabled} aria-invalid={invalid || undefined}
   aria-describedby={description ? id + '-help' : undefined} class="gf-switch">

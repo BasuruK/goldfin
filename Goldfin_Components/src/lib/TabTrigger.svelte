@@ -1,6 +1,18 @@
 <script lang="ts">
   import { Tabs as Primitive } from 'bits-ui';
-  let { value, active = false, disabled = false, children } = $props();
+  import type { Snippet } from 'svelte';
+
+  let {
+    value,
+    active = false,
+    disabled = false,
+    children
+  }: {
+    value: string;
+    active?: boolean;
+    disabled?: boolean;
+    children?: Snippet;
+  } = $props();
 </script>
 <Primitive.Trigger class={['tab', active && 'active']} {value} {disabled}>
   {@render children?.()}

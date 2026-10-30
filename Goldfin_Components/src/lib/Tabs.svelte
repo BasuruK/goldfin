@@ -3,7 +3,25 @@
   import TabList from './TabList.svelte';
   import TabTrigger from './TabTrigger.svelte';
   import TabContent from './TabContent.svelte';
-  let { value = $bindable(''), items, label = 'Views' } = $props();
+  import type { Snippet } from 'svelte';
+
+  type TabItem = {
+    value: string;
+    label: string;
+    disabled?: boolean;
+    content?: string;
+    children?: Snippet;
+  };
+
+  let {
+    value = $bindable(''),
+    items,
+    label = 'Views'
+  }: {
+    value?: string;
+    items: readonly TabItem[];
+    label?: string;
+  } = $props();
   const active = $derived(value || items[0]?.value);
 </script>
 <Primitive.Root bind:value={() => active, next => { if (next) value = next; }}>

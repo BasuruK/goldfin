@@ -1,7 +1,27 @@
 <script lang="ts">
   import Checkbox from './Checkbox.svelte';
   import { selectionState, toggleAll } from './selection.js';
-  let { label = 'Select all', items, selected = $bindable([]), selectAll = true, card = false } = $props();
+  import type { SelectionItem } from './selection.js';
+
+  type CheckboxGroupItem = SelectionItem & {
+    label: string;
+    description?: string;
+    invalid?: boolean;
+  };
+
+  let {
+    label = 'Select all',
+    items,
+    selected = $bindable([]),
+    selectAll = true,
+    card = false
+  }: {
+    label?: string;
+    items: readonly CheckboxGroupItem[];
+    selected?: string[];
+    selectAll?: boolean;
+    card?: boolean;
+  } = $props();
   const state = $derived(selectionState(selected, items));
   function toggle(value: string, checked: boolean) {
     selected = checked ? [...selected.filter(v => v !== value), value] : selected.filter(v => v !== value);

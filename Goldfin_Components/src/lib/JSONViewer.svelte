@@ -2,7 +2,7 @@
   import { safeStringify } from './format.js';
   import { countChildItems, nodeRange, toggleFold, hiddenLines } from './json.js';
   import JSONLine from './JSONLine.svelte';
-  let { value = {}, label = 'JSON output' } = $props();
+  let { value = {}, label = 'JSON output' }: { value?: unknown; label?: string } = $props();
   const text = $derived(safeStringify(value));
   /* New JSON drops the old folds; the same text keeps them. */
   let folded = $derived.by((): Set<number> => {

@@ -5,7 +5,7 @@
   import Button from '../lib/Button.svelte';
   import Section from '../lib/Section.svelte';
   import { suiteError } from '../lib/validation.ts';
-  import type { ConfirmationResult } from '../lib/confirmation.js';
+  import type { ConfirmationResult } from '../lib/confirmation.ts';
   let deleteFeedback = $state('Local sample · invoice-extraction');
   let connected = $state(false);
   let pairFeedback = $state('Sample device · not connected');

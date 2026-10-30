@@ -1,8 +1,52 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
+  import type { HTMLInputAttributes } from 'svelte/elements';
   import { useId } from 'bits-ui';
-  let { id = useId(), value = $bindable(''), label, description = '', message = '',
-    error = '', inlineMessage = false, validate = undefined, onblur = undefined, oninput = undefined, type = 'text', disabled = false,
-    required = false, affix = false, prefix = undefined, suffix = undefined, ...rest } = $props();
+
+  type InputOwnProps = {
+    id?: string;
+    value?: string;
+    label: string;
+    description?: string;
+    message?: string;
+    error?: string;
+    inlineMessage?: boolean;
+    validate?: (value: string) => string | undefined;
+    onblur?: (event: FocusEvent) => void;
+    oninput?: (event: Event) => void;
+    type?: HTMLInputElement['type'];
+    disabled?: boolean;
+    required?: boolean;
+    affix?: boolean;
+    prefix?: Snippet;
+    suffix?: Snippet;
+  };
+
+  type Props = Omit<
+    HTMLInputAttributes,
+    keyof InputOwnProps | 'value' | 'id' | 'type' | 'disabled' | 'required'
+  > &
+    InputOwnProps;
+
+  let {
+    id = useId(),
+    value = $bindable(''),
+    label,
+    description = '',
+    message = '',
+    error = '',
+    inlineMessage = false,
+    validate = undefined,
+    onblur = undefined,
+    oninput = undefined,
+    type = 'text',
+    disabled = false,
+    required = false,
+    affix = false,
+    prefix = undefined,
+    suffix = undefined,
+    ...rest
+  }: Props = $props();
   let localError = $state('');
   const shownError = $derived(error || localError);
   /* The framed input is styled by `.price-input input`, so it carries no class of its own. */

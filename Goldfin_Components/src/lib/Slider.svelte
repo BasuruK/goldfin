@@ -1,6 +1,28 @@
 <script lang="ts">
+  import type { ComponentProps } from 'svelte';
   import { Slider as Primitive, useId } from 'bits-ui';
   import { formatValue, type Format } from './format.js';
+
+  type SliderRootProps = ComponentProps<typeof Primitive.Root>;
+  type Props = Omit<
+    SliderRootProps,
+    'id' | 'value' | 'min' | 'max' | 'step' | 'disabled' | 'type' | 'onValueChange' | 'onValueCommit'
+  > & {
+    id?: string;
+    value?: number;
+    label: string;
+    min?: number;
+    max?: number;
+    step?: number;
+    size?: string;
+    disabled?: boolean;
+    format?: Format;
+    unit?: string;
+    description?: string;
+    onValueChange?: (value: number) => void;
+    onValueCommit?: (value: number) => void;
+  };
+
   let {
     id = useId(),
     value = $bindable(0),
@@ -10,13 +32,13 @@
     step = 1,
     size = 'default',
     disabled = false,
-    format = 'integer' as Format,
+    format = 'integer',
     unit = '',
     description = '',
     onValueChange = undefined,
     onValueCommit = undefined,
     ...rest
-  } = $props();
+  }: Props = $props();
   const text = $derived(formatValue(value, format));
 </script>
 

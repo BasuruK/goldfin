@@ -4,9 +4,39 @@
   import DialogBody from './DialogBody.svelte';
   import DialogFooter from './DialogFooter.svelte';
   import Icon from './Icon.svelte';
-  import { createConfirmation } from './confirmation.js';
-  let { open = $bindable(false), trigger, iconTrigger = false, title, description, action = 'Confirm',
-    tone = 'neutral', icon = 'link', onConfirm = () => {}, onResult = undefined, children = undefined, ...rest } = $props();
+  import type { ComponentProps, Snippet } from 'svelte';
+  import { createConfirmation, type ConfirmationResult } from './confirmation.js';
+
+  type AlertDialogRootProps = ComponentProps<typeof Primitive.Root>;
+
+  type Props = Omit<AlertDialogRootProps, 'open' | 'onOpenChange'> & {
+    open?: boolean;
+    trigger: string;
+    iconTrigger?: boolean;
+    title: string;
+    description: string;
+    action?: string;
+    tone?: string;
+    icon?: string;
+    onConfirm?: () => void | Promise<void>;
+    onResult?: (result: ConfirmationResult) => void;
+    children?: Snippet;
+  };
+
+  let {
+    open = $bindable(false),
+    trigger,
+    iconTrigger = false,
+    title,
+    description,
+    action = 'Confirm',
+    tone = 'neutral',
+    icon = 'link',
+    onConfirm = () => {},
+    onResult = undefined,
+    children = undefined,
+    ...rest
+  }: Props = $props();
   const triggerClass = $derived(
     iconTrigger
       ? `btn icon dialog-icon-trigger${tone === 'bad' ? ' dialog-icon-trigger--bad' : ''}`

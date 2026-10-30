@@ -1,7 +1,9 @@
 <script lang="ts">
   import Mosaic from './Mosaic.svelte';
   import Icon from './Icon.svelte';
-  let { children, icon = '' } = $props();
+  import type { Snippet } from 'svelte';
+
+  let { children, icon = '' }: { children?: Snippet; icon?: string } = $props();
   let hasMosaic = $state(false);
   function setMosaic(next: boolean) {
     hasMosaic = next;

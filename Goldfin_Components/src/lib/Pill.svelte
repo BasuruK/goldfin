@@ -1,5 +1,14 @@
 <script lang="ts">
-  let { variant = '', class: className = '', children, ...rest } = $props();
+  import type { HTMLAttributes } from 'svelte/elements';
+  import type { Snippet } from 'svelte';
+
+  type Props = HTMLAttributes<HTMLSpanElement> & {
+    variant?: string;
+    class?: string;
+    children?: Snippet;
+  };
+
+  let { variant = '', class: className = '', children, ...rest }: Props = $props();
 </script>
 <span {...rest} class={['pill', variant, className]}>{@render children?.()}</span>
 

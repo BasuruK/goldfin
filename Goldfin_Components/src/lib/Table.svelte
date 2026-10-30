@@ -3,6 +3,22 @@
   import { sortRows, nextDirection, type Column, type Direction } from './table.js';
   import TableSortButton from './TableSortButton.svelte';
   import TableEmpty from './TableEmpty.svelte';
+  import type { Snippet } from 'svelte';
+  import type { HTMLTableAttributes } from 'svelte/elements';
+
+  type TableRow = Record<string, unknown>;
+
+  type Props = Omit<HTMLTableAttributes, 'children'> & {
+    columns?: Column[];
+    rows?: TableRow[];
+    label?: string;
+    variant?: string;
+    cell?: Snippet<[TableRow, Column]>;
+    rowKey?: string;
+    caption?: string;
+    empty?: string;
+  };
+
   let {
     columns = [],
     rows = [],
@@ -13,7 +29,7 @@
     caption = '',
     empty = 'No rows to display.',
     ...rest
-  } = $props();
+  }: Props = $props();
   const id = useId();
   let key = $state('');
   let direction = $state<Direction>('ascending');

@@ -1,5 +1,13 @@
 <script lang="ts">
-  let { tone = 'ok', children, ...rest } = $props();
+  import type { HTMLAttributes } from 'svelte/elements';
+  import type { Snippet } from 'svelte';
+
+  type Props = HTMLAttributes<HTMLSpanElement> & {
+    tone?: string;
+    children?: Snippet;
+  };
+
+  let { tone = 'ok', children, ...rest }: Props = $props();
 </script>
 
 <span {...rest} class="chip" data-tone={tone}>

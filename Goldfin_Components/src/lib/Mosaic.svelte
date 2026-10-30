@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { createMosaicTiles, mosaicPeak, type MosaicTile } from './mosaic.js';
   /* onready reports whether the band has tiles, so a header can drop its fallback pattern. */
-  let { onready = () => {} } = $props();
+  let { onready = () => {} }: { onready?: (hasTiles: boolean) => void } = $props();
   let band: HTMLDivElement | undefined = $state(undefined);
   let columns = $state(1);
   let tiles = $state<MosaicTile[]>([]);
