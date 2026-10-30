@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import Button from '../lib/Button.svelte';
   import Icon from '../lib/Icon.svelte';
   import Pill from '../lib/Pill.svelte';

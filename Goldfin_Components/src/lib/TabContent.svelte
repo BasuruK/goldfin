@@ -1,6 +1,8 @@
-<script>
+<script lang="ts">
   import { Tabs as Primitive } from 'bits-ui';
-  let { value, children } = $props();
+  import type { Snippet } from 'svelte';
+
+  let { value, children }: { value: string; children?: Snippet } = $props();
 </script>
 <Primitive.Content {value} class="gf-tab-content">{@render children?.()}</Primitive.Content>
 

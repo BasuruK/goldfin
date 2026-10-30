@@ -1,6 +1,6 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
-let problems;
+let problems: string[];
 
 test.beforeEach(async ({ page }) => {
   problems = [];
@@ -15,14 +15,15 @@ test.afterEach(() => {
   expect(problems.filter(problem => !problem.includes('Denied by test'))).toEqual([]);
 });
 
-const cssVar = (page, name) => page.evaluate(variable => {
+const cssVar = (page: Page, name: string) =>
+  page.evaluate((variable) => {
   const probe = document.createElement('span');
   probe.style.color = `var(${variable})`;
   document.body.append(probe);
   const color = getComputedStyle(probe).color;
   probe.remove();
   return color;
-}, name);
+  }, name);
 
 test.describe('showcase', () => {
   test.beforeEach(async ({ page }) => {
@@ -33,7 +34,7 @@ test.describe('showcase', () => {
   test('focus ring is 2px --ufg with 3px offset; slider and input keep overrides', async ({ page }) => {
     await page.keyboard.press('Tab');
     const ring = await page.evaluate(() => {
-      const style = getComputedStyle(document.activeElement);
+      const style = getComputedStyle(document.activeElement!);
       return { width: style.outlineWidth, offset: style.outlineOffset, style: style.outlineStyle, color: style.outlineColor };
     });
     expect(ring).toEqual({ width: '2px', offset: '3px', style: 'solid', color: await cssVar(page, '--ufg') });
@@ -86,8 +87,10 @@ test.describe('showcase', () => {
     const zone = page.locator('.gf-drop');
     const field = zone.locator('xpath=ancestor::div[contains(@class,"field")][1]');
     const input = zone.locator('input[type=file]');
-    const files = () => input.evaluate(element => [...element.files].map(file => file.name));
-    const drop = (name, type) => zone.evaluate((element, file) => {
+    const files = () =>
+      input.evaluate((element: HTMLInputElement) => [...(element.files ?? [])].map((file) => file.name));
+    const drop = (name: string, type: string) =>
+      zone.evaluate((element, file) => {
       const transfer = new DataTransfer();
       transfer.items.add(new File(['x'], file.name, { type: file.type }));
       element.dispatchEvent(new DragEvent('drop', { dataTransfer: transfer, bubbles: true, cancelable: true }));
@@ -146,10 +149,12 @@ test.describe('showcase', () => {
   });
 
   test('JSONViewer marks only lines ending in a null value', async ({ page }) => {
-    const counts = await page.locator('.gf-json .jsonline').evaluateAll(lines => {
-      const expected = lines.filter(line => /: null,?$/.test(line.querySelector('code').textContent)).length;
-      const marked = lines.filter(line => line.querySelector('.mark').textContent === '●').length;
-      const labelled = lines.filter(line => line.querySelector('.mark').getAttribute('aria-label') === 'Missing value').length;
+    const counts = await page.locator('.gf-json .jsonline').evaluateAll((lines) => {
+      const expected = lines.filter((line) => /: null,?$/.test(line.querySelector('code')!.textContent ?? '')).length;
+      const marked = lines.filter((line) => line.querySelector('.mark')!.textContent === '●').length;
+      const labelled = lines.filter(
+        (line) => line.querySelector('.mark')!.getAttribute('aria-label') === 'Missing value'
+      ).length;
       return { expected, marked, labelled };
     });
     expect(counts.marked).toBe(counts.expected);
@@ -162,7 +167,7 @@ test.describe('showcase', () => {
     const dangling = await page.evaluate(() => {
       const ids = new Set([...document.querySelectorAll('[id]')].map(element => element.id));
       return [...document.querySelectorAll('[aria-describedby]')]
-        .flatMap(element => element.getAttribute('aria-describedby').split(/\s+/))
+        .flatMap((element) => (element.getAttribute('aria-describedby') ?? '').split(/\s+/))
         .filter(id => !ids.has(id));
     });
     expect(dangling).toEqual([]);
@@ -260,8 +265,8 @@ test.describe('harness defaults', () => {
     const first = page.locator('#seg .seg-btn').first();
     await expect(first).toHaveClass(/active/);
     await expect(first).toHaveAttribute('data-state', 'on');
-    const [thumb, button] = await page.locator('#seg .seg').evaluate(el =>
-      [el.querySelector('.seg-thumb'), el.querySelector('.seg-btn')].map(node => node.getBoundingClientRect().width));
+    const [thumb, button] = await page.locator('#seg .seg').evaluate((el) =>
+      [el.querySelector('.seg-thumb')!, el.querySelector('.seg-btn')!].map((node) => node.getBoundingClientRect().width));
     expect(thumb).toBeCloseTo(button, 0);
   });
 
@@ -280,15 +285,24 @@ test.describe('harness defaults', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     const seg = page.locator('#seg .seg');
     await seg.locator('.seg-btn').nth(1).click();
-    const [thumb, button] = await seg.evaluate(el => [el.querySelector('.seg-thumb'), el.querySelectorAll('.seg-btn')[1]]
-      .map(node => { const r = node.getBoundingClientRect(); return [Math.round(r.left), Math.round(r.width)]; }));
+    const [thumb, button] = await seg.evaluate((el) =>
+      [el.querySelector('.seg-thumb')!, el.querySelectorAll('.seg-btn')[1]!].map((node) => {
+        const r = node.getBoundingClientRect();
+        return [Math.round(r.left), Math.round(r.width)];
+      }));
     expect(thumb).toEqual(button);
   });
 
   test('SegmentedControl thumb follows a segment that changes size', async ({ page }) => {
     const seg = page.locator('#seg .seg');
     await page.addStyleTag({ content: '#seg .seg-btn { padding: 0 40px; }' });
-    await expect.poll(() => seg.evaluate(el =>
-      Math.round(el.querySelector('.seg-thumb').getBoundingClientRect().width - el.querySelector('.seg-btn').getBoundingClientRect().width))).toBe(0);
+    await expect.poll(() =>
+      seg.evaluate((el) =>
+        Math.round(
+          el.querySelector('.seg-thumb')!.getBoundingClientRect().width -
+            el.querySelector('.seg-btn')!.getBoundingClientRect().width
+        )
+      )
+    ).toBe(0);
   });
 });

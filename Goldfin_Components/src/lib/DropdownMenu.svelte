@@ -1,6 +1,20 @@
-<script>
+<script lang="ts">
   import { DropdownMenu as Primitive } from 'bits-ui';
-  let { label, items, onAction } = $props();
+  type DropdownMenuItem = {
+    value: string;
+    label: string;
+    disabled?: boolean;
+  };
+
+  let {
+    label,
+    items,
+    onAction
+  }: {
+    label: string;
+    items: readonly DropdownMenuItem[];
+    onAction?: (value: string) => void;
+  } = $props();
 </script>
 <Primitive.Root>
   <Primitive.Trigger class="btn">{label}</Primitive.Trigger>

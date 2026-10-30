@@ -1,11 +1,11 @@
-<script>
+<script lang="ts">
   import { safeStringify } from './format.js';
   import { countChildItems, nodeRange, toggleFold, hiddenLines } from './json.js';
   import JSONLine from './JSONLine.svelte';
-  let { value = {}, label = 'JSON output' } = $props();
+  let { value = {}, label = 'JSON output' }: { value?: unknown; label?: string } = $props();
   const text = $derived(safeStringify(value));
   /* New JSON drops the old folds; the same text keeps them. */
-  let folded = $derived.by(() => {
+  let folded = $derived.by((): Set<number> => {
     text;
     return new Set();
   });
@@ -13,8 +13,9 @@
   const counts = $derived(countChildItems(lines));
   const ranges = $derived(lines.map((_, index) => nodeRange(lines, index)));
   const hidden = $derived(hiddenLines(ranges, folded));
-  /** @param {number} index */
-  const toggle = index => { folded = toggleFold(folded, index); };
+  const toggle = (index: number) => {
+    folded = toggleFold(folded, index);
+  };
 </script>
 
 <div class="jsonbox gf-json" role="region" aria-label={label}>

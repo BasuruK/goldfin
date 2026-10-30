@@ -19,11 +19,12 @@ export const GLYPHS = {
   settings: 'gear-1',
   sun: 'sun-1',
   trash: 'trash-3'
-};
+} as const;
 
-const glyphs = new Map(Object.entries(GLYPHS));
+export type IconName = keyof typeof GLYPHS;
 
-/** @param {string} name */
-export function glyphForName(name) {
+const glyphs = new Map<string, string>(Object.entries(GLYPHS));
+
+export function glyphForName(name: string): string {
   return glyphs.get(name) ?? GLYPHS.chevron;
 }

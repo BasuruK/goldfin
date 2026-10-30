@@ -1,8 +1,8 @@
-<script>
+<script lang="ts">
   import { onDestroy } from 'svelte';
   import { createCopyTask } from './copy.js';
   import Icon from './Icon.svelte';
-  let { text = '', label = 'Copy JSON' } = $props();
+  let { text = '', label = 'Copy JSON' }: { text?: string; label?: string } = $props();
   let copied = $state(false);
   let error = $state('');
   const task = createCopyTask(next => {

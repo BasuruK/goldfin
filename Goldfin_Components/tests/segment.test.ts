@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { resolveValue } from '../src/lib/segment.js';
+import { resolveValue } from '../src/lib/segment.ts';
 
 const items = [{ value: 'formatted', label: 'Formatted' }, { value: 'raw', label: 'Raw' }];
 

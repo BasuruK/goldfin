@@ -1,6 +1,18 @@
-<script>
+<script lang="ts">
   import { sortLabel } from './table.js';
-  let { column, active = false, direction = 'ascending', onsort } = $props();
+  import type { Column, Direction } from './table.js';
+
+  let {
+    column,
+    active = false,
+    direction = 'ascending',
+    onsort
+  }: {
+    column: Column;
+    active?: boolean;
+    direction?: Direction;
+    onsort?: (column: Column) => void;
+  } = $props();
   // The button announces the direction a click will move to, not the current one.
   const next = $derived(active && direction === 'ascending' ? 'descending' : 'ascending');
 </script>

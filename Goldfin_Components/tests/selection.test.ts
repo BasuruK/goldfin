@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { selectionState, toggleAll } from '../src/lib/selection.js';
+import { selectionState, toggleAll } from '../src/lib/selection.ts';
 test('select-all sets enabled items, keeps existing order and leaves unknown values alone', () => {
   const items = [{ value: 'a' }, { value: 'b' }, { value: 'c', disabled: true }];
   assert.deepEqual(toggleAll(['z'], items, true), ['z', 'a', 'b']);

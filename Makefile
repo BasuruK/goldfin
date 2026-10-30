@@ -30,6 +30,7 @@ lint:
 	go vet ./...
 	golangci-lint run
 	pnpm check
+	pnpm --dir Goldfin_Components check
 	pnpm knip
 
 check: lint
@@ -38,6 +39,7 @@ check: lint
 	gitleaks detect --no-banner --redact
 	go test ./...
 	pnpm test:unit
+	pnpm --dir Goldfin_Components test
 
 up:
 	docker compose up -d --build --wait api

@@ -1,8 +1,24 @@
-<script>
+<script lang="ts">
   import { useId } from 'bits-ui';
-  import { sortRows, nextDirection } from './table.js';
+  import { sortRows, nextDirection, type Column, type Direction } from './table.js';
   import TableSortButton from './TableSortButton.svelte';
   import TableEmpty from './TableEmpty.svelte';
+  import type { Snippet } from 'svelte';
+  import type { HTMLTableAttributes } from 'svelte/elements';
+
+  type TableRow = Record<string, unknown>;
+
+  type Props = Omit<HTMLTableAttributes, 'children'> & {
+    columns?: Column[];
+    rows?: TableRow[];
+    label?: string;
+    variant?: string;
+    cell?: Snippet<[TableRow, Column]>;
+    rowKey?: string;
+    caption?: string;
+    empty?: string;
+  };
+
   let {
     columns = [],
     rows = [],
@@ -13,15 +29,13 @@
     caption = '',
     empty = 'No rows to display.',
     ...rest
-  } = $props();
+  }: Props = $props();
   const id = useId();
   let key = $state('');
-  /** @type {import('./table.js').Direction} */
-  let direction = $state('ascending');
+  let direction = $state<Direction>('ascending');
   let feedback = $state('');
   const sorted = $derived(key ? sortRows(rows, key, direction) : rows);
-  /** @param {import('./table.js').Column} column */
-  function sort(column) {
+  function sort(column: Column) {
     direction = nextDirection(column.key, key, direction);
     key = column.key;
     feedback = column.label + ' sorted in ' + direction + ' order.';

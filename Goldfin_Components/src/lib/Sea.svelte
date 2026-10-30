@@ -1,7 +1,7 @@
-<script>
+<script lang="ts">
   /* One body: water, crest and the three wave bands rise together, so the leading edge is a
      wave and never the straight edge of a sheet (DESIGN.md: Run). */
-  let { sinking = false } = $props();
+  let { sinking = false }: { sinking?: boolean } = $props();
 </script>
 
 <span class={['sea', sinking && 'sinking']} aria-hidden="true">

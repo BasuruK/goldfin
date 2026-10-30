@@ -1,9 +1,11 @@
-<script>
+<script lang="ts">
   import Section from '../lib/Section.svelte';
+
+  type TokenSwatch = { name: string; light: string; dark: string; edge?: boolean };
 
   // The chip always paints the live token, so the gallery cannot drift from
   // tokens.css. The label is documentation and is kept beside it.
-  const groups = [
+  const groups: { heading: string; tokens: TokenSwatch[] }[] = [
     { heading: 'Foreground', tokens: [
       { name: '--ufg', light: 'oklch(17.727% 0.0089 264.32)', dark: 'oklch(96.696% 0.0029 264.54)' },
       { name: '--ufg2', light: 'oklch(39.165% 0.0193 257.26)', dark: 'oklch(79.999% 0.0126 259.82)' },

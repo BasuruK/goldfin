@@ -1,6 +1,8 @@
-<script>
+<script lang="ts">
   import { DropdownMenu as Primitive } from 'bits-ui';
-  let { children } = $props();
+  import type { Snippet } from 'svelte';
+
+  let { children }: { children?: Snippet } = $props();
 </script>
 <!-- GroupHeading needs a Group context; the part carries it so a screen writes one tag. -->
 <Primitive.Group>

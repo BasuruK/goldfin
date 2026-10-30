@@ -1,11 +1,10 @@
-<script>
+<script lang="ts">
   import { useId } from 'bits-ui';
   import { onDestroy } from 'svelte';
-  import { createLoadingTask, sampleSuiteMatches } from './loading.js';
+  import { createLoadingTask, sampleSuiteMatches, type LoadingState } from './loading.js';
   let query = $state('');
-  let loadingState = $state('idle');
-  /** @type {string[]} */
-  let matches = $state([]);
+  let loadingState = $state<LoadingState>('idle');
+  let matches = $state<string[]>([]);
   const id = useId();
   const task = createLoadingTask(next => loadingState = next);
   function search() {

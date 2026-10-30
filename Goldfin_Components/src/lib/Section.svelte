@@ -1,6 +1,24 @@
-<script>
+<script lang="ts">
+  import type { Snippet } from 'svelte';
+
   /* `reference` is the mono note beside the title; `id` stays the HTML id. */
-  let { title, reference = undefined, legend = undefined, id, class: className = '', 'data-od-id': odId, children } = $props();
+  let {
+    title,
+    reference = undefined,
+    legend = undefined,
+    id = undefined,
+    class: className = '',
+    'data-od-id': odId,
+    children
+  }: {
+    title: string;
+    reference?: string;
+    legend?: string;
+    id?: string;
+    class?: string;
+    'data-od-id'?: string;
+    children?: Snippet;
+  } = $props();
 </script>
 <section class={['section', className]} data-od-id={odId} {id}>
   <div class="section-head">

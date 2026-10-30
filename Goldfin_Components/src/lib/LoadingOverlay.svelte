@@ -1,8 +1,27 @@
-<script>
+<script lang="ts">
   import Skeleton from './Skeleton.svelte';
   /* `loading-demo` carries the `[hidden]` rule that takes the overlay out of the flow, so a
      stage dropped into a product screen hides its overlay without extra CSS at the call site. */
-  let { busy = false, state = 'idle', overlay = '', hint = '', empty = false, example, children } = $props();
+  import type { Snippet } from 'svelte';
+  import type { LoadingState } from './loading.js';
+
+  let {
+    busy = false,
+    state = 'idle',
+    overlay = '',
+    hint = '',
+    empty = false,
+    example,
+    children
+  }: {
+    busy?: boolean;
+    state?: LoadingState;
+    overlay?: string;
+    hint?: string;
+    empty?: boolean;
+    example?: string;
+    children?: Snippet;
+  } = $props();
 </script>
 <div
   class={['loading-stage', empty && 'loading-empty', 'loading-demo']}

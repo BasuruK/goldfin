@@ -1,8 +1,24 @@
-<script>
+<script lang="ts">
   import { ToggleGroup as Primitive } from 'bits-ui';
   import SegmentedItem from './SegmentedItem.svelte';
   import { resolveValue } from './segment.js';
-  let { value = $bindable(''), items, label = 'Options', disabled = false } = $props();
+  type SegmentedControlItem = {
+    value: string;
+    label: string;
+    disabled?: boolean;
+  };
+
+  let {
+    value = $bindable(''),
+    items,
+    label = 'Options',
+    disabled = false
+  }: {
+    value?: string;
+    items: readonly SegmentedControlItem[];
+    label?: string;
+    disabled?: boolean;
+  } = $props();
   const selected = $derived(resolveValue(value, items));
 </script>
 

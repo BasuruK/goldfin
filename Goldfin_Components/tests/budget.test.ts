@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { budgetParts } from '../src/lib/budget.js';
+import { budgetParts } from '../src/lib/budget.ts';
 
 test('budgetParts clamps track widths and reports excess', () => {
   assert.equal(budgetParts(1893, 836, 4096).remaining, 1367);

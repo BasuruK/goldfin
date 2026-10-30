@@ -1,10 +1,9 @@
-<script>
+<script lang="ts">
   import TimelineMarker from './TimelineMarker.svelte';
   import Pill from './Pill.svelte';
+  import type { Snippet } from 'svelte';
+
   // `status` is a string (rendered in a Pill) or a snippet that replaces the Pill entirely.
-  /** @type {{ title: string, description?: string, meta?: string, time?: string, datetime?: string,
-   * state?: string, status?: string | import('svelte').Snippet, statusVariant?: string, icon?: string,
-   * dateColumn?: boolean, collapsible?: boolean, open?: boolean, summary?: string, children?: import('svelte').Snippet }} */
   let {
     title,
     description = '',
@@ -20,6 +19,21 @@
     open = false,
     summary = 'Details',
     children
+  }: {
+    title: string;
+    description?: string;
+    meta?: string;
+    time?: string;
+    datetime?: string;
+    state?: string;
+    status?: string | Snippet;
+    statusVariant?: string;
+    icon?: string;
+    dateColumn?: boolean;
+    collapsible?: boolean;
+    open?: boolean;
+    summary?: string;
+    children?: Snippet;
   } = $props();
 </script>
 

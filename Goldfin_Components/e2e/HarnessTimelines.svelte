@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import Timeline from '../src/lib/Timeline.svelte';
   import TimelineItem from '../src/lib/TimelineItem.svelte';
   const events = [

@@ -122,7 +122,8 @@ test('pressing a button scales it rather than doing nothing', async ({ page }) =
   expect(before === 'none' || before === 'matrix(1, 0, 0, 1, 0, 0)').toBe(true);
 
   const box = await btn.boundingBox();
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
   await page.mouse.down();
   const active = await btn.evaluate((el) => el.matches(':active'));
   // The press transitions over 150ms; sampling immediately reads the identity start
@@ -143,12 +144,14 @@ test('the loading spinner never changes the button box', async ({ page }) => {
   await expect(btn).toBeVisible();
 
   const idle = await btn.boundingBox();
+  expect(idle).not.toBeNull();
   await btn.click();
   await page.waitForTimeout(400);           // into the busy state
   const busy = await btn.boundingBox();
+  expect(busy).not.toBeNull();
 
-  expect(Math.abs(busy.width - idle.width)).toBeLessThan(1);
-  expect(Math.abs(busy.height - idle.height)).toBeLessThan(1);
+  expect(Math.abs(busy!.width - idle!.width)).toBeLessThan(1);
+  expect(Math.abs(busy!.height - idle!.height)).toBeLessThan(1);
 });
 
 test('the spinner is centred on the button it belongs to', async ({ page }) => {
@@ -169,10 +172,10 @@ test('the spinner is centred on the button it belongs to', async ({ page }) => {
 
 test('the Run label fades faster on the way out than on the way in', async ({ page }) => {
   const btn = page.locator('#run .run-btn');
-  const idle = await btn.evaluate((el) => getComputedStyle(el.querySelector('.label')).transitionDuration);
+  const idle = await btn.evaluate((el) => getComputedStyle(el.querySelector('.label')!).transitionDuration);
   await btn.click();
   await page.waitForTimeout(300);
-  const busy = await btn.evaluate((el) => getComputedStyle(el.querySelector('.label')).transitionDuration);
+  const busy = await btn.evaluate((el) => getComputedStyle(el.querySelector('.label')!).transitionDuration);
 
   expect(idle).toBe('0.2s');
   expect(busy).toBe('0.4s');
@@ -226,7 +229,7 @@ test('core tokens resolve in dark and light', async ({ page }) => {
     return {
       scheme: s.colorScheme,
       bg: s.backgroundColor,
-      fg: getComputedStyle(document.querySelector('.page-title')).color,
+      fg: getComputedStyle(document.querySelector('.page-title')!).color,
     };
   });
 
@@ -251,8 +254,9 @@ test('pressing a checkbox label presses the checkbox', async ({ page }) => {
   const label = row.locator('.label');
   await label.scrollIntoViewIfNeeded();
   const box = await label.boundingBox();
+  expect(box).not.toBeNull();
 
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
   await page.mouse.down();
   await page.waitForTimeout(250);
   const pressed = await row.locator('.gf-control').evaluate((el) => getComputedStyle(el).transform);

@@ -1,5 +1,10 @@
-<script>
-  let { size = 'md', tone, label = 'Loading', dots = false } = $props();
+<script lang="ts">
+  let {
+    size = 'md',
+    tone,
+    label = 'Loading',
+    dots = false
+  }: { size?: string; tone?: string; label?: string; dots?: boolean } = $props();
 </script>
 
 <span class="od-row" role="status" data-loading-tone={tone}>

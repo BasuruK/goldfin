@@ -1,9 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { tokenizeJsonLine, isNullLine, countChildItems, nodeRange, toggleFold, hiddenLines } from '../src/lib/json.js';
+import { tokenizeJsonLine, isNullLine, countChildItems, nodeRange, toggleFold, hiddenLines } from '../src/lib/json.ts';
 
-const classesOf = (line) => tokenizeJsonLine(line).filter((t) => t.cls).map((t) => `${t.text}|${t.cls}`);
-const roundTrip = (line) => tokenizeJsonLine(line).map((t) => t.text).join('');
+const classesOf = (line: string) =>
+  tokenizeJsonLine(line)
+    .filter((t) => t.cls)
+    .map((t) => `${t.text}|${t.cls}`);
+const roundTrip = (line: string) => tokenizeJsonLine(line).map((t) => t.text).join('');
 
 test('tokenizeJsonLine assigns classes, preserves escapes, and round-trips lines', () => {
   assert.deepEqual(classesOf('  "invoice": {'), ['"invoice"|k-key', ':|k-p', '{|k-p']);
@@ -49,7 +52,7 @@ test('countChildItems counts direct children and respects nesting, dedents, and 
   assert.deepEqual(countChildItems(blanks), [2, null, null, null, null]);
 });
 
-const rangesOf = (lines) => lines.map((_, index) => nodeRange(lines, index));
+const rangesOf = (lines: string[]) => lines.map((_, index) => nodeRange(lines, index));
 
 test('nodeRange finds leaf lines, closing dedents, nested bounds, unclosed tails, and internal blanks', () => {
   const simple = ['{', '  "a": 1,', '}'];
@@ -73,14 +76,14 @@ test('nodeRange finds leaf lines, closing dedents, nested bounds, unclosed tails
 });
 
 test('toggleFold and hiddenLines fold per line without mutating the caller set', () => {
-  const empty = new Set();
+  const empty = new Set<number>();
   const open = toggleFold(empty, 1);
   assert.deepEqual([...open], [1]);
   assert.equal(empty.size, 0, "the caller's set must not be mutated");
-  assert.deepEqual([...toggleFold(open, 1)], []);
+  assert.deepEqual([...toggleFold(open as Set<number>, 1)], []);
 
   const lines = ['{', '  "a": {', '    "x": 1', '  },', '  "b": {', '    "y": 2', '  }', '}'];
-  const folded = toggleFold(toggleFold(new Set(), 1), 4);
+  const folded = toggleFold(toggleFold(new Set<number>(), 1), 4);
   assert.deepEqual([...folded].sort(), [1, 4]);
   assert.deepEqual(hiddenLines(rangesOf(lines), folded), [false, false, true, true, false, true, true, false]);
 
@@ -90,6 +93,6 @@ test('toggleFold and hiddenLines fold per line without mutating the caller set',
 
   const leaf = ['{', '  "a": 1', '}'];
   const leafRanges = rangesOf(leaf);
-  assert.deepEqual(hiddenLines(leafRanges, new Set([1])), [false, false, false]);
-  assert.deepEqual(hiddenLines(leafRanges, new Set([9])), [false, false, false]);
+  assert.deepEqual(hiddenLines(leafRanges, new Set<number>([1])), [false, false, false]);
+  assert.deepEqual(hiddenLines(leafRanges, new Set<number>([9])), [false, false, false]);
 });

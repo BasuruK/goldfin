@@ -1,40 +1,34 @@
 const TOKEN = /("(?:[^"\\]|\\.)*")(\s*:)?|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|\b(true|false|null)\b|([{}[\],:])/g;
-/** @type {Record<string, string>} */
-const LITERAL_CLASS = { true: 'k-ok', false: 'k-ok', null: 'k-bad' };
+const LITERAL_CLASS: Record<string, string> = { true: 'k-ok', false: 'k-ok', null: 'k-bad' };
 
-/** @param {string} line */
-export function isNullLine(line) {
+export function isNullLine(line: string): boolean {
   return /: null,?$/.test(line);
 }
 
-/** @param {string} line */
-const indentOf = line => line.length - line.trimStart().length;
+const indentOf = (line: string) => line.length - line.trimStart().length;
 const OPENS_NODE = /[{[]\s*,?$/;
 
-/** @typedef {{ opens: boolean, end: number }} NodeRange */
+export interface NodeRange {
+  opens: boolean;
+  end: number;
+}
 
-/**
- * @param {string[]} lines
- * @param {number} index
- * @returns {NodeRange}
- */
-export function nodeRange(lines, index) {
+export function nodeRange(lines: string[], index: number): NodeRange {
   const line = lines[index];
   if (!OPENS_NODE.test(line)) return { opens: false, end: index };
   const base = indentOf(line);
   let end = lines.length - 1;
   for (let next = index + 1; next < lines.length; next++) {
     if (lines[next].trim() === '') continue;
-    if (indentOf(lines[next]) <= base) { end = next; break; }
+    if (indentOf(lines[next]) <= base) {
+      end = next;
+      break;
+    }
   }
   return { opens: true, end };
 }
 
-/**
- * @param {string[]} lines
- * @returns {(number | null)[]}
- */
-export function countChildItems(lines) {
+export function countChildItems(lines: string[]): (number | null)[] {
   return lines.map((line, index) => {
     if (!OPENS_NODE.test(line)) return null;
     const base = indentOf(line);
@@ -52,25 +46,15 @@ export function countChildItems(lines) {
   });
 }
 
-/* Fold state is a set of opening-line indexes. Each entry hides its own descendants only,
-   so one fold never collapses another line's children. */
-/**
- * @param {Set<number>} folded
- * @param {number} index
- */
-export function toggleFold(folded, index) {
+export function toggleFold(folded: Set<number>, index: number): Set<number> {
   const next = new Set(folded);
-  next.has(index) ? next.delete(index) : next.add(index);
+  if (next.has(index)) next.delete(index);
+  else next.add(index);
   return next;
 }
 
-/**
- * @param {NodeRange[]} ranges
- * @param {Set<number>} folded
- */
-export function hiddenLines(ranges, folded) {
-  /** @type {boolean[]} */
-  const mask = new Array(ranges.length).fill(false);
+export function hiddenLines(ranges: NodeRange[], folded: Set<number>): boolean[] {
+  const mask = new Array<boolean>(ranges.length).fill(false);
   for (const index of folded) {
     const range = ranges[index];
     if (!range?.opens) continue;
@@ -79,12 +63,16 @@ export function hiddenLines(ranges, folded) {
   return mask;
 }
 
-/** @param {string} line */
-export function tokenizeJsonLine(line) {
-  /** @type {{ text: string, cls: string | null }[]} */
-  const tokens = [];
+export interface JsonToken {
+  text: string;
+  cls: string | null;
+}
+
+export function tokenizeJsonLine(line: string): JsonToken[] {
+  const tokens: JsonToken[] = [];
   let last = 0;
   for (const match of line.matchAll(TOKEN)) {
+    if (match.index === undefined) continue;
     if (match.index > last) tokens.push({ text: line.slice(last, match.index), cls: null });
     const [text, quoted, colon, number, literal, punctuation] = match;
     if (quoted !== undefined) {
@@ -94,7 +82,7 @@ export function tokenizeJsonLine(line) {
       tokens.push({ text: number, cls: 'k-num' });
     } else if (literal !== undefined) {
       tokens.push({ text: literal, cls: LITERAL_CLASS[literal] });
-    } else {
+    } else if (punctuation !== undefined) {
       tokens.push({ text: punctuation, cls: 'k-p' });
     }
     last = match.index + text.length;

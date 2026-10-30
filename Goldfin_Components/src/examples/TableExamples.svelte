@@ -1,5 +1,9 @@
-<script>
-import Table from '../lib/Table.svelte';import Icon from '../lib/Icon.svelte';import Pill from '../lib/Pill.svelte';import Section from '../lib/Section.svelte';
+<script lang="ts">
+import Table from '../lib/Table.svelte';
+import Icon from '../lib/Icon.svelte';
+import Pill from '../lib/Pill.svelte';
+import Section from '../lib/Section.svelte';
+import type { Column } from '../lib/table.js';
 const files = [
   {
     "id": 0,

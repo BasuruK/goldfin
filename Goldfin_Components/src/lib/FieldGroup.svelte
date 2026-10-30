@@ -1,5 +1,21 @@
-<script>
-  let { label, aside = '', legend, set = false, class: className = '', children } = $props();
+<script lang="ts">
+  import type { Snippet } from 'svelte';
+
+  let {
+    label,
+    aside = '',
+    legend = undefined,
+    set = false,
+    class: className = '',
+    children
+  }: {
+    label?: string;
+    aside?: string;
+    legend?: string;
+    set?: boolean;
+    class?: string;
+    children?: Snippet;
+  } = $props();
 </script>
 
 {#if set}

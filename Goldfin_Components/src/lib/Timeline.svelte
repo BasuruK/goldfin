@@ -1,12 +1,22 @@
-<script>
+<script lang="ts">
+  import type { Snippet } from 'svelte';
+
   let {
     layout = 'vertical',
     markers = 'solid',
-    tone,
+    tone = undefined,
     leading = false,
     label = 'Timeline',
     count = 3,
     children
+  }: {
+    layout?: string;
+    markers?: string;
+    tone?: string;
+    leading?: boolean;
+    label?: string;
+    count?: number;
+    children?: Snippet;
   } = $props();
 </script>
 

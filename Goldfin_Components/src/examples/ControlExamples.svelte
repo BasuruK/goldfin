@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import Checkbox from '../lib/Checkbox.svelte';
   import CheckboxGroup from '../lib/CheckboxGroup.svelte';
   import RadioGroup from '../lib/RadioGroup.svelte';
@@ -13,7 +13,7 @@
   import FieldGroup from '../lib/FieldGroup.svelte';
   import FileDrop from '../lib/FileDrop.svelte';
   import Section from '../lib/Section.svelte';
-  import { modelError } from '../lib/validation.js';
+  import { modelError } from '../lib/validation.ts';
   let modelId = $state('gpt-4o-minii');
   let currentModelError = $state(modelError('gpt-4o-minii'));
   let formats = $state(['json','csv']);
@@ -91,6 +91,6 @@
   <div class="grid-3"><Select label="Model" items={models} value="gpt-4o-mini"/><Select label="Models" type="multiple" items={models} value={['gpt-4o-mini','claude-3-5-sonnet']}/>
     <StatusSelect label="With icons" value="active" items={[{value:'active',label:'Active',note:'Running normally',tone:'ok'},{value:'pending',label:'Pending',note:'Awaiting resources',tone:'num'},{value:'failed',label:'Failed',note:'Check logs',tone:'bad'}]}/></div>
   <div class="grid-2 mt-16"><StatusSelect label="Status filter" items={statuses}/><Select label="Model ID filter" items={modelFilters} value="claude-sonnet-4-5"/></div>
-  <div class="od-cluster mt-16"><DropdownMenu label="Sample actions" items={[{value:'inspect',label:'Inspect sample'},{value:'duplicate',label:'Duplicate sample'},{value:'admin',label:'Admin action',disabled:true}]} onAction={action => actionFeedback = action === 'inspect' ? 'Sample inspected locally.' : 'Sample duplicated locally.'}/><span class="field-desc" role="status">{actionFeedback}</span></div>
+  <div class="od-cluster mt-16"><DropdownMenu label="Sample actions" items={[{value:'inspect',label:'Inspect sample'},{value:'duplicate',label:'Duplicate sample'},{value:'admin',label:'Admin action',disabled:true}]} onAction={(action: string) => (actionFeedback = action === 'inspect' ? 'Sample inspected locally.' : 'Sample duplicated locally.')}/><span class="field-desc" role="status">{actionFeedback}</span></div>
   <p class="field-desc mt-16">Model IDs and price notes are retained sample content, not current pricing advice.</p>
 </Section>

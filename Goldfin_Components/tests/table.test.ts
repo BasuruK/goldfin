@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { compareValues, sortRows, nextDirection, sortLabel } from '../src/lib/table.js';
+import { compareValues, sortRows, nextDirection, sortLabel } from '../src/lib/table.ts';
 
 test('nextDirection toggles only on the active column and sortLabel names the next direction', () => {
   assert.equal(nextDirection('size', '', 'ascending'), 'ascending');

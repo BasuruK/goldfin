@@ -7,7 +7,7 @@ import hoverMedia from '../scripts/stylelint-hover-media.js';
 const projectRoot = fileURLToPath(new URL('..', import.meta.url));
 const configPath = fileURLToPath(new URL('../stylelint.config.js', import.meta.url));
 
-const lint = async (code) => {
+const lint = async (code: string) => {
   const { results } = await stylelint.lint({
     code,
     config: { plugins: [hoverMedia], rules: { 'goldfin/hover-in-hover-media': true } },
@@ -31,7 +31,7 @@ test('(hover: hover) alone is not enough: a touch laptop still reports it', asyn
   assert.deepEqual(await lint('@media (hover: hover) { .btn:hover { color: red; } }'), ['goldfin/hover-in-hover-media']);
 });
 
-const lintWithProjectConfig = async (code) => {
+const lintWithProjectConfig = async (code: string) => {
   const { results } = await stylelint.lint({ code, configFile: configPath, configBasedir: projectRoot });
   return results[0].warnings.map((warning) => warning.rule);
 };

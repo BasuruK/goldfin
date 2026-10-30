@@ -1,9 +1,33 @@
-<script>
+<script lang="ts">
+  import type { ComponentProps, Snippet } from 'svelte';
   import { Dialog as Primitive } from 'bits-ui';
   import DialogHeader from './DialogHeader.svelte';
   import DialogBody from './DialogBody.svelte';
   import DialogFooter from './DialogFooter.svelte';
-  let { open = $bindable(false), trigger, title, description, icon = '', children, actions, ...rest } = $props();
+
+  type DialogRootProps = ComponentProps<typeof Primitive.Root>;
+  type DialogActionsArgs = { close: () => void };
+
+  type Props = Omit<DialogRootProps, 'open'> & {
+    open?: boolean;
+    trigger: string;
+    title: string;
+    description: string;
+    icon?: string;
+    children?: Snippet;
+    actions?: Snippet<[DialogActionsArgs]>;
+  };
+
+  let {
+    open = $bindable(false),
+    trigger,
+    title,
+    description,
+    icon = '',
+    children,
+    actions,
+    ...rest
+  }: Props = $props();
 </script>
 <Primitive.Root {...rest} bind:open>
   <Primitive.Trigger class="btn dialog-trigger">{trigger}</Primitive.Trigger>

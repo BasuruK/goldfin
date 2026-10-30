@@ -1,19 +1,15 @@
-<script>
+<script lang="ts">
   import { onMount } from 'svelte';
-  import { createMosaicTiles, mosaicPeak } from './mosaic.js';
+  import { createMosaicTiles, mosaicPeak, type MosaicTile } from './mosaic.js';
   /* onready reports whether the band has tiles, so a header can drop its fallback pattern. */
-  let { onready = () => {} } = $props();
-  /** @type {HTMLDivElement | undefined} */
-  let band;
+  let { onready = () => {} }: { onready?: (hasTiles: boolean) => void } = $props();
+  let band: HTMLDivElement | undefined = $state(undefined);
   let columns = $state(1);
-  /** @type {import('./mosaic.js').MosaicTile[]} */
-  let tiles = $state([]);
+  let tiles = $state<MosaicTile[]>([]);
   let paused = $state(false);
-  /** @type {Set<import('./mosaic.js').MosaicTile>} */
-  const pendingPeaks = new Set();
+  const pendingPeaks = new Set<MosaicTile>();
   let peakFrame = 0;
-  /** @param {import('./mosaic.js').MosaicTile} tile */
-  function queuePeak(tile) {
+  function queuePeak(tile: MosaicTile) {
     pendingPeaks.add(tile);
     peakFrame ||= requestAnimationFrame(flushPeaks);
   }

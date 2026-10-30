@@ -1,28 +1,66 @@
-<script>
+<script lang="ts">
   import { Select as Primitive, Label, useId } from 'bits-ui';
   import Icon from './Icon.svelte';
-  /** @typedef {{ value: string, label: string, disabled?: boolean, tone?: string, note?: string }} SelectItem */
+
+  export interface SelectItem {
+    value: string;
+    label: string;
+    disabled?: boolean;
+    tone?: string;
+    note?: string;
+  }
+
+  type SelectSharedProps = {
+    id?: string;
+    items: readonly SelectItem[];
+    label: string;
+    placeholder?: string;
+    disabled?: boolean;
+    tone?: boolean;
+    summary?: (count: number) => string;
+  };
+
+  export type SelectSingleProps = SelectSharedProps & {
+    type?: 'single';
+    value?: string;
+  };
+
+  export type SelectMultipleProps = SelectSharedProps & {
+    type: 'multiple';
+    value?: string[];
+  };
+
+  export type SelectProps = SelectSingleProps | SelectMultipleProps;
+
   let {
     id = useId(),
     type = 'single',
-    value = $bindable(type === 'multiple' ? [] : ''),
+    value = $bindable(type === 'multiple' ? ([] as string[]) : ('' as string)),
     items,
     label,
     placeholder = 'Select an option',
     disabled = false,
     tone = false,
-    summary = (/** @type {number} */ count) => count + ' selected',
+    summary = (count: number) => count + ' selected',
     ...rest
-  } = $props();
-  const picked = $derived(items.find((/** @type {SelectItem} */ item) => item.value === value));
-  const selected = $derived(type === 'multiple' ? summary(value.length) : picked?.label || placeholder);
-  // Tone colour always comes from a token; ufg3 is the neutral fallback.
-  /** @param {{ tone?: string }} item */
-  function dotColor(item) { return 'var(--' + (item.tone || 'ufg3') + ')'; }
+  }: SelectProps = $props();
+  const picked = $derived(items.find((item) => item.value === value));
+  const selected = $derived(
+    type === 'multiple' ? summary(Array.isArray(value) ? value.length : 0) : picked?.label || placeholder
+  );
+  function dotColor(item: Pick<SelectItem, 'tone'>) {
+    return 'var(--' + (item.tone || 'ufg3') + ')';
+  }
 </script>
 <div class="dd">
   <Label.Root for={id} class="label">{label}</Label.Root>
-  <Primitive.Root {...rest} type={type === 'multiple' ? 'multiple' : 'single'} {items} bind:value {disabled}>
+  <Primitive.Root
+    {...rest}
+    type={type === 'multiple' ? 'multiple' : 'single'}
+    items={[...items]}
+    bind:value={value as never}
+    {disabled}
+  >
     <Primitive.Trigger {id} class="dd-trigger">
       {#if tone}
         <span class="dd-lead">

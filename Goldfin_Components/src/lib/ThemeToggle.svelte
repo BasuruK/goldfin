@@ -1,5 +1,5 @@
-<script>
-  let { theme = $bindable('dark') } = $props();
+<script lang="ts">
+  let { theme = $bindable('dark') }: { theme?: string } = $props();
   $effect(() => { document.body.dataset.theme = theme; });
 </script>
 

@@ -1,8 +1,8 @@
-<script>
+<script lang="ts">
   import Timeline from '../lib/Timeline.svelte';
   import TimelineItem from '../lib/TimelineItem.svelte';
   import Section from '../lib/Section.svelte';
-  const at = time => ({ time, datetime: '2026-10-04T' + time + ':00' });
+  const at = (time: string) => ({ time, datetime: '2026-10-04T' + time + ':00' });
   const complete = { state: 'complete', status: 'Complete' };
   const passed = { state: 'complete', status: 'Complete', statusVariant: 'ok-pill' };
   const current = { state: 'current', status: 'Current', statusVariant: 'running-pill' };

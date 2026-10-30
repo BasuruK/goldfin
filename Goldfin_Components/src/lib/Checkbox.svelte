@@ -1,6 +1,24 @@
-<script>
+<script lang="ts">
+  import type { ComponentProps } from 'svelte';
   import { Checkbox as Primitive, Label, useId } from 'bits-ui';
   import Icon from './Icon.svelte';
+
+  type CheckboxRootProps = ComponentProps<typeof Primitive.Root>;
+
+  type Props = Omit<
+    CheckboxRootProps,
+    'id' | 'checked' | 'indeterminate' | 'disabled' | 'aria-describedby'
+  > & {
+    id?: string;
+    checked?: boolean;
+    indeterminate?: boolean;
+    label: string;
+    description?: string;
+    disabled?: boolean;
+    invalid?: boolean;
+    'aria-describedby'?: string;
+  };
+
   let {
     id = useId(),
     checked = $bindable(false),
@@ -11,7 +29,7 @@
     invalid = false,
     'aria-describedby': describedBy = '',
     ...rest
-  } = $props();
+  }: Props = $props();
 </script>
 <div class="ctl" data-type="check" data-checked={checked || undefined}
   data-disabled={disabled ? 'true' : undefined} data-invalid={invalid || undefined}>
