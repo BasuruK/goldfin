@@ -61,6 +61,7 @@ test('model panel reveals through intermediate frames when motion is allowed', a
   const addButton = page.getByRole('button', { name: 'Add connector', exact: true });
   await expect(addButton).toBeVisible();
   const frames = await addButton.evaluate(async button => {
+    if (!(button instanceof HTMLElement)) throw new Error('Add connector control is not an HTML button');
     const readOpacityFrames = async () => {
       const seen: number[] = [];
       for (let frame = 0; frame < 20; frame++) {
