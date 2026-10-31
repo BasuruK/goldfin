@@ -5,9 +5,9 @@ module.exports = {
       name: 'goldfin-entry-point',
       severity: 'error',
       comment:
-        'App and app tests must import the design system only via $goldfin/lib/index.js (barrel) or $goldfin/goldfin.css — not deep paths under Goldfin_Components/. Showcase and e2e inside the package may import internals.',
+        'Every module outside Goldfin_Components/ (app, root config, tests) must import the design system only via $goldfin/lib/index.js (barrel) or $goldfin/goldfin.css — not deep paths under Goldfin_Components/. Code inside the package may import internals.',
       from: {
-        path: '^(src|tests)/',
+        pathNot: '^Goldfin_Components/',
       },
       to: {
         path: '^Goldfin_Components/',
