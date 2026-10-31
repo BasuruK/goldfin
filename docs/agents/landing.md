@@ -4,7 +4,7 @@ Every change lands as one PR that holds one feature seam in one layer: the Workf
 
 A change to documentation only (`AGENTS.md`, `docs/`, ADRs) is its own layer and a two-way door. It skips steps 1 and 2. Instead, check every path, command and claim it states against the current code, and put `No code change` in the PR body's Evidence.
 
-## 0. Planing
+## 0. Planning
 
 - **Exercise Abstract Thinking**
 
