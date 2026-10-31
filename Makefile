@@ -31,6 +31,7 @@ lint:
 	golangci-lint run
 	pnpm check
 	pnpm --dir Goldfin_Components check
+	pnpm lint:boundaries
 	pnpm knip
 
 check: lint
