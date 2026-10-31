@@ -4,6 +4,10 @@ Every change lands as one PR that holds one feature seam in one layer: the Workf
 
 A change to documentation only (`AGENTS.md`, `docs/`, ADRs) is its own layer and a two-way door. It skips steps 1 and 2. Instead, check every path, command and claim it states against the current code, and put `No code change` in the PR body's Evidence.
 
+## 0. Planing
+
+- **Exercise Abstract Thinking**
+
 ## 1. Classify the door
 
 - **One-way**: the seam stores, transmits, or displays a Credential; writes Prompt versions, Run results, Verdicts, or Connector snapshots; or migrates data that already exists. The spec and each one-way ticket end with a **Failure table** holding only the rows the path can reach, from: two writers, mid-flight crash, mid-flight shutdown, timeout, stale result, rollback after data exists.
