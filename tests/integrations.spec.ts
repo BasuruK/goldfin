@@ -58,11 +58,9 @@ test('model panel reveals through intermediate frames when motion is allowed', a
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await mockConnectorApi(page);
   await page.goto('/connectors/');
-  const frames = await page.evaluate(async () => {
-    const addButton = Array.from(document.querySelectorAll('button')).find(
-      button => button.textContent?.trim() === 'Add connector'
-    );
-    if (!(addButton instanceof HTMLElement)) throw new Error('Add connector button is missing');
+  const addButton = page.getByRole('button', { name: 'Add connector', exact: true });
+  await expect(addButton).toBeVisible();
+  const frames = await addButton.evaluate(async button => {
     const readOpacityFrames = async () => {
       const seen: number[] = [];
       for (let frame = 0; frame < 20; frame++) {
@@ -72,7 +70,7 @@ test('model panel reveals through intermediate frames when motion is allowed', a
       }
       return seen;
     };
-    addButton.click();
+    button.click();
     return readOpacityFrames();
   });
   const dialog = page.getByRole('dialog');
