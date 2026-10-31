@@ -14,7 +14,7 @@ Every change keeps these two. The ADRs hold the reasons.
 Two containers over Postgres (ADR 0010 as amended by 0013; changing them needs an ADR): `web` (nginx + static SvelteKit) and `api` (Go). Migrations are `goose` files in `db/migrations/`, applied by `make migrate`, a one-shot Compose service. Local Compose runs `postgres`, `migrate` and `api`; the UI runs from `pnpm dev`.
 
 - `cmd/goldfin/` is the `api` entry point. `internal/handler` mounts the routes; `internal/api` saves and lists Connectors; `internal/probe` runs synchronous Probes; `internal/azureocr` is the Azure Document Intelligence client; `internal/secretbox` encrypts Credentials; `internal/testdb` gives each DB test a disposable schema.
-- `src/lib/<surface>/` holds each surface's API client and store (`connectors`, `ocr`); `src/routes/` holds pages; `Goldfin_Components/` is the design system.
+- `src/lib/<surface>/` holds each surface's API client and store (`connectors`, `ocr`); `src/routes/` holds pages; `Goldfin_Components/` is the design system. Code outside that package (`src/`, `tests/`) may import it only via `$goldfin/lib/index.js` and `$goldfin/goldfin.css` (no deep `$goldfin/…` paths); `make lint` runs `pnpm lint:boundaries` (dependency-cruiser) to enforce that and to forbid dependency cycles in the scanned graph.
 
 ## Commands
 
