@@ -57,7 +57,12 @@ func countConnectors(t *testing.T, pool *pgxpool.Pool) int {
 
 type connector struct {
 	ID, Name, ProviderType, BaseURL, APIVersion, CredentialLabel string
-	CredentialSetAt                                              *time.Time
+	LLMApiMode                                                      string `json:"llmApiMode"`
+	CredentialSetAt                                                 *time.Time
+	Models                                                                       []struct {
+		ID      string `json:"id"`
+		Enabled bool   `json:"enabled"`
+	}
 }
 
 func TestAPICreatesAConnectorAndEncryptsItsCredential(t *testing.T) {
@@ -149,6 +154,66 @@ func TestAPICreatesAzureDocumentIntelligenceConnector(t *testing.T) {
 	}
 }
 
+func TestAPICreatesLLMConnectorWithModels(t *testing.T) {
+	handler, pool, box := newAPI(t)
+	secret := rand.Text()
+	body, err := json.Marshal(map[string]any{
+		"name": " OpenAI ", "providerType": " openai ",
+		"baseUrl": " https://api.openai.com/v1 ", "credential": secret, "credentialLabel": "Prod key",
+		"llmApiMode": "responses",
+		"models": []map[string]any{
+			{"id": " gpt-4o-mini ", "enabled": true},
+			{"id": "gpt-4o", "enabled": false},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	created := request(t, handler, http.MethodPost, "/api/v1/connectors", string(body))
+	if created.Code != http.StatusCreated || strings.Contains(created.Body.String(), secret) {
+		t.Fatalf("create: %d %s", created.Code, created.Body.String())
+	}
+	var got connector
+	if err := json.Unmarshal(created.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.ProviderType != "openai" || got.LLMApiMode != "responses" || len(got.Models) != 2 ||
+		got.Models[0].ID != "gpt-4o-mini" || !got.Models[0].Enabled || got.Models[1].ID != "gpt-4o" || got.Models[1].Enabled {
+		t.Fatalf("created Connector: %+v", got)
+	}
+	var llmMode string
+	var modelCount int
+	if err := pool.QueryRow(t.Context(), `SELECT llm_api_mode FROM connectors WHERE id = $1`, got.ID).Scan(&llmMode); err != nil {
+		t.Fatal(err)
+	}
+	if llmMode != "responses" {
+		t.Fatalf("llm_api_mode: %s", llmMode)
+	}
+	if err := pool.QueryRow(t.Context(), `SELECT count(*) FROM connector_models WHERE connector_id = $1`, got.ID).Scan(&modelCount); err != nil {
+		t.Fatal(err)
+	}
+	if modelCount != 2 {
+		t.Fatalf("model rows: %d", modelCount)
+	}
+	var ciphertext []byte
+	if err := pool.QueryRow(t.Context(), `SELECT credential_ciphertext FROM connectors WHERE id = $1`, got.ID).Scan(&ciphertext); err != nil {
+		t.Fatal(err)
+	}
+	plain, err := box.Decrypt(ciphertext)
+	if err != nil || string(plain) != secret {
+		t.Fatal("stored Credential does not round-trip")
+	}
+
+	listed := request(t, handler, http.MethodGet, "/api/v1/connectors", "")
+	var list struct{ Connectors []connector }
+	if err := json.Unmarshal(listed.Body.Bytes(), &list); err != nil || listed.Code != http.StatusOK {
+		t.Fatalf("list: %d %s", listed.Code, listed.Body.String())
+	}
+	if len(list.Connectors) != 1 || list.Connectors[0].ID != got.ID || len(list.Connectors[0].Models) != 2 {
+		t.Fatalf("list: %s", listed.Body.String())
+	}
+}
+
 func TestAPICreatesAConnectorWithoutACredential(t *testing.T) {
 	handler, _, _ := newAPI(t)
 	created := request(t, handler, http.MethodPost, "/api/v1/connectors", `{"name":"Local","providerType":"web_request","baseUrl":"http://127.0.0.1:9000"}`)
@@ -167,7 +232,11 @@ func TestAPIRejectsInvalidConnectorsWithoutInserting(t *testing.T) {
 	for _, tc := range []struct{ name, body, contentType string }{
 		{"missing_name", `{"providerType":"web_request","baseUrl":"https://example.com"}`, "application/json"},
 		{"blank_name", strings.Replace(valid, "Fixture", "  ", 1), "application/json"},
-		{"unsupported_provider", strings.Replace(valid, "web_request", "openai", 1), "application/json"},
+		{"unsupported_provider", strings.Replace(valid, "web_request", "mistral", 1), "application/json"},
+		{"llm_without_models", `{"name":"LLM","providerType":"openai","baseUrl":"https://api.openai.com/v1","credential":"secret","credentialLabel":"Prod"}`, "application/json"},
+		{"llm_without_enabled_model", `{"name":"LLM","providerType":"openai","baseUrl":"https://api.openai.com/v1","credential":"secret","credentialLabel":"Prod","models":[{"id":"gpt-4o","enabled":false}]}`, "application/json"},
+		{"llm_duplicate_model", `{"name":"LLM","providerType":"openai","baseUrl":"https://api.openai.com/v1","credential":"secret","credentialLabel":"Prod","models":[{"id":"gpt-4o","enabled":true},{"id":"gpt-4o","enabled":false}]}`, "application/json"},
+		{"web_request_models", strings.TrimSuffix(valid, "}") + `,"models":[{"id":"x","enabled":true}]}`, "application/json"},
 		{"web_request_api_version", strings.TrimSuffix(valid, "}") + `,"apiVersion":"2024-11-30"}`, "application/json"},
 		{"azure_without_credential", `{"name":"Azure","providerType":"azure_document_intelligence","baseUrl":"https://ocr.example.cognitiveservices.azure.com","credentialLabel":"key"}`, "application/json"},
 		{"relative_url", withURL("/check"), "application/json"},
