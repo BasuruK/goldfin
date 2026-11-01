@@ -11,7 +11,7 @@ const REQUEST_TIMEOUT_MS = 10_000;
 
 export type ApiErrorKind = 'timeout' | 'unreachable' | 'rejected' | 'unavailable' | 'malformed';
 
-export interface SavedConnectorModel {
+interface SavedConnectorModel {
   id: string;
   enabled: boolean;
 }
