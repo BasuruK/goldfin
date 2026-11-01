@@ -111,6 +111,31 @@ test('an unsupported provider cannot be saved and shows no model panel', async (
   await expect(dialog.getByRole('heading', { name: 'Models', exact: true })).toHaveCount(0);
 });
 
+test('LLM save posts every manual model id with its enabled state', async ({ page }) => {
+  const api = await mockConnectorApi(page);
+  await page.goto('/connectors/');
+  await page.getByRole('button', { name: 'Add connector', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Name', { exact: true }).fill('OpenAI prod');
+  await dialog.getByLabel('Base URL', { exact: true }).fill('https://api.openai.com/v1');
+  await dialog.getByLabel('API Key', { exact: true }).fill('secret-token');
+  await dialog.getByLabel('Credential label', { exact: true }).fill('Prod key');
+  for (const id of ['alpha', 'beta', 'gamma']) {
+    await dialog.getByLabel('Model ID', { exact: true }).fill(id);
+    await dialog.getByLabel('Model ID', { exact: true }).press('Enter');
+  }
+  await dialog.getByRole('switch', { name: 'alpha', exact: true }).click();
+  await dialog.getByRole('switch', { name: 'beta', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(dialog).toBeHidden();
+  expect(api.posts).toHaveLength(1);
+  expect(api.posts[0].models).toEqual([
+    { id: 'alpha', enabled: true },
+    { id: 'beta', enabled: true },
+    { id: 'gamma', enabled: false }
+  ]);
+});
+
 test('an unreachable API reports and retries', async ({ page }) => {
   await page.route('**/api/v1/connectors', route => route.abort());
   await page.goto('/connectors/');

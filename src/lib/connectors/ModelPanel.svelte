@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Input, Switch } from '$goldfin/lib/index.js';
   import { isCatalogEditable, canToggleModel } from './models.js';
-  import { addDraftModel, setDraftModelEnabled } from './store.svelte.js';
+  import { addDraftModel, connectorStore, setDraftModelEnabled } from './store.svelte.js';
   import type { ConnectorRecord } from './storage.js';
 
   let { record }: { record: ConnectorRecord } = $props();
@@ -9,6 +9,9 @@
   const models = $derived(record.models ?? []);
   const enabledCount = $derived(models.filter(model => model.enabled).length);
   const editable = $derived(isCatalogEditable(record));
+  const modelSaveError = $derived(
+    connectorStore.saveErrorField === 'models' ? connectorStore.saveError : ''
+  );
 
   function addModel(event: SubmitEvent): void {
     event.preventDefault();
@@ -48,7 +51,7 @@
     </table>
   </div>
   <form class="model-manual" onsubmit={addModel}>
-    <Input label="Model ID" bind:value={manualId} placeholder="Type an ID, then press Enter" />
+    <Input label="Model ID" bind:value={manualId} placeholder="Type an ID, then press Enter" error={modelSaveError} />
   </form>
 </section>
 

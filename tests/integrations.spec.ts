@@ -38,8 +38,8 @@ test('manual models start disabled, stay toggleable after connection edits idle 
   await model.click();
   await expect(model).toHaveAttribute('aria-checked', 'true');
   await dialog.getByLabel('Base URL', { exact: true }).fill('https://changed.example/v1');
+  await expect(model).toHaveAttribute('aria-checked', 'false');
   await expect(model).toBeEnabled();
-  await expect(dialog.getByText('Connection changed.', { exact: false })).toBeVisible();
   expect(outbound).toEqual([]);
 });
 

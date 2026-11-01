@@ -15,17 +15,24 @@ export function canToggleModel(record: ConnectorRecord, model: ConnectorModel): 
 }
 
 export function applyConnectorPatch(record: ConnectorRecord, patch: Partial<ConnectorRecord>): ConnectorRecord {
+  const providerChanged = 'providerType' in patch && patch.providerType !== record.providerType;
+  const baseUrlChanged = 'baseUrl' in patch && patch.baseUrl !== record.baseUrl;
   const connectionFields: (keyof ConnectorRecord)[] = ['providerType', 'baseUrl', 'apiKey', 'apiVersion', 'llmApiMode'];
   const changed = connectionFields.some(
     field => field in patch && patch[field] !== record[field]
   );
   if (!changed) return { ...record, ...patch };
+  const clearEnabledModels = providerChanged || baseUrlChanged;
   return {
     ...record,
     ...patch,
     catalogState: 'idle',
     catalogMessage: '',
-    models: (record.models ?? []).map(model => ({ ...model, verified: false }))
+    models: (record.models ?? []).map(model => ({
+      ...model,
+      verified: false,
+      enabled: clearEnabledModels ? false : model.enabled
+    }))
   };
 }
 

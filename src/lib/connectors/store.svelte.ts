@@ -13,7 +13,13 @@ import {
 import { clearLegacyConnectors, createEmptyConnector, type ConnectorRecord } from './storage.ts';
 import { ApiError, createConnector, listConnectors, validateDraft, type SaveDraft, type SavedConnector } from './api.ts';
 
-export type SaveErrorField = 'name' | 'baseUrl' | 'credential' | 'credentialLabel';
+export type SaveErrorField = 'name' | 'baseUrl' | 'credential' | 'credentialLabel' | 'models';
+
+function clearModelsSaveError(): void {
+  if (connectorStore.saveErrorField !== 'models') return;
+  connectorStore.saveError = '';
+  connectorStore.saveErrorField = null;
+}
 
 export interface ConnectorStoreState {
   connectors: SavedConnector[];
@@ -91,6 +97,9 @@ export function patchDraft(patch: Partial<ConnectorRecord>): void {
     connectorStore.saveError = '';
     connectorStore.saveErrorField = null;
   }
+  if (connectorStore.saveErrorField === 'models' && ('providerType' in patch || 'baseUrl' in patch)) {
+    clearModelsSaveError();
+  }
 }
 
 export function setDraftProviderType(providerType: ProviderType): void {
@@ -123,7 +132,7 @@ export async function saveDraft(): Promise<void> {
     const enabledModels = (draft.models ?? []).filter(model => model.enabled);
     if (enabledModels.length === 0) {
       connectorStore.saveError = 'Enable at least one model ID before saving.';
-      connectorStore.saveErrorField = null;
+      connectorStore.saveErrorField = 'models';
       return;
     }
   }
@@ -177,6 +186,7 @@ export function setDraftModelEnabled(modelId: string, enabled: boolean): void {
     ...draft,
     models: (draft.models ?? []).map(model => (model.id === modelId ? { ...model, enabled } : model))
   };
+  clearModelsSaveError();
 }
 
 export function addDraftModel(value: string): void {
@@ -184,4 +194,5 @@ export function addDraftModel(value: string): void {
   if (!draft) return;
   const next = addManualModel(draft, value);
   if (next !== draft) connectorStore.draft = next;
+  clearModelsSaveError();
 }

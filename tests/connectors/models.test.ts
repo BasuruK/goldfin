@@ -24,14 +24,22 @@ test('changing connection details blocks model use but retains selections', () =
     models: [{ id: 'model-a', enabled: true, source: 'discovered', verified: true }]
   });
   assert.deepEqual(availableModelIds(record), ['model-a']);
-  const patches: Partial<ConnectorRecord>[] = [
+  const patchesDisableEnabled: Partial<ConnectorRecord>[] = [
     { baseUrl: 'https://other.example/v1' },
+    { providerType: 'openai_compatible' }
+  ];
+  for (const patch of patchesDisableEnabled) {
+    const changed = applyConnectorPatch(record, patch);
+    assert.equal(changed.catalogState, 'idle');
+    assert.deepEqual(availableModelIds(changed), []);
+    assert.equal(changed.models[0].enabled, false);
+  }
+  const patchesKeepEnabled: Partial<ConnectorRecord>[] = [
     { apiKey: 'changed' },
     { llmApiMode: 'chat_completions' },
-    { apiVersion: '2024-11-30' },
-    { providerType: 'azure' }
+    { apiVersion: '2024-11-30' }
   ];
-  for (const patch of patches) {
+  for (const patch of patchesKeepEnabled) {
     const changed = applyConnectorPatch(record, patch);
     assert.equal(changed.catalogState, 'idle');
     assert.deepEqual(availableModelIds(changed), []);
