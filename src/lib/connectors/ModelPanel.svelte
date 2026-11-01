@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Input, Switch } from '$goldfin/lib/index.js';
-  import { isCatalogEditable } from './models.js';
+  import { isCatalogEditable, canToggleModel } from './models.js';
   import { addDraftModel, setDraftModelEnabled } from './store.svelte.js';
   import type { ConnectorRecord } from './storage.js';
 
@@ -37,7 +37,7 @@
             <span class="model-source">{model.source === 'manual' ? 'Unverified' : 'Discovered'}</span>
           </th>
           <td class="model-toggle-cell">
-            <Switch size="sm" label={model.id} checked={model.enabled} disabled={!editable}
+            <Switch size="sm" label={model.id} checked={model.enabled} disabled={!canToggleModel(record, model)}
                     onCheckedChange={(checked: boolean) => setDraftModelEnabled(model.id, checked)} />
           </td>
         </tr>

@@ -6,6 +6,14 @@ export function isCatalogEditable(record: { catalogState: string }): boolean {
   return record.catalogState === 'ready';
 }
 
+/** Manual model toggles stay available while connection edits leave the catalog idle. */
+export function canToggleModel(record: ConnectorRecord, model: ConnectorModel): boolean {
+  if (model.source === 'discovered') {
+    return isCatalogEditable(record);
+  }
+  return record.catalogState === 'ready' || record.catalogState === 'idle';
+}
+
 export function applyConnectorPatch(record: ConnectorRecord, patch: Partial<ConnectorRecord>): ConnectorRecord {
   const connectionFields: (keyof ConnectorRecord)[] = ['providerType', 'baseUrl', 'apiKey', 'apiVersion', 'llmApiMode'];
   const changed = connectionFields.some(

@@ -1,4 +1,4 @@
-import { applyConnectorPatch, addManualModel, isCatalogEditable } from './models.ts';
+import { applyConnectorPatch, addManualModel, canToggleModel, isCatalogEditable } from './models.ts';
 import {
   AZURE_OCR_PROVIDER_TYPE,
   DEFAULT_AZURE_OCR_API_VERSION,
@@ -170,7 +170,9 @@ export async function saveDraft(): Promise<void> {
 
 export function setDraftModelEnabled(modelId: string, enabled: boolean): void {
   const draft = connectorStore.draft;
-  if (!draft || !isCatalogEditable(draft)) return;
+  if (!draft) return;
+  const model = (draft.models ?? []).find(entry => entry.id === modelId);
+  if (!model || !canToggleModel(draft, model)) return;
   connectorStore.draft = {
     ...draft,
     models: (draft.models ?? []).map(model => (model.id === modelId ? { ...model, enabled } : model))

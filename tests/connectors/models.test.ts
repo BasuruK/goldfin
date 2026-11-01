@@ -4,6 +4,7 @@ import {
   applyConnectorPatch,
   availableModelIds,
   addManualModel,
+  canToggleModel,
   isCatalogEditable
 } from '../../src/lib/connectors/models.ts';
 import { makeRecord } from './fixtures.ts';
@@ -26,6 +27,7 @@ test('changing connection details blocks model use but retains selections', () =
   const patches: Partial<ConnectorRecord>[] = [
     { baseUrl: 'https://other.example/v1' },
     { apiKey: 'changed' },
+    { llmApiMode: 'chat_completions' },
     { apiVersion: '2024-11-30' },
     { providerType: 'azure' }
   ];
@@ -67,6 +69,21 @@ test('re-entering an existing model ID restores catalog readiness without revivi
   assert.equal(restored.models[0].verified, false);
   assert.equal(restored.models[0].enabled, true);
   assert.equal(addManualModel(restored, 'deployment-a'), restored);
+});
+
+test('manual model toggles stay enabled when connection edits idle the catalog', () => {
+  const record = makeRecord({
+    apiKey: 'test',
+    catalogState: 'idle',
+    models: [{ id: 'deployment-a', enabled: false, source: 'manual' }]
+  });
+  assert.equal(isCatalogEditable(record), false);
+  assert.equal(canToggleModel(record, record.models[0]), true);
+  const discovered = makeRecord({
+    catalogState: 'idle',
+    models: [{ id: 'model-a', enabled: true, source: 'discovered', verified: true }]
+  });
+  assert.equal(canToggleModel(discovered, discovered.models[0]), false);
 });
 
 test('manual IDs lose availability on connection changes until re-enabled', () => {
