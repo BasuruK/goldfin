@@ -258,6 +258,9 @@ func decodeConnector(w http.ResponseWriter, r *http.Request) (connectorRequest, 
 		if !ok {
 			return "", nil
 		}
+		if string(value) == "null" {
+			return "", invalid
+		}
 		var text string
 		if err := json.Unmarshal(value, &text); err != nil {
 			return "", invalid
