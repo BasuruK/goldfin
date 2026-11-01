@@ -47,7 +47,7 @@ ALTER TABLE connectors ADD CONSTRAINT connectors_provider_api_version_check
             AND api_version IS NOT NULL
             AND btrim(api_version) <> ''
         )
-    );
+    ) NOT VALID;
 
 ALTER TABLE connectors DROP CONSTRAINT connectors_provider_type_check;
 
