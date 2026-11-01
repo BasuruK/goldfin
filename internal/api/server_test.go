@@ -57,9 +57,9 @@ func countConnectors(t *testing.T, pool *pgxpool.Pool) int {
 
 type connector struct {
 	ID, Name, ProviderType, BaseURL, APIVersion, CredentialLabel string
-	LLMApiMode                                                      string `json:"llmApiMode"`
-	CredentialSetAt                                                 *time.Time
-	Models                                                                       []struct {
+	LLMApiMode                                                   string `json:"llmApiMode"`
+	CredentialSetAt                                              *time.Time
+	Models                                                       []struct {
 		ID      string `json:"id"`
 		Enabled bool   `json:"enabled"`
 	}

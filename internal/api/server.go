@@ -114,7 +114,7 @@ func (s *server) createConnector(w http.ResponseWriter, r *http.Request) {
 	if isLLMProvider(in.ProviderType) {
 		out.Models = make([]connectorModelResponse, len(in.Models))
 		for i, model := range in.Models {
-			out.Models[i] = connectorModelResponse{ID: model.ID, Enabled: model.Enabled}
+			out.Models[i] = connectorModelResponse(model)
 		}
 	}
 	var label *string
@@ -140,7 +140,8 @@ func (s *server) createConnector(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"message": "Could not save the Connector."})
 		return
 	}
-	defer func() { _ = tx.Rollback(r.Context()) }()
+	ctx := r.Context()
+	defer func() { _ = tx.Rollback(ctx) }()
 	err = tx.QueryRow(r.Context(), `
 		INSERT INTO connectors (name, provider_type, base_url, api_version, llm_api_mode, credential_label, credential_ciphertext, credential_set_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
