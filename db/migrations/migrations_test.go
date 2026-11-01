@@ -11,6 +11,8 @@ import (
 
 const plainConnectorsVersion = 20261022000000
 
+const azureDocumentIntelligenceConnectorsVersion = 20261024120000
+
 func migrateTo(t *testing.T, db *sql.DB, version int64) {
 	t.Helper()
 	migrator, err := migrations.NewProvider(db)
@@ -44,11 +46,10 @@ func TestAzureDocumentIntelligenceConnectorSchemaRoundTripAndRollback(t *testing
 	migrateTo(t, db, plainConnectorsVersion)
 	webID, webCipher, webLabel, webSetAt := seedWebRequestConnector(t, db)
 
+	migrateTo(t, db, azureDocumentIntelligenceConnectorsVersion)
+
 	migrator, err := migrations.NewProvider(db)
 	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := migrator.Up(ctx); err != nil {
 		t.Fatal(err)
 	}
 
