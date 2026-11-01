@@ -20,7 +20,7 @@ test('Integrations expands without navigation and opens Connectors from the rail
   await expect(group).toHaveAttribute('aria-expanded', 'true');
 });
 
-test('manual models start disabled, toggle in the draft, and block after connection changes', async ({ page }) => {
+test('manual models start disabled, stay toggleable after connection edits idle the catalog', async ({ page }) => {
   const outbound: string[] = [];
   page.on('request', request => {
     if (request.url().includes('api.openai.com')) outbound.push(request.url());
@@ -38,16 +38,17 @@ test('manual models start disabled, toggle in the draft, and block after connect
   await model.click();
   await expect(model).toHaveAttribute('aria-checked', 'true');
   await dialog.getByLabel('Base URL', { exact: true }).fill('https://changed.example/v1');
-  await expect(model).toBeDisabled();
+  await expect(model).toBeEnabled();
+  await expect(dialog.getByText('Connection changed.', { exact: false })).toBeVisible();
   expect(outbound).toEqual([]);
 });
 
-test('web request allows explicit unverified manual IDs', async ({ page }) => {
+test('LLM providers allow explicit unverified manual IDs', async ({ page }) => {
   await mockConnectorApi(page);
   await page.goto('/connectors/');
   await page.getByRole('button', { name: 'Add connector', exact: true }).click();
   const dialog = page.getByRole('dialog');
-  await selectProvider(dialog, 'Web Request');
+  await selectProvider(dialog, 'OpenAI Compatible');
   await dialog.getByLabel('Model ID', { exact: true }).fill('custom-model');
   await dialog.getByLabel('Model ID', { exact: true }).press('Enter');
   await expect(dialog.getByRole('switch', { name: 'custom-model', exact: true })).toHaveAttribute('aria-checked', 'false');
