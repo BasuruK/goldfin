@@ -23,24 +23,24 @@ interface MockConnectorApiOptions {
 export async function mockConnectorApi(page: Page, options: MockConnectorApiOptions = {}) {
   const state = {
     connectors: [...(options.saved ?? [])],
-    posts: [] as Record<string, string>[]
+    posts: [] as Record<string, unknown>[]
   };
   await page.route(`**${CONNECTORS_PATH}`, async route => {
     const request = route.request();
     if (request.method() === 'GET') return route.fulfill({ json: { connectors: state.connectors } });
     if (request.method() !== 'POST') return route.fulfill({ status: 405, json: { message: 'Method not allowed.' } });
-    const body = JSON.parse(request.postData() ?? '{}') as Record<string, string>;
+    const body = JSON.parse(request.postData() ?? '{}') as Record<string, unknown>;
     state.posts.push(body);
     await mockRouteDelay(options.saveDelayMs);
     if (options.reject) return route.fulfill({ status: options.reject.status, json: { message: options.reject.message } });
     const saved: SavedConnector = {
       id: `c${state.posts.length}`,
-      name: body.name,
-      providerType: body.providerType,
-      baseUrl: body.baseUrl
+      name: String(body.name),
+      providerType: String(body.providerType),
+      baseUrl: String(body.baseUrl)
     };
-    if (body.apiVersion) saved.apiVersion = body.apiVersion;
-    if (body.credentialLabel) saved.credentialLabel = body.credentialLabel;
+    if (typeof body.apiVersion === 'string') saved.apiVersion = body.apiVersion;
+    if (typeof body.credentialLabel === 'string') saved.credentialLabel = body.credentialLabel;
     state.connectors = [...state.connectors, saved];
     await route.fulfill({ status: 201, json: saved });
   });

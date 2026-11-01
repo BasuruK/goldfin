@@ -13,6 +13,8 @@ const plainConnectorsVersion = 20261022000000
 
 const azureDocumentIntelligenceConnectorsVersion = 20261024120000
 
+const llmConnectorsVersion = 20261101120000
+
 func migrateTo(t *testing.T, db *sql.DB, version int64) {
 	t.Helper()
 	migrator, err := migrations.NewProvider(db)
@@ -95,6 +97,8 @@ func TestAzureDocumentIntelligenceConnectorSchemaRoundTripAndRollback(t *testing
 		t.Fatal("expected azure_document_intelligence without api_version to be rejected")
 	}
 
+	migrateTo(t, db, llmConnectorsVersion)
+
 	if _, err := migrator.Down(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -124,7 +128,43 @@ func TestAzureDocumentIntelligenceConnectorSchemaRoundTripAndRollback(t *testing
 	}
 	if afterProvider != "azure_document_intelligence" || !afterAPI.Valid || afterAPI.String != apiVersion ||
 		string(afterCipher) != string(ocrCipher) {
-		t.Fatalf("OCR configuration was lost on rollback: provider=%s api=%v cipher=%x", afterProvider, afterAPI, afterCipher)
+		t.Fatalf("OCR configuration was lost on LLM rollback: provider=%s api=%v cipher=%x", afterProvider, afterAPI, afterCipher)
+	}
+
+	var secondOCRID string
+	err = db.QueryRowContext(ctx, `
+		INSERT INTO connectors (name, provider_type, base_url, api_version, credential_label, credential_ciphertext, credential_set_at)
+		VALUES ('Azure OCR 2', 'azure_document_intelligence', 'https://ocr.example.cognitiveservices.azure.com', $1, 'Azure key', $2, $3)
+		RETURNING id`, apiVersion, ocrCipher, ocrSetAt).Scan(&secondOCRID)
+	if err != nil {
+		t.Fatal("expected OCR insert to succeed after LLM rollback only")
+	}
+
+	if _, err := migrator.Down(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	err = db.QueryRowContext(ctx, `
+		SELECT name, provider_type, credential_ciphertext, credential_label, credential_set_at, api_version
+		FROM connectors WHERE id = $1`, webID).Scan(&afterName, &afterProvider, &afterCipher, &afterLabel, &afterSetAt, &afterAPI)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if afterName != "Fixture" || afterProvider != "web_request" || string(afterCipher) != string(webCipher) ||
+		!afterLabel.Valid || afterLabel.String != webLabel || !afterSetAt.Valid || !afterSetAt.Time.Equal(webSetAt) ||
+		afterAPI.Valid {
+		t.Fatalf("web_request row changed after azure rollback: %+v", afterName)
+	}
+
+	err = db.QueryRowContext(ctx, `
+		SELECT name, provider_type, credential_ciphertext, api_version
+		FROM connectors WHERE id = $1`, ocrID).Scan(&afterName, &afterProvider, &afterCipher, &afterAPI)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if afterProvider != "azure_document_intelligence" || !afterAPI.Valid || afterAPI.String != apiVersion ||
+		string(afterCipher) != string(ocrCipher) {
+		t.Fatalf("OCR configuration was lost on azure rollback: provider=%s api=%v cipher=%x", afterProvider, afterAPI, afterCipher)
 	}
 
 	var rejectedID string
@@ -133,7 +173,7 @@ func TestAzureDocumentIntelligenceConnectorSchemaRoundTripAndRollback(t *testing
 		VALUES ('Bad OCR', 'azure_document_intelligence', 'https://ocr.example.cognitiveservices.azure.com', '2024-11-30')
 		RETURNING id`).Scan(&rejectedID)
 	if err == nil {
-		t.Fatal("expected OCR insert to fail after rollback until migration is reapplied")
+		t.Fatal("expected OCR insert to fail after azure rollback until migration is reapplied")
 	}
 }
 

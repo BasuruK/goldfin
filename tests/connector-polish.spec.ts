@@ -46,7 +46,7 @@ test('menu items never shrink while pressed', async ({ page }) => {
   }
 });
 
-for (const providerLabel of ['OpenAI', 'Azure', 'OpenAI Compatible', 'Web Request']) {
+for (const providerLabel of ['OpenAI', 'OpenAI Compatible']) {
   test(`custom models are available for ${providerLabel} and keep toggle state`, async ({ page }) => {
     await mockConnectorApi(page);
     await page.goto('/connectors/');

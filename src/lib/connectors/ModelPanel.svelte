@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Input, Switch } from '$goldfin/lib/index.js';
-  import { isCatalogEditable } from './models.js';
-  import { addDraftModel, setDraftModelEnabled } from './store.svelte.js';
+  import { isCatalogEditable, canToggleModel } from './models.js';
+  import { addDraftModel, connectorStore, setDraftModelEnabled } from './store.svelte.js';
   import type { ConnectorRecord } from './storage.js';
 
   let { record }: { record: ConnectorRecord } = $props();
@@ -9,6 +9,9 @@
   const models = $derived(record.models ?? []);
   const enabledCount = $derived(models.filter(model => model.enabled).length);
   const editable = $derived(isCatalogEditable(record));
+  const modelSaveError = $derived(
+    connectorStore.saveErrorField === 'models' ? connectorStore.saveError : ''
+  );
 
   function addModel(event: SubmitEvent): void {
     event.preventDefault();
@@ -23,7 +26,7 @@
     <span class="model-panel-count">{enabledCount} enabled · unverified until checked</span>
   </header>
   <p class="model-panel-notice" role="status">
-    {record.catalogMessage || (editable ? 'Add model IDs manually. Unverified IDs cannot be used in a Run.' : 'Connection changed. Model toggles stay off until you add a model ID.')}
+    {record.catalogMessage || (editable ? 'Add model IDs manually. Unverified IDs cannot be used in a Run.' : 'Connection changed. Model toggles stay available; enable at least one before Save.')}
   </p>
   <!-- svelte-ignore a11y_no_noninteractive_tabindex (The scroll region needs keyboard access.) -->
   <div class="model-list" role="region" aria-label="Model list" tabindex="0">
@@ -37,7 +40,7 @@
             <span class="model-source">{model.source === 'manual' ? 'Unverified' : 'Discovered'}</span>
           </th>
           <td class="model-toggle-cell">
-            <Switch size="sm" label={model.id} checked={model.enabled} disabled={!editable}
+            <Switch size="sm" label={model.id} checked={model.enabled} disabled={!canToggleModel(record, model)}
                     onCheckedChange={(checked: boolean) => setDraftModelEnabled(model.id, checked)} />
           </td>
         </tr>
@@ -48,7 +51,7 @@
     </table>
   </div>
   <form class="model-manual" onsubmit={addModel}>
-    <Input label="Model ID" bind:value={manualId} placeholder="Type an ID, then press Enter" />
+    <Input label="Model ID" bind:value={manualId} placeholder="Type an ID, then press Enter" error={modelSaveError} />
   </form>
 </section>
 

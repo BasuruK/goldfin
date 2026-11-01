@@ -99,16 +99,41 @@ test('Cancel discards the draft without saving', async ({ page }) => {
   await expect(reopened.getByLabel('Name', { exact: true })).toHaveValue('Web Request');
 });
 
-test('an unsupported provider cannot be saved but still shows manual model entry', async ({ page }) => {
+test('an unsupported provider cannot be saved and shows no model panel', async ({ page }) => {
   await mockConnectorApi(page);
   await page.goto('/connectors/');
   await page.getByRole('button', { name: 'Add connector', exact: true }).click();
   const dialog = page.getByRole('dialog');
+  await selectProvider(dialog, 'Azure');
   await expect(dialog.getByRole('button', { name: 'Delete connector', exact: true })).toHaveCount(0);
-  await expect(dialog.getByText(/Saving is not available for OpenAI yet/)).toBeVisible();
+  await expect(dialog.getByText(/Saving is not available for Azure yet/)).toBeVisible();
   await expect(dialog.getByRole('button', { name: 'Save', exact: true })).toBeDisabled();
-  await expect(dialog.getByRole('heading', { name: 'Models', exact: true })).toBeVisible();
-  await expect(dialog.getByLabel('Model ID', { exact: true })).toBeVisible();
+  await expect(dialog.getByRole('heading', { name: 'Models', exact: true })).toHaveCount(0);
+});
+
+test('LLM save posts every manual model id with its enabled state', async ({ page }) => {
+  const api = await mockConnectorApi(page);
+  await page.goto('/connectors/');
+  await page.getByRole('button', { name: 'Add connector', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Name', { exact: true }).fill('OpenAI prod');
+  await dialog.getByLabel('Base URL', { exact: true }).fill('https://api.openai.com/v1');
+  await dialog.getByLabel('API Key', { exact: true }).fill('secret-token');
+  await dialog.getByLabel('Credential label', { exact: true }).fill('Prod key');
+  for (const id of ['alpha', 'beta', 'gamma']) {
+    await dialog.getByLabel('Model ID', { exact: true }).fill(id);
+    await dialog.getByLabel('Model ID', { exact: true }).press('Enter');
+  }
+  await dialog.getByRole('switch', { name: 'alpha', exact: true }).click();
+  await dialog.getByRole('switch', { name: 'beta', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(dialog).toBeHidden();
+  expect(api.posts).toHaveLength(1);
+  expect(api.posts[0].models).toEqual([
+    { id: 'alpha', enabled: true },
+    { id: 'beta', enabled: true },
+    { id: 'gamma', enabled: false }
+  ]);
 });
 
 test('an unreachable API reports and retries', async ({ page }) => {
