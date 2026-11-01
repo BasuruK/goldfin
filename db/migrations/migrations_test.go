@@ -135,3 +135,91 @@ func TestAzureDocumentIntelligenceConnectorSchemaRoundTripAndRollback(t *testing
 		t.Fatal("expected OCR insert to fail after rollback until migration is reapplied")
 	}
 }
+
+func TestLLMConnectorSchemaRoundTripAndRollback(t *testing.T) {
+	_, db := testdb.New(t)
+	ctx := t.Context()
+
+	migrateTo(t, db, plainConnectorsVersion)
+	webID, webCipher, webLabel, webSetAt := seedWebRequestConnector(t, db)
+
+	migrator, err := migrations.NewProvider(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := migrator.Up(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	var llmID string
+	llmCipher := []byte{0xcc, 0xdd}
+	llmSetAt := time.Date(2026, 11, 1, 9, 0, 0, 0, time.UTC)
+	err = db.QueryRowContext(ctx, `
+		INSERT INTO connectors (name, provider_type, base_url, llm_api_mode, credential_label, credential_ciphertext, credential_set_at)
+		VALUES ('OpenAI', 'openai', 'https://api.openai.com/v1', 'responses', 'Prod key', $1, $2)
+		RETURNING id`, llmCipher, llmSetAt).Scan(&llmID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO connector_models (connector_id, model_id, enabled, source)
+		VALUES ($1, 'gpt-4o-mini', true, 'manual'), ($1, 'gpt-4o', false, 'manual')`, llmID); err != nil {
+		t.Fatal(err)
+	}
+
+	var mode string
+	if err := db.QueryRowContext(ctx, `SELECT llm_api_mode FROM connectors WHERE id = $1`, llmID).Scan(&mode); err != nil {
+		t.Fatal(err)
+	}
+	if mode != "responses" {
+		t.Fatalf("llm_api_mode: got %q want responses", mode)
+	}
+
+	var enabledCount int
+	if err := db.QueryRowContext(ctx, `
+		SELECT count(*) FROM connector_models WHERE connector_id = $1 AND enabled`, llmID).Scan(&enabledCount); err != nil {
+		t.Fatal(err)
+	}
+	if enabledCount != 1 {
+		t.Fatalf("enabled models: got %d want 1", enabledCount)
+	}
+
+	_, err = db.ExecContext(ctx, `
+		INSERT INTO connectors (name, provider_type, base_url, llm_api_mode)
+		VALUES ('Bad mix', 'web_request', 'https://example.com', 'responses')`)
+	if err == nil {
+		t.Fatal("expected web_request with llm_api_mode to be rejected")
+	}
+
+	_, err = db.ExecContext(ctx, `
+		INSERT INTO connector_models (connector_id, model_id, enabled, source)
+		VALUES ($1, 'gpt-4o-mini', true, 'manual')`, llmID)
+	if err == nil {
+		t.Fatal("expected duplicate model_id to be rejected")
+	}
+
+	if _, err := db.ExecContext(ctx, `DELETE FROM connectors WHERE id = $1`, llmID); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := migrator.Down(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	var afterName, afterProvider string
+	var afterCipher []byte
+	var afterLabel sql.NullString
+	var afterSetAt sql.NullTime
+	var afterAPI sql.NullString
+	err = db.QueryRowContext(ctx, `
+		SELECT name, provider_type, credential_ciphertext, credential_label, credential_set_at, api_version
+		FROM connectors WHERE id = $1`, webID).Scan(&afterName, &afterProvider, &afterCipher, &afterLabel, &afterSetAt, &afterAPI)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if afterName != "Fixture" || afterProvider != "web_request" || string(afterCipher) != string(webCipher) ||
+		!afterLabel.Valid || afterLabel.String != webLabel || !afterSetAt.Valid || !afterSetAt.Time.Equal(webSetAt) ||
+		afterAPI.Valid {
+		t.Fatalf("web_request row changed after rollback: %+v", afterName)
+	}
+}
