@@ -1,4 +1,4 @@
-import { DEFAULT_PROVIDER_TYPE, type ProviderType } from './providers.ts';
+import { DEFAULT_PROVIDER_TYPE, type ProviderType, defaultLlmApiMode, type LlmApiMode } from './providers.ts';
 
 /**
  * Key of the pre-API on-device Connector store, which held plaintext Credentials.
@@ -22,6 +22,7 @@ export interface ConnectorRecord {
   apiKey: string;
   credentialLabel: string;
   apiVersion: string;
+  llmApiMode: LlmApiMode;
   updatedAt: string;
   models: ConnectorModel[];
   catalogState: 'idle' | 'ready';
@@ -47,6 +48,7 @@ export function createEmptyConnector(providerType: ProviderType = DEFAULT_PROVID
     apiKey: '',
     credentialLabel: '',
     apiVersion: '',
+    llmApiMode: defaultLlmApiMode(providerType),
     models: [],
     catalogState: 'ready',
     catalogMessage: '',

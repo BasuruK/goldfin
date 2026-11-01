@@ -59,7 +59,22 @@ export const AZURE_OCR_PROVIDER_TYPE = 'azure_document_intelligence';
 export const DEFAULT_AZURE_OCR_API_VERSION = '2024-11-30';
 
 export function isSavableProvider(providerType: string): boolean {
-  return providerType === 'web_request' || providerType === AZURE_OCR_PROVIDER_TYPE;
+  return (
+    providerType === 'web_request'
+    || providerType === AZURE_OCR_PROVIDER_TYPE
+    || providerType === 'openai'
+    || providerType === 'openai_compatible'
+  );
+}
+
+export function isLlmProvider(providerType: string): boolean {
+  return providerType === 'openai' || providerType === 'openai_compatible';
+}
+
+export type LlmApiMode = 'responses' | 'chat_completions';
+
+export function defaultLlmApiMode(providerType: ProviderType): LlmApiMode {
+  return providerType === 'openai_compatible' ? 'chat_completions' : 'responses';
 }
 
 /** The provider a new or unreadable Connector gets; `providerByType` falls back to the same one. */

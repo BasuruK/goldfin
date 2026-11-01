@@ -20,8 +20,11 @@
     DEFAULT_AZURE_OCR_API_VERSION,
     DEFAULT_PROVIDER_TYPE,
     PROVIDER_SELECT_ITEMS,
+    defaultLlmApiMode,
+    isLlmProvider,
     isSavableProvider,
     providerByType,
+    type LlmApiMode,
     type ProviderType
   } from './providers.js';
   import type { SaveErrorField } from './store.svelte.js';
@@ -30,9 +33,13 @@
   const provider = $derived(record ? providerByType(record.providerType) : null);
 
   let providerType = $state<ProviderType>(DEFAULT_PROVIDER_TYPE);
+  let llmApiMode = $state<LlmApiMode>(defaultLlmApiMode(DEFAULT_PROVIDER_TYPE));
 
   $effect(() => {
-    if (record) providerType = record.providerType;
+    if (record) {
+      providerType = record.providerType;
+      llmApiMode = record.llmApiMode;
+    }
   });
 
   $effect(() => {
@@ -40,11 +47,16 @@
     setDraftProviderType(providerType);
   });
 
+  $effect(() => {
+    if (!record || llmApiMode === record.llmApiMode) return;
+    patchDraft({ llmApiMode });
+  });
+
   function onOpenChange(next: boolean): void {
     if (!next) closeDialog();
   }
 
-  type DraftField = 'name' | 'baseUrl' | 'apiVersion' | 'apiKey' | 'credentialLabel';
+  type DraftField = 'name' | 'baseUrl' | 'apiVersion' | 'apiKey' | 'credentialLabel' | 'llmApiMode';
 
   function fieldInput(field: DraftField, event: Event): void {
     if (!record) return;
@@ -58,7 +70,11 @@
   const savableProvider = $derived(record ? isSavableProvider(record.providerType) : false);
   const saveUnavailable = $derived(record !== null && !savableProvider);
   const isAzureOcr = $derived(record?.providerType === 'azure_document_intelligence');
-  const showModels = $derived(!isAzureOcr);
+  const showModels = $derived(record ? isLlmProvider(record.providerType) : false);
+  const llmApiModeItems = [
+    { value: 'responses' as LlmApiMode, label: 'Responses API' },
+    { value: 'chat_completions' as LlmApiMode, label: 'Chat completions' }
+  ];
 
   function fieldError(field: SaveErrorField): string {
     return connectorStore.saveErrorField === field ? connectorStore.saveError : '';
@@ -119,6 +135,13 @@
                 disabled={fieldsDisabled}
                 description="Azure Document Intelligence REST API version."
               />
+            {:else if showModels}
+              <Select
+                label="LLM API mode"
+                items={llmApiModeItems}
+                bind:value={llmApiMode}
+                disabled={fieldsDisabled}
+              />
             {/if}
             <Input
               label="API Key"
@@ -128,7 +151,7 @@
               type="password"
               autocomplete="off"
               placeholder={record.providerType === 'web_request' ? 'Optional' : 'Paste your key'}
-              description={record.providerType === 'web_request' ? 'Optional for public endpoints.' : isAzureOcr ? 'Required for Azure Document Intelligence.' : ''}
+              description={record.providerType === 'web_request' ? 'Optional for public endpoints.' : isAzureOcr ? 'Required for Azure Document Intelligence.' : showModels ? 'Required for LLM Connectors.' : ''}
               disabled={fieldsDisabled}
               error={fieldError('credential')}
             />

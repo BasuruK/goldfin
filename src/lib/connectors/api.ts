@@ -11,12 +11,19 @@ const REQUEST_TIMEOUT_MS = 10_000;
 
 export type ApiErrorKind = 'timeout' | 'unreachable' | 'rejected' | 'unavailable' | 'malformed';
 
+export interface SavedConnectorModel {
+  id: string;
+  enabled: boolean;
+}
+
 export interface SavedConnector {
   id: string;
   name: string;
   providerType: string;
   baseUrl: string;
   apiVersion?: string;
+  llmApiMode?: string;
+  models?: SavedConnectorModel[];
   credentialLabel?: string;
   credentialSetAt?: string;
 }
@@ -26,6 +33,8 @@ export interface SaveDraft {
   providerType: string;
   baseUrl: string;
   apiVersion?: string;
+  llmApiMode?: string;
+  models?: SavedConnectorModel[];
   credential: string;
   credentialLabel: string;
 }
@@ -96,6 +105,19 @@ function parseSavedConnector(body: Record<string, unknown>): SavedConnector {
   };
   const apiVersion = optionalStringField(body, 'apiVersion');
   if (apiVersion !== undefined) connector.apiVersion = apiVersion;
+  const llmApiMode = optionalStringField(body, 'llmApiMode');
+  if (llmApiMode !== undefined) connector.llmApiMode = llmApiMode;
+  if ('models' in body && body.models !== null && body.models !== undefined) {
+    const rawModels = body.models;
+    if (!Array.isArray(rawModels)) throw new ApiError('malformed', MESSAGES.malformed);
+    connector.models = rawModels.map((item: unknown) => {
+      if (!isJsonRecord(item)) throw new ApiError('malformed', MESSAGES.malformed);
+      if (typeof item.id !== 'string' || typeof item.enabled !== 'boolean') {
+        throw new ApiError('malformed', MESSAGES.malformed);
+      }
+      return { id: item.id, enabled: item.enabled };
+    });
+  }
   const credentialLabel = optionalStringField(body, 'credentialLabel');
   if (credentialLabel !== undefined) connector.credentialLabel = credentialLabel;
   const credentialSetAt = optionalStringField(body, 'credentialSetAt');
@@ -104,13 +126,19 @@ function parseSavedConnector(body: Record<string, unknown>): SavedConnector {
 }
 
 export async function createConnector(draft: SaveDraft): Promise<SavedConnector> {
-  const payload: Record<string, string> = {
+  const payload: Record<string, unknown> = {
     name: draft.name.trim(),
     providerType: draft.providerType,
     baseUrl: draft.baseUrl.trim()
   };
   if (draft.providerType === 'azure_document_intelligence' && draft.apiVersion?.trim()) {
     payload.apiVersion = draft.apiVersion.trim();
+  }
+  if (draft.llmApiMode) {
+    payload.llmApiMode = draft.llmApiMode;
+  }
+  if (draft.models?.length) {
+    payload.models = draft.models.map(model => ({ id: model.id, enabled: model.enabled }));
   }
   if (draft.credential !== '') {
     payload.credential = draft.credential;
@@ -141,6 +169,11 @@ export function validateDraft(draft: SaveDraft): DraftValidationError | null {
   if (draft.providerType === 'azure_document_intelligence') {
     if (!draft.credential.trim()) {
       return { field: 'credential', message: 'API Key is required for Azure Document Intelligence.' };
+    }
+  }
+  if (draft.providerType === 'openai' || draft.providerType === 'openai_compatible') {
+    if (!draft.credential.trim()) {
+      return { field: 'credential', message: 'API Key is required for this provider.' };
     }
   }
   if (!draft.baseUrl.trim()) return { field: 'baseUrl', message: 'Base URL is required.' };

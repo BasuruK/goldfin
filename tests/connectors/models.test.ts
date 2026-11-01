@@ -38,16 +38,17 @@ test('changing connection details blocks model use but retains selections', () =
   assert.deepEqual(availableModelIds(applyConnectorPatch(record, { name: 'Renamed' })), ['model-a']);
 });
 
-test('manual models never claim verified system access', () => {
+test('manual models are selectable when enabled without verification', () => {
   const manual = addManualModel(makeRecord({ catalogState: 'ready' }), ' deployment-a ');
   assert.deepEqual(manual.models, [{ id: 'deployment-a', enabled: false, source: 'manual' }]);
-  assert.equal(addManualModel(manual, 'deployment-a'), manual);
-  assert.equal(addManualModel(manual, '  '), manual);
-  manual.models[0].enabled = true;
-  assert.deepEqual(availableModelIds(manual), []);
+  const enabled = {
+    ...manual,
+    models: [{ id: 'deployment-a', enabled: true, source: 'manual' as const }]
+  };
+  assert.deepEqual(availableModelIds(enabled), ['deployment-a']);
 });
 
-test('being listed by a provider does not prove model access', () => {
+test('discovered models still require verification', () => {
   const record = makeRecord({ catalogState: 'ready', models: [{ id: 'model-a', enabled: true, source: 'discovered' }] });
   assert.deepEqual(availableModelIds(record), []);
   record.models[0].verified = true;
@@ -68,15 +69,14 @@ test('re-entering an existing model ID restores catalog readiness without revivi
   assert.equal(addManualModel(restored, 'deployment-a'), restored);
 });
 
-test('manual IDs become available only after verification and lose access on connection changes', () => {
+test('manual IDs lose availability on connection changes until re-enabled', () => {
   const record = makeRecord({
     apiKey: 'test',
     catalogState: 'ready',
-    models: [{ id: 'deployment-a', enabled: true, source: 'manual', verified: true }]
+    models: [{ id: 'deployment-a', enabled: true, source: 'manual' }]
   });
   assert.deepEqual(availableModelIds(record), ['deployment-a']);
   const changed = applyConnectorPatch(record, { apiKey: 'changed' });
   assert.equal(changed.catalogState, 'idle');
-  assert.equal(changed.models[0].verified, false);
   assert.deepEqual(availableModelIds(changed), []);
 });

@@ -4,12 +4,14 @@ import {
   DEFAULT_AZURE_OCR_API_VERSION,
   DEFAULT_PROVIDER_TYPE,
   defaultBaseUrlFor,
+  defaultLlmApiMode,
   defaultNameFor,
+  isLlmProvider,
   isSavableProvider,
   type ProviderType
 } from './providers.ts';
 import { clearLegacyConnectors, createEmptyConnector, type ConnectorRecord } from './storage.ts';
-import { ApiError, createConnector, listConnectors, validateDraft, type SavedConnector } from './api.ts';
+import { ApiError, createConnector, listConnectors, validateDraft, type SaveDraft, type SavedConnector } from './api.ts';
 
 export type SaveErrorField = 'name' | 'baseUrl' | 'credential' | 'credentialLabel';
 
@@ -99,7 +101,8 @@ export function setDraftProviderType(providerType: ProviderType): void {
     providerType,
     name: draft.name === defaultNameFor(draft.providerType) ? defaultNameFor(providerType) : draft.name,
     baseUrl: wasDefault || !draft.baseUrl.trim() ? defaultBaseUrlFor(providerType) : draft.baseUrl,
-    apiVersion: providerType === AZURE_OCR_PROVIDER_TYPE ? DEFAULT_AZURE_OCR_API_VERSION : ''
+    apiVersion: providerType === AZURE_OCR_PROVIDER_TYPE ? DEFAULT_AZURE_OCR_API_VERSION : '',
+    llmApiMode: defaultLlmApiMode(providerType)
   });
 }
 
@@ -111,7 +114,20 @@ export async function saveDraft(): Promise<void> {
     connectorStore.saveErrorField = null;
     return;
   }
-  const request = {
+  if (isLlmProvider(draft.providerType)) {
+    if (!draft.apiKey.trim()) {
+      connectorStore.saveError = 'API Key is required for this provider.';
+      connectorStore.saveErrorField = 'credential';
+      return;
+    }
+    const enabledModels = (draft.models ?? []).filter(model => model.enabled);
+    if (enabledModels.length === 0) {
+      connectorStore.saveError = 'Enable at least one model ID before saving.';
+      connectorStore.saveErrorField = null;
+      return;
+    }
+  }
+  const request: SaveDraft = {
     name: draft.name,
     providerType: draft.providerType,
     baseUrl: draft.baseUrl,
@@ -119,6 +135,10 @@ export async function saveDraft(): Promise<void> {
       draft.providerType === AZURE_OCR_PROVIDER_TYPE
         ? draft.apiVersion.trim() || DEFAULT_AZURE_OCR_API_VERSION
         : undefined,
+    llmApiMode: isLlmProvider(draft.providerType) ? draft.llmApiMode : undefined,
+    models: isLlmProvider(draft.providerType)
+      ? (draft.models ?? []).map(model => ({ id: model.id, enabled: model.enabled }))
+      : undefined,
     credential: draft.apiKey,
     credentialLabel: draft.credentialLabel
   };

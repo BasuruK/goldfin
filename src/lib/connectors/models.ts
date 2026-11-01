@@ -7,7 +7,7 @@ export function isCatalogEditable(record: { catalogState: string }): boolean {
 }
 
 export function applyConnectorPatch(record: ConnectorRecord, patch: Partial<ConnectorRecord>): ConnectorRecord {
-  const connectionFields: (keyof ConnectorRecord)[] = ['providerType', 'baseUrl', 'apiKey', 'apiVersion'];
+  const connectionFields: (keyof ConnectorRecord)[] = ['providerType', 'baseUrl', 'apiKey', 'apiVersion', 'llmApiMode'];
   const changed = connectionFields.some(
     field => field in patch && patch[field] !== record[field]
   );
@@ -24,10 +24,11 @@ export function applyConnectorPatch(record: ConnectorRecord, patch: Partial<Conn
 export function availableModelIds(record: ConnectorRecord): string[] {
   if (!isCatalogEditable(record)) return [];
   return (record.models ?? [])
-    .filter(
-      model =>
-        model.enabled && ['discovered', 'manual'].includes(model.source) && model.verified === true
-    )
+    .filter(model => {
+      if (!model.enabled) return false;
+      if (model.source === 'manual') return true;
+      return model.source === 'discovered' && model.verified === true;
+    })
     .map(model => model.id);
 }
 
