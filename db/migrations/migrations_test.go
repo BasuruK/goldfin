@@ -13,6 +13,8 @@ const plainConnectorsVersion = 20261022000000
 
 const azureDocumentIntelligenceConnectorsVersion = 20261024120000
 
+const llmConnectorsVersion = 20261101120000
+
 func migrateTo(t *testing.T, db *sql.DB, version int64) {
 	t.Helper()
 	migrator, err := migrations.NewProvider(db)
@@ -94,6 +96,8 @@ func TestAzureDocumentIntelligenceConnectorSchemaRoundTripAndRollback(t *testing
 	if err == nil {
 		t.Fatal("expected azure_document_intelligence without api_version to be rejected")
 	}
+
+	migrateTo(t, db, llmConnectorsVersion)
 
 	if _, err := migrator.Down(ctx); err != nil {
 		t.Fatal(err)
