@@ -40,7 +40,7 @@ interface ShellHandles {
   profileButton: HTMLElement | null;
 }
 
-type NavIcon = 'home' | 'file' | 'plug';
+type NavIcon = 'home' | 'file' | 'plug' | 'branch';
 
 interface NavItem {
   href: string;
@@ -73,6 +73,7 @@ export const NAV: NavGroup[] = [
     label: 'Integrations',
     items: [
       { href: '/playground/', label: 'OCR Playground', icon: 'file' },
+      { href: '/prompts/', label: 'Prompts', icon: 'branch' },
       { href: '/connectors/', label: 'Connectors', icon: 'plug' }
     ]
   }

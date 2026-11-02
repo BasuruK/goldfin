@@ -39,7 +39,7 @@ Current UI work follows design artefacts (`DESIGN.md`, OpenDesign handoffs) and 
 - **Runs (v2+)**: Copy Connector definitions at start; re-attempts are new Runs, not repairs (ADR 0008).
 - **API boundary**: Connector saves encrypt Credentials at rest; only the probe/run outbound path decrypts in-process until a worker exists (ADR 0005, 0013).
 - **Frontend**: Static SvelteKit; nginx proxies `/api` so the browser avoids CORS.
-- **v1 gaps (explicit)**: `{{credential}}` interpolation and the REST connector's request template are decided but not built; the Workflow executor and Prompt versions are not built yet.
+- **v1 gaps (explicit)**: `{{credential}}` interpolation and the REST connector's request template are decided but not built; the Workflow executor is not built yet.
 
 ## Brand Commitments
 
