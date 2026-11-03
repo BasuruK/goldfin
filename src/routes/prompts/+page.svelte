@@ -11,11 +11,11 @@
     selectPrompt
   } from '#lib/prompts/store.svelte.js';
 
-  let selectionReady = $state(false);
-
+  // Reload the selected Prompt on mount; after that only the Select's setter runs selectPrompt.
+  // A $effect here re-ran on every promptStore read and overwrote the save status.
   onMount(() => {
     void loadPromptList().then(() => {
-      selectionReady = true;
+      selectPrompt(promptStore.selection);
     });
   });
 
@@ -25,11 +25,6 @@
 
   const selectItems = $derived(getPromptSelectItems());
   const saveDisabled = $derived(promptStore.saving || promptStore.listState === 'failed');
-
-  $effect(() => {
-    if (!selectionReady) return;
-    selectPrompt(promptStore.selection);
-  });
 </script>
 
 <svelte:head>
@@ -63,7 +58,7 @@
         <Select
           label="Saved prompt"
           items={selectItems}
-          bind:value={promptStore.selection}
+          bind:value={() => promptStore.selection, selectPrompt}
           disabled={promptStore.saving}
         />
         <Input
@@ -74,7 +69,7 @@
           disabled={promptStore.saving}
           oninput={() => markPromptDirty()}
         />
-        <Button type="submit" class="primary prompt-save" disabled={saveDisabled}>
+        <Button type="submit" class="primary" disabled={saveDisabled}>
           {promptStore.saving ? 'Saving…' : 'Save prompt'}
         </Button>
       </div>
@@ -154,9 +149,5 @@
   .prompt-editor:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
-  }
-
-  .prompt-save {
-    align-self: start;
   }
 </style>
