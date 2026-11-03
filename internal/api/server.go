@@ -39,6 +39,7 @@ func NewHandler(pool *pgxpool.Pool, box *secretbox.Box) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST "+ConnectorsPath, s.createConnector)
 	mux.HandleFunc("GET "+ConnectorsPath, s.listConnectors)
+	s.registerPromptRoutes(mux)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
 		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
