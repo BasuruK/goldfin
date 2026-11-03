@@ -5,6 +5,7 @@ import {
   appendPromptVersion,
   createPrompt,
   listPrompts,
+  planSave,
   renamePrompt,
   validatePromptDraft
 } from '../../src/lib/prompts/api.ts';
@@ -74,6 +75,32 @@ describe('validatePromptDraft', () => {
     const half = 'é'.repeat(256 * 1024); // 2 bytes each: exactly 512 KiB
     assert.equal(validatePromptDraft('A', half), null);
     assert.equal(validatePromptDraft('A', `${half}a`), 'Prompt content is too large.');
+  });
+});
+
+describe('planSave', () => {
+  const loaded = { selection: 'p1', name: 'Invoices', content: 'Extract.', loadedName: 'Invoices', loadedContent: 'Extract.' };
+
+  it('reports the validation message instead of a plan', () => {
+    assert.deepEqual(planSave({ ...loaded, name: '  ' }), { kind: 'invalid', message: 'Enter a Prompt name before saving.' });
+  });
+
+  it('creates when no saved Prompt is selected', () => {
+    assert.deepEqual(planSave({ ...loaded, selection: null }), { kind: 'create' });
+  });
+
+  it('does nothing when the name differs only in outer whitespace and the content is unchanged', () => {
+    assert.deepEqual(planSave({ ...loaded, name: ' Invoices ' }), { kind: 'unchanged' });
+    assert.deepEqual(planSave({ ...loaded, loadedName: ' Invoices ' }), { kind: 'unchanged' });
+  });
+
+  it('renames, appends, or both, for exactly the fields that changed', () => {
+    assert.deepEqual(planSave({ ...loaded, name: 'Receipts' }), { kind: 'update', promptId: 'p1', rename: true, append: false });
+    assert.deepEqual(planSave({ ...loaded, content: 'Extract more.' }), { kind: 'update', promptId: 'p1', rename: false, append: true });
+    assert.deepEqual(
+      planSave({ ...loaded, name: 'Receipts', content: 'Extract more.' }),
+      { kind: 'update', promptId: 'p1', rename: true, append: true }
+    );
   });
 });
 

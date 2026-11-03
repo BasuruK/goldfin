@@ -53,14 +53,6 @@
       "count": 2
     }
   },
-  "src/lib/prompts/store.svelte.ts": {
-    "@typescript-eslint/no-redundant-type-constituents": {
-      "count": 1
-    },
-    "complexity": {
-      "count": 1
-    }
-  },
   "src/routes/playground/+page.svelte": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1

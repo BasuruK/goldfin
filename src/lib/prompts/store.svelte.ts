@@ -3,18 +3,22 @@ import {
   appendPromptVersion,
   createPrompt,
   listPrompts,
+  planSave,
   renamePrompt,
-  validatePromptDraft,
-  type SavedPrompt
+  type SavedPrompt,
+  type SavePlan
 } from './api.ts';
 
-export type PromptSelection = 'new' | string;
+/** The Select's value for "New prompt…". Prompt ids are UUIDs, so no saved Prompt can collide with it. */
+const NEW_PROMPT_VALUE = 'new';
+const NEW_PROMPT_STATUS = 'New Prompt. Enter a name and system instructions.';
 
 export interface PromptStoreState {
   prompts: SavedPrompt[];
   listState: 'idle' | 'loading' | 'loaded' | 'failed';
   listError: string;
-  selection: PromptSelection;
+  /** The saved Prompt being edited; null until the draft is saved. */
+  selection: string | null;
   name: string;
   content: string;
   loadedName: string;
@@ -28,21 +32,31 @@ export const promptStore = $state<PromptStoreState>({
   prompts: [],
   listState: 'idle',
   listError: '',
-  selection: 'new',
+  selection: null,
   name: '',
   content: '',
   loadedName: '',
   loadedContent: '',
   saving: false,
   saveError: '',
-  statusMessage: 'New Prompt. Enter a name and system instructions.'
+  statusMessage: NEW_PROMPT_STATUS
 });
 
 export function getPromptSelectItems(): { value: string; label: string }[] {
   return [
-    { value: 'new', label: 'New prompt…' },
+    { value: NEW_PROMPT_VALUE, label: 'New prompt…' },
     ...promptStore.prompts.map(p => ({ value: p.id, label: p.name }))
   ];
+}
+
+/** The Select's value for the current selection. */
+export function getSelectedValue(): string {
+  return promptStore.selection ?? NEW_PROMPT_VALUE;
+}
+
+/** Applies the operator's pick from the Select. */
+export function selectPromptValue(value: string): void {
+  selectPrompt(value === NEW_PROMPT_VALUE ? null : value);
 }
 
 export async function loadPromptList(): Promise<void> {
@@ -58,15 +72,15 @@ export async function loadPromptList(): Promise<void> {
   }
 }
 
-export function selectPrompt(selection: PromptSelection): void {
+export function selectPrompt(selection: string | null): void {
   promptStore.selection = selection;
   promptStore.saveError = '';
-  if (selection === 'new') {
+  if (selection === null) {
     promptStore.name = '';
     promptStore.content = '';
     promptStore.loadedName = '';
     promptStore.loadedContent = '';
-    promptStore.statusMessage = 'New Prompt. Enter a name and system instructions.';
+    promptStore.statusMessage = NEW_PROMPT_STATUS;
     return;
   }
   const item = promptStore.prompts.find(p => p.id === selection);
@@ -87,53 +101,58 @@ export function markPromptDirty(): void {
 }
 
 export function disposePromptsPage(): void {
-  promptStore.statusMessage = 'New Prompt. Enter a name and system instructions.';
+  promptStore.statusMessage = NEW_PROMPT_STATUS;
   promptStore.saveError = '';
 }
 
 export async function savePrompt(): Promise<void> {
-  const validation = validatePromptDraft(promptStore.name, promptStore.content);
-  if (validation) {
-    promptStore.saveError = validation;
+  const plan = planSave(promptStore);
+  if (plan.kind === 'invalid') {
+    promptStore.saveError = plan.message;
+    return;
+  }
+  promptStore.saveError = '';
+  if (plan.kind === 'unchanged') {
+    promptStore.statusMessage = 'No changes to save.';
     return;
   }
   promptStore.saving = true;
-  promptStore.saveError = '';
   try {
-    const nameChanged =
-      promptStore.selection !== 'new' && promptStore.name.trim() !== promptStore.loadedName.trim();
-    const contentChanged =
-      promptStore.selection === 'new' || promptStore.content !== promptStore.loadedContent;
-    if (promptStore.selection === 'new') {
-      const saved = await createPrompt(promptStore.name, promptStore.content);
-      promptStore.prompts = [...promptStore.prompts, saved];
-      promptStore.selection = saved.id;
-      promptStore.loadedName = saved.name;
-      promptStore.loadedContent = saved.latestVersion.content;
-      promptStore.statusMessage = `Prompt saved as version ${saved.latestVersion.version}.`;
-      return;
-    }
-    let latest: SavedPrompt | null = null;
-    if (nameChanged) {
-      latest = await renamePrompt(promptStore.selection, promptStore.name);
-    }
-    if (contentChanged) {
-      latest = await appendPromptVersion(promptStore.selection, promptStore.content);
-    }
-    if (!nameChanged && !contentChanged) {
-      promptStore.statusMessage = 'No changes to save.';
-      return;
-    }
-    if (latest) {
-      promptStore.prompts = promptStore.prompts.map(p => (p.id === latest.id ? latest : p));
-      promptStore.loadedName = latest.name;
-      promptStore.loadedContent = latest.latestVersion?.content ?? promptStore.content;
-      promptStore.statusMessage = `Prompt saved as version ${latest.latestVersion?.version ?? ''}.`;
-    }
+    await (plan.kind === 'create' ? saveNewPrompt() : updatePrompt(plan));
   } catch (error) {
     promptStore.saveError =
       error instanceof ApiError ? error.message : 'Could not save the Prompt. Try again.';
   } finally {
     promptStore.saving = false;
   }
+}
+
+async function saveNewPrompt(): Promise<void> {
+  const saved = await createPrompt(promptStore.name, promptStore.content);
+  promptStore.prompts = [...promptStore.prompts, saved];
+  promptStore.selection = saved.id;
+  promptStore.loadedName = saved.name;
+  promptStore.loadedContent = saved.latestVersion.content;
+  promptStore.statusMessage = `Prompt saved as version ${saved.latestVersion.version}.`;
+}
+
+/** Applies each reply as it lands, so a failed append still keeps a rename that succeeded. */
+async function updatePrompt({ promptId, rename, append }: Extract<SavePlan, { kind: 'update' }>): Promise<void> {
+  if (rename) {
+    const renamed = await renamePrompt(promptId, promptStore.name);
+    mergePrompt(renamed);
+    promptStore.loadedName = renamed.name;
+    promptStore.statusMessage = 'Prompt renamed.';
+  }
+  if (append) {
+    const appended = await appendPromptVersion(promptId, promptStore.content);
+    mergePrompt(appended);
+    promptStore.loadedContent = appended.latestVersion.content;
+    promptStore.statusMessage = `Prompt saved as version ${appended.latestVersion.version}.`;
+  }
+}
+
+/** A rename reply may omit latestVersion; merging keeps the version already listed. */
+function mergePrompt(saved: SavedPrompt): void {
+  promptStore.prompts = promptStore.prompts.map(p => (p.id === saved.id ? { ...p, ...saved } : p));
 }
