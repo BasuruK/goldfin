@@ -14,11 +14,6 @@
       "count": 2
     }
   },
-  "src/lib/connectors/request-core.ts": {
-    "complexity": {
-      "count": 1
-    }
-  },
   "src/lib/connectors/storage.ts": {
     "@typescript-eslint/no-unnecessary-condition": {
       "count": 1
@@ -51,6 +46,11 @@
   "src/lib/ocr/store.svelte.ts": {
     "complexity": {
       "count": 2
+    }
+  },
+  "src/lib/request-core.ts": {
+    "complexity": {
+      "count": 1
     }
   },
   "src/routes/playground/+page.svelte": {

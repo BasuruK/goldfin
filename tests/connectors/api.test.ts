@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { afterEach, describe, it, mock } from 'node:test';
+import { ApiError } from '../../src/lib/request-core.ts';
 import {
-  ApiError,
   CONNECTORS_PATH,
   createConnector,
   listConnectors,

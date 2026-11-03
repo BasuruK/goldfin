@@ -11,7 +11,8 @@ import {
   type ProviderType
 } from './providers.ts';
 import { clearLegacyConnectors, createEmptyConnector, type ConnectorRecord } from './storage.ts';
-import { ApiError, createConnector, listConnectors, validateDraft, type SaveDraft, type SavedConnector } from './api.ts';
+import { ApiError } from '../request-core.ts';
+import { createConnector, listConnectors, validateDraft, type SaveDraft, type SavedConnector } from './api.ts';
 
 export type SaveErrorField = 'name' | 'baseUrl' | 'credential' | 'credentialLabel' | 'models';
 

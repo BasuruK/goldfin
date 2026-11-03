@@ -87,3 +87,50 @@ export async function fetchApiRequest(
   }
   return { response, record };
 }
+
+export type ApiErrorKind = 'timeout' | 'unreachable' | 'rejected' | 'unavailable' | 'malformed';
+
+/** A failed request to a Goldfin JSON route, carrying the mapped message the UI shows. */
+export class ApiError extends Error {
+  readonly kind: ApiErrorKind;
+
+  constructor(kind: ApiErrorKind, message: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.kind = kind;
+  }
+}
+
+const API_REQUEST_TIMEOUT_MS = 10_000;
+
+const API_MESSAGES = {
+  timeout: 'The request timed out. Try again.',
+  unreachable: 'Could not reach the API. Check that Goldfin is running, then try again.',
+  unavailable: 'Goldfin is unavailable right now. Try again.',
+  malformed: 'Goldfin returned an unexpected response.'
+};
+
+export function malformed(): ApiError {
+  return new ApiError('malformed', API_MESSAGES.malformed);
+}
+
+export function isJsonRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/**
+ * One request to a Goldfin JSON route. `rejected` is the caller's message for a 4xx
+ * that carries no server message (CODING_STANDARDS Caller-neutral errors).
+ */
+export async function requestJson(path: string, rejected: string, init: RequestInit = {}): Promise<Record<string, unknown>> {
+  const { record } = await fetchApiRequest({
+    path,
+    init,
+    timeoutMs: API_REQUEST_TIMEOUT_MS,
+    messages: { ...API_MESSAGES, rejected },
+    // No canceledKind is passed, so fetchApiRequest never reports 'canceled' here.
+    createError: (kind, message) => new ApiError(kind === 'canceled' ? 'malformed' : kind, message)
+  });
+  if (!record) throw malformed();
+  return record;
+}

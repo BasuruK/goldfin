@@ -1,4 +1,5 @@
-import { ApiError, listConnectors, type SavedConnector } from '#lib/connectors/api.ts';
+import { listConnectors, type SavedConnector } from '#lib/connectors/api.ts';
+import { ApiError } from '#lib/request-core.ts';
 import { AZURE_OCR_PROVIDER_TYPE } from '#lib/connectors/providers.ts';
 import { OcrError, submitOcr } from './api.ts';
 import { validateDocument } from './documents.ts';

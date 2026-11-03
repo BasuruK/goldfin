@@ -3,13 +3,10 @@
  * only in that request and is never persisted here.
  */
 
-import { fetchApiRequest } from './request-core.ts';
+import { isJsonRecord, malformed, requestJson } from '../request-core.ts';
 
 export const CONNECTORS_PATH = '/api/v1/connectors';
-
-const REQUEST_TIMEOUT_MS = 10_000;
-
-export type ApiErrorKind = 'timeout' | 'unreachable' | 'rejected' | 'unavailable' | 'malformed';
+const REJECTED = 'The Connector was rejected.';
 
 interface SavedConnectorModel {
   id: string;
@@ -46,57 +43,18 @@ export interface DraftValidationError {
   message: string;
 }
 
-export class ApiError extends Error {
-  kind: ApiErrorKind;
-
-  constructor(kind: ApiErrorKind, message: string) {
-    super(message);
-    this.name = 'ApiError';
-    this.kind = kind;
-  }
-}
-
-const MESSAGES: Record<ApiErrorKind, string> = {
-  timeout: 'The request timed out. Try again.',
-  unreachable: 'Could not reach the API. Check that Goldfin is running, then try again.',
-  unavailable: 'Goldfin is unavailable right now. Try again.',
-  malformed: 'Goldfin returned an unexpected response.',
-  rejected: 'The Connector was rejected.'
-};
-
-function isApiErrorKind(kind: string): kind is ApiErrorKind {
-  return kind in MESSAGES;
-}
-
-function isJsonRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
-async function requestJSON(path: string, init: RequestInit = {}): Promise<Record<string, unknown>> {
-  const { record } = await fetchApiRequest({
-    path,
-    init,
-    timeoutMs: REQUEST_TIMEOUT_MS,
-    messages: MESSAGES,
-    createError: (kind, message) =>
-      new ApiError(isApiErrorKind(kind) ? kind : 'malformed', message)
-  });
-  if (!record) throw new ApiError('malformed', MESSAGES.malformed);
-  return record;
-}
-
 function optionalStringField(body: Record<string, unknown>, key: string): string | undefined {
   if (!(key in body)) return undefined;
   const value = body[key];
-  if (typeof value !== 'string') throw new ApiError('malformed', MESSAGES.malformed);
+  if (typeof value !== 'string') throw malformed();
   return value;
 }
 
 function parseSavedConnector(body: Record<string, unknown>): SavedConnector {
-  if (typeof body.id !== 'string' || body.id === '') throw new ApiError('malformed', MESSAGES.malformed);
-  if (typeof body.name !== 'string') throw new ApiError('malformed', MESSAGES.malformed);
-  if (typeof body.providerType !== 'string') throw new ApiError('malformed', MESSAGES.malformed);
-  if (typeof body.baseUrl !== 'string') throw new ApiError('malformed', MESSAGES.malformed);
+  if (typeof body.id !== 'string' || body.id === '') throw malformed();
+  if (typeof body.name !== 'string') throw malformed();
+  if (typeof body.providerType !== 'string') throw malformed();
+  if (typeof body.baseUrl !== 'string') throw malformed();
   const connector: SavedConnector = {
     id: body.id,
     name: body.name,
@@ -109,11 +67,11 @@ function parseSavedConnector(body: Record<string, unknown>): SavedConnector {
   if (llmApiMode !== undefined) connector.llmApiMode = llmApiMode;
   if ('models' in body && body.models !== null && body.models !== undefined) {
     const rawModels = body.models;
-    if (!Array.isArray(rawModels)) throw new ApiError('malformed', MESSAGES.malformed);
+    if (!Array.isArray(rawModels)) throw malformed();
     connector.models = rawModels.map((item: unknown) => {
-      if (!isJsonRecord(item)) throw new ApiError('malformed', MESSAGES.malformed);
+      if (!isJsonRecord(item)) throw malformed();
       if (typeof item.id !== 'string' || typeof item.enabled !== 'boolean') {
-        throw new ApiError('malformed', MESSAGES.malformed);
+        throw malformed();
       }
       return { id: item.id, enabled: item.enabled };
     });
@@ -144,7 +102,7 @@ export async function createConnector(draft: SaveDraft): Promise<SavedConnector>
     payload.credential = draft.credential;
     payload.credentialLabel = draft.credentialLabel.trim();
   }
-  const body = await requestJSON(CONNECTORS_PATH, {
+  const body = await requestJson(CONNECTORS_PATH, REJECTED, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -153,10 +111,10 @@ export async function createConnector(draft: SaveDraft): Promise<SavedConnector>
 }
 
 export async function listConnectors(): Promise<SavedConnector[]> {
-  const body = await requestJSON(CONNECTORS_PATH);
-  if (!Array.isArray(body.connectors)) throw new ApiError('malformed', MESSAGES.malformed);
+  const body = await requestJson(CONNECTORS_PATH, REJECTED);
+  if (!Array.isArray(body.connectors)) throw malformed();
   return body.connectors.map(item => {
-    if (!isJsonRecord(item)) throw new ApiError('malformed', MESSAGES.malformed);
+    if (!isJsonRecord(item)) throw malformed();
     return parseSavedConnector(item);
   });
 }
