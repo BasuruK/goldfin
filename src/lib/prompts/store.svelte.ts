@@ -59,6 +59,7 @@ export async function loadPromptList(): Promise<void> {
 }
 
 export function selectPrompt(selection: PromptSelection): void {
+  promptStore.selection = selection;
   promptStore.saveError = '';
   if (selection === 'new') {
     promptStore.name = '';
