@@ -69,6 +69,12 @@ describe('validatePromptDraft', () => {
     assert.equal(validatePromptDraft('A', 'a'.repeat(512 * 1024)), null);
     assert.equal(validatePromptDraft('A', 'a'.repeat(512 * 1024 + 1)), 'Prompt content is too large.');
   });
+
+  it('counts content in UTF-8 bytes, as the API does', () => {
+    const half = 'é'.repeat(256 * 1024); // 2 bytes each: exactly 512 KiB
+    assert.equal(validatePromptDraft('A', half), null);
+    assert.equal(validatePromptDraft('A', `${half}a`), 'Prompt content is too large.');
+  });
 });
 
 describe('createPrompt', () => {

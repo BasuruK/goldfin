@@ -86,7 +86,8 @@ export function validatePromptDraft(name: string, content: string): string | nul
   const trimmed = name.trim();
   if (!trimmed) return 'Enter a Prompt name before saving.';
   if (trimmed.length > 80) return 'Prompt name must be 80 characters or fewer.';
-  if (content.length > 512 * 1024) return 'Prompt content is too large.';
+  // The API caps content in UTF-8 bytes; `.length` counts UTF-16 code units.
+  if (new TextEncoder().encode(content).length > 512 * 1024) return 'Prompt content is too large.';
   return null;
 }
 
