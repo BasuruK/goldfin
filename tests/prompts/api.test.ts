@@ -138,17 +138,22 @@ describe('renamePrompt', () => {
     replyWith(200, { id: 'p1', createdAt: PROMPT.createdAt });
     await assertApiError(renamePrompt('p1', 'New'), 'malformed', MALFORMED);
   });
+
+  it('returns a Prompt without a version exactly as sent, and rejects a mis-shaped version', async () => {
+    const bare = { id: 'p1', name: 'New', createdAt: PROMPT.createdAt };
+    replyWith(200, bare);
+    assert.deepEqual(await renamePrompt('p1', 'New'), bare);
+    mock.restoreAll();
+    replyWith(200, { ...bare, latestVersion: { ...VERSION, version: '1' } });
+    await assertApiError(renamePrompt('p1', 'New'), 'malformed', MALFORMED);
+  });
 });
 
 describe('listPrompts', () => {
   it('returns every listed Prompt, including one with no version yet', async () => {
     const bare = { id: 'p2', name: 'Bare', createdAt: PROMPT.createdAt };
     const request = replyWith(200, { prompts: [PROMPT, bare] });
-    const [first, second] = await listPrompts();
-    assert.deepEqual(first, PROMPT);
-    assert.ok(second);
-    assert.equal(second.id, 'p2');
-    assert.equal(second.latestVersion, undefined);
+    assert.deepEqual(await listPrompts(), [PROMPT, bare]);
     assert.deepEqual(request(), { url: '/api/v1/prompts', method: 'GET', body: undefined });
   });
 
@@ -167,7 +172,9 @@ describe('listPrompts', () => {
       'p1',
       { ...PROMPT, id: 1 },
       { ...PROMPT, name: 2 },
-      { ...PROMPT, createdAt: 3 }
+      { ...PROMPT, createdAt: 3 },
+      { ...PROMPT, latestVersion: null },
+      { ...PROMPT, latestVersion: { ...VERSION, content: 7 } }
     ];
     for (const entry of broken) {
       replyWith(200, { prompts: [PROMPT, entry] });

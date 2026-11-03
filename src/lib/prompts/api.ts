@@ -24,6 +24,9 @@ export interface SavedPrompt {
   latestVersion?: PromptVersion;
 }
 
+/** Create and append always return the version they wrote; list and rename may omit it. */
+type SavedPromptWithVersion = SavedPrompt & { latestVersion: PromptVersion };
+
 export class ApiError extends Error {
   kind: ApiErrorKind;
 
@@ -50,23 +53,30 @@ function isJsonRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-function parseVersion(value: unknown): PromptVersion | undefined {
-  if (!isJsonRecord(value)) return undefined;
+function parseVersion(value: unknown): PromptVersion {
+  if (!isJsonRecord(value)) throw new ApiError('malformed', MESSAGES.malformed);
   const { id, version, content, createdAt } = value;
   if (typeof id !== 'string' || typeof version !== 'number' || typeof content !== 'string' || typeof createdAt !== 'string') {
-    return undefined;
+    throw new ApiError('malformed', MESSAGES.malformed);
   }
   return { id, version, content, createdAt };
 }
 
-function parsePrompt(value: unknown): SavedPrompt | null {
-  if (!isJsonRecord(value)) return null;
+/** A missing `latestVersion` stays missing; a mis-shaped one makes the whole reply malformed. */
+function parsePrompt(value: unknown): SavedPrompt {
+  if (!isJsonRecord(value)) throw new ApiError('malformed', MESSAGES.malformed);
   const { id, name, createdAt, latestVersion } = value;
   if (typeof id !== 'string' || typeof name !== 'string' || typeof createdAt !== 'string') {
-    return null;
+    throw new ApiError('malformed', MESSAGES.malformed);
   }
-  const version = parseVersion(latestVersion);
-  return { id, name, createdAt, latestVersion: version };
+  if (latestVersion === undefined) return { id, name, createdAt };
+  return { id, name, createdAt, latestVersion: parseVersion(latestVersion) };
+}
+
+function parsePromptWithVersion(value: unknown): SavedPromptWithVersion {
+  const { latestVersion, ...prompt } = parsePrompt(value);
+  if (!latestVersion) throw new ApiError('malformed', MESSAGES.malformed);
+  return { ...prompt, latestVersion };
 }
 
 async function requestJSON(path: string, init: RequestInit = {}): Promise<Record<string, unknown>> {
@@ -92,38 +102,27 @@ export function validatePromptDraft(name: string, content: string): string | nul
 }
 
 export async function listPrompts(): Promise<SavedPrompt[]> {
-  const record = await requestJSON(PROMPTS_PATH);
-  const raw = record.prompts;
-  if (!Array.isArray(raw)) throw new ApiError('malformed', MESSAGES.malformed);
-  const prompts: SavedPrompt[] = [];
-  for (const item of raw) {
-    const parsed = parsePrompt(item);
-    if (!parsed) throw new ApiError('malformed', MESSAGES.malformed);
-    prompts.push(parsed);
-  }
-  return prompts;
+  const { prompts } = await requestJSON(PROMPTS_PATH);
+  if (!Array.isArray(prompts)) throw new ApiError('malformed', MESSAGES.malformed);
+  return prompts.map(parsePrompt);
 }
 
-export async function createPrompt(name: string, content: string): Promise<SavedPrompt> {
+export async function createPrompt(name: string, content: string): Promise<SavedPromptWithVersion> {
   const record = await requestJSON(PROMPTS_PATH, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json; charset=utf-8' },
     body: JSON.stringify({ name: name.trim(), content })
   });
-  const parsed = parsePrompt(record);
-  if (!parsed?.latestVersion) throw new ApiError('malformed', MESSAGES.malformed);
-  return parsed;
+  return parsePromptWithVersion(record);
 }
 
-export async function appendPromptVersion(promptId: string, content: string): Promise<SavedPrompt> {
+export async function appendPromptVersion(promptId: string, content: string): Promise<SavedPromptWithVersion> {
   const record = await requestJSON(`${PROMPTS_PATH}/${encodeURIComponent(promptId)}/versions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json; charset=utf-8' },
     body: JSON.stringify({ content })
   });
-  const parsed = parsePrompt(record);
-  if (!parsed?.latestVersion) throw new ApiError('malformed', MESSAGES.malformed);
-  return parsed;
+  return parsePromptWithVersion(record);
 }
 
 export async function renamePrompt(promptId: string, name: string): Promise<SavedPrompt> {
@@ -132,7 +131,5 @@ export async function renamePrompt(promptId: string, name: string): Promise<Save
     headers: { 'Content-Type': 'application/json; charset=utf-8' },
     body: JSON.stringify({ name: name.trim() })
   });
-  const parsed = parsePrompt(record);
-  if (!parsed) throw new ApiError('malformed', MESSAGES.malformed);
-  return parsed;
+  return parsePrompt(record);
 }

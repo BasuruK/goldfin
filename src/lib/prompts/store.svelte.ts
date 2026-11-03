@@ -109,8 +109,8 @@ export async function savePrompt(): Promise<void> {
       promptStore.prompts = [...promptStore.prompts, saved];
       promptStore.selection = saved.id;
       promptStore.loadedName = saved.name;
-      promptStore.loadedContent = saved.latestVersion?.content ?? '';
-      promptStore.statusMessage = `Prompt saved as version ${saved.latestVersion?.version ?? 1}.`;
+      promptStore.loadedContent = saved.latestVersion.content;
+      promptStore.statusMessage = `Prompt saved as version ${saved.latestVersion.version}.`;
       return;
     }
     let latest: SavedPrompt | null = null;
