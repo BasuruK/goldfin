@@ -1,6 +1,6 @@
 # Coding standards
 
-Apply every rule in the touched layer before writing code, and verify every diff hunk against it at review. Judgement calls only: anything a linter can decide belongs in `make check` (`.golangci.yml`, `svelte-check`, `knip`, tests).
+Apply every rule in the touched layer before writing code, and verify every diff hunk against it at review. Judgement calls only: anything a linter can decide belongs in `make check` (`.golangci.yml`, `eslint.config.js`, `.dependency-cruiser.cjs`, `svelte-check`, `knip`, tests). A rule tagged `[enforced by X]` is here only for its reason; the tool decides.
 
 These rules govern mechanisms that exist. None of them is a reason to build one: a queue, worker, fence, lease, or hardened dialer is added only when `docs/adr/0013-walking-skeleton-synchronous-saves.md` names its trigger as met.
 
@@ -44,6 +44,19 @@ When a ticket has a **Failure table** (`docs/agents/landing.md`, one-way seams o
 - **Optimistic rollback**: Pair every optimistic update with a rollback path and clear prior failure messages on success.
 - **Mapped errors**: Surface only mapped user-facing messages in the UI.
 - **Client credentials** (`docs/adr/0005-credential-handling.md`): Keep Credential plaintext in the creating request only. `src/lib/connectors/storage.ts` clears the legacy `localStorage` store on every load.
+
+## TypeScript
+
+- **Parse once at the boundary** [judgement]: A value from `fetch`, `JSON.parse`, `localStorage`, `FormData` or an input event is `unknown` until one `parse…(value: unknown)` in the surface's `api.ts` returns the exact type its callers rely on, or throws the surface's `malformed` error. Return the narrowest type (for example `SavedPrompt & { latestVersion: PromptVersion }`), never `null` or `undefined` for "malformed".
+- **Check once, delete the echo** [enforced by `@typescript-eslint/no-unnecessary-condition`]: Past the parse, trust the type: no `?.`, `??`, `!= null` or `!` on a value the type proves present. When a guard still seems needed, the type is wrong; narrow it at the parse. The rule is only sound with `noUncheckedIndexedAccess`; until that flag is on, keep a flagged guard on an index read.
+- **Suppressions only shrink** [enforced by `eslint-suppressions.json`, `.dependency-cruiser-known-violations.json`]: A new violation fails `make lint`, even in a file that has suppressed ones. After fixing one, run `pnpm exec eslint --prune-suppressions …` or `pnpm exec depcruise-baseline …`. Adopt a new rule with `eslint --suppress-rule <rule>` in its own PR; never suppress a new violation.
+- **No in-band sentinels** [judgement]: Model "new", "none selected" or "not loaded" as a discriminated union or a single `null`, never a magic string inside a `string` field. `'new' | string` is just `string`; `no-redundant-type-constituents` catches only that spelling.
+- **Small functions** [enforced by `complexity` 10, `max-depth` 3]: Split a store action into a pure decision in `api.ts`, testable under `node --test`, and the store mutations that apply it.
+- **Surfaces stay apart** [enforced by `no-surface-to-surface`, `shared-imports-no-surface`, `lib-imports-no-route`]: A folder in `src/lib/` is a surface; a file directly in `src/lib/` is shared and imports no surface; a route composes surfaces. Code two surfaces need moves to `src/lib/` (`connectors/request-core.ts` is a recorded known violation).
+- **Events for actions, effects for sync** [judgement]: Run a user action from its event handler or a `bind:value={() => x, setX}` setter. Use `$effect` only to push state out of Svelte (DOM, timers, storage): it re-runs on every state it reads, including state the action itself writes.
+- **Mirror the server's units** [judgement]: A client check that mirrors a Go limit counts what Go counts: runes are `[...s].length`, bytes are `new TextEncoder().encode(s).length`. `.length` counts UTF-16 code units.
+- **Tests that can fail** [judgement, measured by `pnpm mutation`]: Assert against the contract's literals (`'/api/v1/prompts'`), never the module's own export. Give every parse function a malformed-input case. Kill each surviving mutant, or name it equivalent in the PR body.
+- **No floating promises** [enforced by `@typescript-eslint/no-floating-promises`]: `await`, return, or `void` every promise; `void` marks a deliberate fire-and-forget.
 
 ## Contracts across layers
 
