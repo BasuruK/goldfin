@@ -108,6 +108,8 @@ func TestAPIRejectsInvalidPrompt(t *testing.T) {
 		method, path, body string
 	}{
 		{"empty_name", http.MethodPost, "/api/v1/prompts", `{"name":"  ","content":"x"}`},
+		{"nul_in_name", http.MethodPost, "/api/v1/prompts", `{"name":"A\u0000B","content":"x"}`},
+		{"nul_in_content", http.MethodPost, "/api/v1/prompts", `{"name":"A","content":"x\u0000y"}`},
 		{"missing_content", http.MethodPost, "/api/v1/prompts", `{"name":"A"}`},
 		{"unknown_prompt", http.MethodPost, "/api/v1/prompts/missing/versions", `{"content":"x"}`},
 	}
