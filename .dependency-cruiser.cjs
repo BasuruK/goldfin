@@ -21,9 +21,9 @@ module.exports = {
       name: 'no-surface-to-surface',
       severity: 'error',
       comment:
-        'A surface (a folder under src/lib/) imports only itself and shared modules (files directly in src/lib/). A route composes surfaces.',
+        "A surface (a folder under src/lib/) imports itself, shared modules (files directly in src/lib/), and another surface only through that surface's api.ts, never its store, components or helpers.",
       from: { path: '^src/lib/([^/]+)/' },
-      to: { path: '^src/lib/[^/]+/', pathNot: '^src/lib/$1/' },
+      to: { path: '^src/lib/[^/]+/', pathNot: ['^src/lib/$1/', '^src/lib/[^/]+/api\\.ts$'] },
     },
     {
       name: 'shared-imports-no-surface',
