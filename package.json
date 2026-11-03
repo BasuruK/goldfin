@@ -13,7 +13,7 @@
     "preview:test": "vite preview --host 127.0.0.1 --port 5175 --strictPort",
     "test": "playwright test",
     "test:unit": "node --test \"tests/**/*.test.ts\"",
-    "prepare": "svelte-kit sync || echo '' && git config core.hooksPath .githooks || echo ''",
+    "prepare": "(svelte-kit sync || echo '') && (git config core.hooksPath .githooks || echo '')",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "knip": "knip",
     "lint:ts": "eslint src tests api-proxy-target.ts vite.config.ts playwright.config.ts",
