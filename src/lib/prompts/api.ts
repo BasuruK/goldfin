@@ -101,6 +101,32 @@ export function validatePromptDraft(name: string, content: string): string | nul
   return null;
 }
 
+/** The draft fields a save compares; `selection` is null until the Prompt is saved. */
+interface PromptDraft {
+  selection: string | null;
+  name: string;
+  content: string;
+  loadedName: string;
+  loadedContent: string;
+}
+
+export type SavePlan =
+  | { kind: 'invalid'; message: string }
+  | { kind: 'create' }
+  | { kind: 'unchanged' }
+  | { kind: 'update'; promptId: string; rename: boolean; append: boolean };
+
+/** Decides what a save sends, so the store only applies the replies. */
+export function planSave(draft: PromptDraft): SavePlan {
+  const message = validatePromptDraft(draft.name, draft.content);
+  if (message) return { kind: 'invalid', message };
+  if (draft.selection === null) return { kind: 'create' };
+  const rename = draft.name.trim() !== draft.loadedName.trim();
+  const append = draft.content !== draft.loadedContent;
+  if (!rename && !append) return { kind: 'unchanged' };
+  return { kind: 'update', promptId: draft.selection, rename, append };
+}
+
 export async function listPrompts(): Promise<SavedPrompt[]> {
   const { prompts } = await requestJSON(PROMPTS_PATH);
   if (!Array.isArray(prompts)) throw new ApiError('malformed', MESSAGES.malformed);

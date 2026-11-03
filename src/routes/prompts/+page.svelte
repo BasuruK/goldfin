@@ -4,14 +4,16 @@
   import {
     disposePromptsPage,
     getPromptSelectItems,
+    getSelectedValue,
     loadPromptList,
     markPromptDirty,
     promptStore,
     savePrompt,
-    selectPrompt
+    selectPrompt,
+    selectPromptValue
   } from '#lib/prompts/store.svelte.js';
 
-  // Reload the selected Prompt on mount; after that only the Select's setter runs selectPrompt.
+  // Reload the selected Prompt on mount; after that only the Select's setter selects a Prompt.
   // A $effect here re-ran on every promptStore read and overwrote the save status.
   onMount(() => {
     void loadPromptList().then(() => {
@@ -58,7 +60,7 @@
         <Select
           label="Saved prompt"
           items={selectItems}
-          bind:value={() => promptStore.selection, selectPrompt}
+          bind:value={getSelectedValue, selectPromptValue}
           disabled={promptStore.saving}
         />
         <Input
