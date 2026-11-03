@@ -19,6 +19,8 @@ export default defineConfig(
   ts.configs.recommendedTypeChecked,
   svelte.configs.recommended,
   {
+    // A per-site `eslint-disable` must go once its violation is fixed.
+    linterOptions: { reportUnusedDisableDirectives: 'error' },
     languageOptions: {
       parserOptions: { projectService: true, extraFileExtensions: ['.svelte'] }
     },

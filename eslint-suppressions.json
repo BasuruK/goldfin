@@ -14,11 +14,6 @@
       "count": 2
     }
   },
-  "src/lib/connectors/models.ts": {
-    "@typescript-eslint/no-unnecessary-condition": {
-      "count": 6
-    }
-  },
   "src/lib/connectors/request-core.ts": {
     "complexity": {
       "count": 1
