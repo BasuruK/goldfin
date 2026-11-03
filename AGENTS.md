@@ -14,13 +14,13 @@ Every change keeps these two. The ADRs hold the reasons.
 Two containers over Postgres (ADR 0010 as amended by 0013; changing them needs an ADR): `web` (nginx + static SvelteKit) and `api` (Go). Migrations are `goose` files in `db/migrations/`, applied by `make migrate`, a one-shot Compose service. Local Compose runs `postgres`, `migrate` and `api`; the UI runs from `pnpm dev`.
 
 - `cmd/goldfin/` is the `api` entry point. `internal/handler` mounts the routes; `internal/api` saves and lists Connectors; `internal/probe` runs synchronous Probes; `internal/azureocr` is the Azure Document Intelligence client; `internal/secretbox` encrypts Credentials; `internal/testdb` gives each DB test a disposable schema.
-- `src/lib/<surface>/` holds each surface's API client and store (`connectors`, `ocr`); `src/routes/` holds pages; `Goldfin_Components/` is the design system. Code outside that package (`src/`, `tests/`) may import it only via `$goldfin/lib/index.js` and `$goldfin/goldfin.css` (no deep `$goldfin/…` paths); `make lint` runs `pnpm lint:boundaries` (dependency-cruiser) to enforce that and to forbid dependency cycles in the scanned graph.
+- `src/lib/<surface>/` holds each surface's API client and store (`connectors`, `ocr`, `prompts`); files directly in `src/lib/` are shared; `src/routes/` holds pages; `Goldfin_Components/` is the design system. Code outside that package (`src/`, `tests/`) may import it only via `$goldfin/lib/index.js` and `$goldfin/goldfin.css` (no deep `$goldfin/…` paths); `make lint` runs `pnpm lint:boundaries` (dependency-cruiser) to enforce that, to keep surfaces from importing each other, and to forbid dependency cycles in the scanned graph.
 
 ## Commands
 
 - `make run`: Postgres and `api` in Docker on `127.0.0.1:8080`, then `pnpm dev` on `127.0.0.1:5174`. `make logs` tails the `api`; read it when a request fails and the page shows only a mapped message.
 - **While iterating**, run only the tests that cover your change: `go test ./internal/probe/...`, `node --test tests/ocr/<file>.test.ts`, `pnpm exec playwright test tests/<file>.spec.ts`. DB-backed Go tests need `TEST_DATABASE_URL` pointing at a disposable database.
-- `make check` runs everything CI's `make check` job runs, and is green before you push. CI also runs the Playwright suite.
+- `make check` runs everything CI's `make check` job runs, and is green before you push. CI also runs the Playwright suite. `make lint` (ESLint, svelte-check, dependency-cruiser, knip, Go linters) is also the pre-push hook in `.githooks/`, which `pnpm install` enables.
 
 ## Context pointers
 

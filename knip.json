@@ -1,4 +1,5 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "ignore": ["Goldfin_Components/**", "prototypes/**"]
+  "ignore": ["Goldfin_Components/**", "prototypes/**"],
+  "ignoreDependencies": ["@stryker-mutator/command-runner"]
 }

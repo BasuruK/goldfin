@@ -27,10 +27,10 @@ type promptVersionResponse struct {
 }
 
 type promptResponse struct {
-	ID             string                 `json:"id"`
-	Name           string                 `json:"name"`
-	CreatedAt      time.Time              `json:"createdAt"`
-	LatestVersion  *promptVersionResponse `json:"latestVersion,omitempty"`
+	ID            string                 `json:"id"`
+	Name          string                 `json:"name"`
+	CreatedAt     time.Time              `json:"createdAt"`
+	LatestVersion *promptVersionResponse `json:"latestVersion,omitempty"`
 }
 
 func (s *server) registerPromptRoutes(mux *http.ServeMux) {
@@ -92,7 +92,7 @@ func (s *server) createPrompt(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"message": "Invalid Prompt."})
 		return
 	}
-	out, err := s.insertPromptWithFirstVersion(r, name, content)
+	out, err := s.insertPromptWithFirstVersion(r.Context(), name, content)
 	if err != nil {
 		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"message": "Could not save the Prompt."})
 		return
@@ -134,7 +134,7 @@ func (s *server) appendPromptVersion(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"message": "Invalid Prompt."})
 		return
 	}
-	out, err := s.insertPromptVersion(r, id, content)
+	out, err := s.insertPromptVersion(r.Context(), id, content)
 	if errors.Is(err, errPromptNotFound) {
 		writeJSON(w, http.StatusNotFound, map[string]string{"message": "Prompt not found."})
 		return
@@ -148,14 +148,14 @@ func (s *server) appendPromptVersion(w http.ResponseWriter, r *http.Request) {
 
 var errPromptNotFound = errors.New("prompt not found")
 
-func (s *server) insertPromptWithFirstVersion(r *http.Request, name, content string) (promptResponse, error) {
-	tx, err := s.pool.Begin(r.Context())
+func (s *server) insertPromptWithFirstVersion(ctx context.Context, name, content string) (promptResponse, error) {
+	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return promptResponse{}, err
 	}
-	defer func() { _ = tx.Rollback(r.Context()) }()
+	defer func() { _ = tx.Rollback(ctx) }()
 	var out promptResponse
-	err = tx.QueryRow(r.Context(), `
+	err = tx.QueryRow(ctx, `
 		INSERT INTO prompts (name) VALUES ($1)
 		RETURNING id, name, created_at`, name,
 	).Scan(&out.ID, &out.Name, &out.CreatedAt)
@@ -164,7 +164,7 @@ func (s *server) insertPromptWithFirstVersion(r *http.Request, name, content str
 	}
 	createdAt := time.Now().UTC().Truncate(time.Microsecond)
 	var version promptVersionResponse
-	err = tx.QueryRow(r.Context(), `
+	err = tx.QueryRow(ctx, `
 		INSERT INTO prompt_versions (prompt_id, version, content, created_at)
 		VALUES ($1, 1, $2, $3)
 		RETURNING id, version, content, created_at`, out.ID, content, createdAt,
@@ -173,20 +173,20 @@ func (s *server) insertPromptWithFirstVersion(r *http.Request, name, content str
 		return promptResponse{}, err
 	}
 	out.LatestVersion = &version
-	if err := tx.Commit(r.Context()); err != nil {
+	if err := tx.Commit(ctx); err != nil {
 		return promptResponse{}, err
 	}
 	return out, nil
 }
 
-func (s *server) insertPromptVersion(r *http.Request, promptID, content string) (promptResponse, error) {
-	tx, err := s.pool.Begin(r.Context())
+func (s *server) insertPromptVersion(ctx context.Context, promptID, content string) (promptResponse, error) {
+	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return promptResponse{}, err
 	}
-	defer func() { _ = tx.Rollback(r.Context()) }()
+	defer func() { _ = tx.Rollback(ctx) }()
 	var out promptResponse
-	err = tx.QueryRow(r.Context(), `
+	err = tx.QueryRow(ctx, `
 		SELECT id, name, created_at FROM prompts WHERE id = $1 FOR UPDATE`, promptID,
 	).Scan(&out.ID, &out.Name, &out.CreatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -196,14 +196,14 @@ func (s *server) insertPromptVersion(r *http.Request, promptID, content string) 
 		return promptResponse{}, err
 	}
 	var nextVersion int
-	if err := tx.QueryRow(r.Context(), `
+	if err := tx.QueryRow(ctx, `
 		SELECT COALESCE(MAX(version), 0) + 1 FROM prompt_versions WHERE prompt_id = $1`, promptID,
 	).Scan(&nextVersion); err != nil {
 		return promptResponse{}, err
 	}
 	createdAt := time.Now().UTC().Truncate(time.Microsecond)
 	var version promptVersionResponse
-	err = tx.QueryRow(r.Context(), `
+	err = tx.QueryRow(ctx, `
 		INSERT INTO prompt_versions (prompt_id, version, content, created_at)
 		VALUES ($1, $2, $3, $4)
 		RETURNING id, version, content, created_at`, promptID, nextVersion, content, createdAt,
@@ -212,7 +212,7 @@ func (s *server) insertPromptVersion(r *http.Request, promptID, content string) 
 		return promptResponse{}, err
 	}
 	out.LatestVersion = &version
-	if err := tx.Commit(r.Context()); err != nil {
+	if err := tx.Commit(ctx); err != nil {
 		return promptResponse{}, err
 	}
 	return out, nil

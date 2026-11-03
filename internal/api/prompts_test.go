@@ -104,7 +104,7 @@ func TestAPIRenamesPrompt(t *testing.T) {
 func TestAPIRejectsInvalidPrompt(t *testing.T) {
 	handler, pool, _ := newAPI(t)
 	cases := []struct {
-		name string
+		name               string
 		method, path, body string
 	}{
 		{"empty_name", http.MethodPost, "/api/v1/prompts", `{"name":"  ","content":"x"}`},

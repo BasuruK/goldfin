@@ -4,13 +4,13 @@
 
 import { fetchApiRequest } from '../connectors/request-core.ts';
 
-export const PROMPTS_PATH = '/api/v1/prompts';
+const PROMPTS_PATH = '/api/v1/prompts';
 
 const REQUEST_TIMEOUT_MS = 10_000;
 
 export type ApiErrorKind = 'timeout' | 'unreachable' | 'rejected' | 'unavailable' | 'malformed';
 
-export interface PromptVersion {
+interface PromptVersion {
   id: string;
   version: number;
   content: string;
@@ -86,7 +86,8 @@ export function validatePromptDraft(name: string, content: string): string | nul
   const trimmed = name.trim();
   if (!trimmed) return 'Enter a Prompt name before saving.';
   if (trimmed.length > 80) return 'Prompt name must be 80 characters or fewer.';
-  if (content.length > 512 * 1024) return 'Prompt content is too large.';
+  // The API caps content in UTF-8 bytes; `.length` counts UTF-16 code units.
+  if (new TextEncoder().encode(content).length > 512 * 1024) return 'Prompt content is too large.';
   return null;
 }
 
@@ -134,9 +135,4 @@ export async function renamePrompt(promptId: string, name: string): Promise<Save
   const parsed = parsePrompt(record);
   if (!parsed) throw new ApiError('malformed', MESSAGES.malformed);
   return parsed;
-}
-
-export function apiErrorKind(error: unknown): ApiErrorKind | null {
-  if (!(error instanceof ApiError)) return null;
-  return isApiErrorKind(error.kind) ? error.kind : null;
 }

@@ -1,0 +1,64 @@
+[
+  {
+    "type": "dependency",
+    "from": "src/lib/ocr/api.ts",
+    "to": "src/lib/connectors/request-core.ts",
+    "unresolvedTo": "../connectors/request-core.ts",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-surface-to-surface"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/ocr/store.svelte.ts",
+    "to": "src/lib/connectors/api.ts",
+    "unresolvedTo": "#lib/connectors/api.ts",
+    "dependencyTypes": [
+      "aliased",
+      "aliased-tsconfig",
+      "aliased-tsconfig-paths",
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-surface-to-surface"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/ocr/store.svelte.ts",
+    "to": "src/lib/connectors/providers.ts",
+    "unresolvedTo": "#lib/connectors/providers.ts",
+    "dependencyTypes": [
+      "aliased",
+      "aliased-tsconfig",
+      "aliased-tsconfig-paths",
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-surface-to-surface"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/prompts/api.ts",
+    "to": "src/lib/connectors/request-core.ts",
+    "unresolvedTo": "../connectors/request-core.ts",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-surface-to-surface"
+    }
+  }
+]
