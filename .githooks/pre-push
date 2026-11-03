@@ -1,0 +1,4 @@
+#!/bin/sh
+# Runs CI's lint gate before a push leaves the machine. `pnpm install` points git here
+# (core.hooksPath). Bypass once with `git push --no-verify`.
+exec make lint

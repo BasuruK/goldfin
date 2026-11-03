@@ -1,0 +1,12 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "testRunner": "command",
+  "commandRunner": { "command": "node --test \"tests/**/*.test.ts\"" },
+  "mutate": ["src/lib/**/*.ts", "!src/lib/**/*.svelte.ts"],
+  "coverageAnalysis": "off",
+  "reporters": ["clear-text", "progress", "html"],
+  "ignorePatterns": [
+    "build", "test-results", "reports", "Goldfin_Components", "prototypes", "ref",
+    "docs", "internal", "cmd", "db", ".svelte-kit", ".serena", ".impeccable", ".cursor"
+  ]
+}

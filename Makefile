@@ -11,13 +11,16 @@
 
 .DEFAULT_GOAL := help
 
-.PHONY: help check lint up run watch down migrate logs
+.PHONY: help check lint lint-go lint-types lint-ts up run watch down migrate logs
+
+# `lint` runs its three groups in parallel; each group's lines still run in order.
+MAKEFLAGS += --jobs=3 --output-sync=target
 
 help:
 	@echo "Goldfin local dev"
 	@echo ""
 	@echo "  make check    vet, lint, vulnerabilities, workflows, Go/unit tests, svelte-check, knip"
-	@echo "  make lint     build, vet, golangci-lint, svelte-check, knip"
+	@echo "  make lint     build, vet, golangci-lint, svelte-check, eslint, dependency-cruiser, knip (pre-push hook)"
 	@echo "  make up       Start postgres, migrate, api; wait until running/healthy"
 	@echo "  make run      up, then Vite on the host"
 	@echo "  make watch    Rebuild api on Go changes"
@@ -25,12 +28,19 @@ help:
 	@echo "  make migrate  Apply migrations"
 	@echo "  make logs     Follow api logs"
 
-lint:
+lint: lint-go lint-types lint-ts
+
+lint-go:
 	go build ./...
 	go vet ./...
 	golangci-lint run
+
+lint-types:
 	pnpm check
 	pnpm --dir Goldfin_Components check
+
+lint-ts:
+	pnpm lint:ts
 	pnpm lint:boundaries
 	pnpm knip
 

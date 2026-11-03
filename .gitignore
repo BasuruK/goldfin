@@ -34,3 +34,7 @@ prototypes/UI improvement discussion.zip
 # Cursor local runtime state; the shared settings file stays committed.
 .cursor/*
 !.cursor/settings.json
+
+# Stryker sandbox and mutation reports
+.stryker-tmp/
+reports/

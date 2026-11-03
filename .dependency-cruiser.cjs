@@ -18,6 +18,28 @@ module.exports = {
       },
     },
     {
+      name: 'no-surface-to-surface',
+      severity: 'error',
+      comment:
+        'A surface (a folder under src/lib/) imports only itself and shared modules (files directly in src/lib/). A route composes surfaces.',
+      from: { path: '^src/lib/([^/]+)/' },
+      to: { path: '^src/lib/[^/]+/', pathNot: '^src/lib/$1/' },
+    },
+    {
+      name: 'shared-imports-no-surface',
+      severity: 'error',
+      comment: 'Shared modules (files directly in src/lib/) sit below every surface and import none.',
+      from: { path: '^src/lib/[^/]+$' },
+      to: { path: '^src/lib/[^/]+/' },
+    },
+    {
+      name: 'lib-imports-no-route',
+      severity: 'error',
+      comment: 'Routes sit above src/lib/; nothing in src/lib/ imports a route.',
+      from: { path: '^src/lib/' },
+      to: { path: '^src/routes/' },
+    },
+    {
       name: 'no-circular',
       severity: 'error',
       comment:
@@ -29,6 +51,8 @@ module.exports = {
     },
   ],
   options: {
+    // Count `import type` too: a type-only import couples two surfaces as much as a value import.
+    tsPreCompilationDeps: true,
     tsConfig: {
       fileName: 'tsconfig.json',
     },
