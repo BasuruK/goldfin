@@ -162,7 +162,9 @@ func runAPI(ctx context.Context, addr string) error {
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		_ = srv.Close()
-		<-errCh
+		if serveErr := <-errCh; !errors.Is(serveErr, http.ErrServerClosed) {
+			return errors.Join(err, serveErr)
+		}
 		return err
 	}
 	if err := <-errCh; !errors.Is(err, http.ErrServerClosed) {

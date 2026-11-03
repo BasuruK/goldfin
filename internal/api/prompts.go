@@ -331,15 +331,16 @@ func validatePromptFields(name, content string) error {
 	return validatePromptContent(content)
 }
 
+// Postgres text cannot hold NUL, so reject it here as a 400 rather than fail the insert as a 503.
 func validatePromptName(name string) error {
-	if name == "" || utf8.RuneCountInString(name) > promptMaxNameRunes {
+	if name == "" || utf8.RuneCountInString(name) > promptMaxNameRunes || strings.ContainsRune(name, 0) {
 		return errInvalidPrompt
 	}
 	return nil
 }
 
 func validatePromptContent(content string) error {
-	if len(content) > promptMaxContentBytes {
+	if len(content) > promptMaxContentBytes || strings.ContainsRune(content, 0) {
 		return errInvalidPrompt
 	}
 	return nil

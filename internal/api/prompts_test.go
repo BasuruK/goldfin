@@ -106,16 +106,21 @@ func TestAPIRejectsInvalidPrompt(t *testing.T) {
 	cases := []struct {
 		name               string
 		method, path, body string
+		status             int
+		message            string
 	}{
-		{"empty_name", http.MethodPost, "/api/v1/prompts", `{"name":"  ","content":"x"}`},
-		{"missing_content", http.MethodPost, "/api/v1/prompts", `{"name":"A"}`},
-		{"unknown_prompt", http.MethodPost, "/api/v1/prompts/missing/versions", `{"content":"x"}`},
+		{"empty_name", http.MethodPost, "/api/v1/prompts", `{"name":"  ","content":"x"}`, http.StatusBadRequest, "Invalid Prompt."},
+		{"nul_in_name", http.MethodPost, "/api/v1/prompts", `{"name":"A\u0000B","content":"x"}`, http.StatusBadRequest, "Invalid Prompt."},
+		{"nul_in_content", http.MethodPost, "/api/v1/prompts", `{"name":"A","content":"x\u0000y"}`, http.StatusBadRequest, "Invalid Prompt."},
+		{"missing_content", http.MethodPost, "/api/v1/prompts", `{"name":"A"}`, http.StatusBadRequest, "Invalid Prompt."},
+		{"unknown_prompt", http.MethodPost, "/api/v1/prompts/missing/versions", `{"content":"x"}`, http.StatusNotFound, "Prompt not found."},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			rec := request(t, handler, tc.method, tc.path, tc.body)
-			if rec.Code != http.StatusBadRequest && rec.Code != http.StatusNotFound {
-				t.Fatalf("status: %d %s", rec.Code, rec.Body.String())
+			var got map[string]string
+			if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil || rec.Code != tc.status || got["message"] != tc.message {
+				t.Fatalf("got %d %s, want %d %q", rec.Code, rec.Body.String(), tc.status, tc.message)
 			}
 			if strings.Contains(rec.Body.String(), "v1 text") {
 				t.Fatal("leaked content in error")
