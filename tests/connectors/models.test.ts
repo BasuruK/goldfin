@@ -21,6 +21,7 @@ test('changing connection details blocks model use but retains selections', () =
     baseUrl: 'https://example.com/v1',
     apiKey: 'test',
     catalogState: 'ready',
+    catalogMessage: 'Found 1 model.',
     models: [{ id: 'model-a', enabled: true, source: 'discovered', verified: true }]
   });
   assert.deepEqual(availableModelIds(record), ['model-a']);
@@ -44,18 +45,41 @@ test('changing connection details blocks model use but retains selections', () =
     assert.equal(changed.catalogState, 'idle');
     assert.deepEqual(availableModelIds(changed), []);
     assert.equal(changed.models[0]?.enabled, true);
+    assert.equal(changed.models[0].verified, false);
+    assert.equal(changed.catalogMessage, '');
   }
   assert.deepEqual(availableModelIds(applyConnectorPatch(record, { name: 'Renamed' })), ['model-a']);
+});
+
+test('repeating the current connection details keeps the catalog and its selections', () => {
+  const record = makeRecord({
+    providerType: 'openai',
+    baseUrl: 'https://example.com/v1',
+    catalogState: 'ready',
+    models: [{ id: 'model-a', enabled: true, source: 'discovered', verified: true }]
+  });
+  const same = { providerType: record.providerType, baseUrl: record.baseUrl };
+  assert.equal(applyConnectorPatch(record, same).catalogState, 'ready');
+  const keyChanged = applyConnectorPatch(record, { ...same, apiKey: 'changed' });
+  assert.equal(keyChanged.catalogState, 'idle');
+  assert.equal(keyChanged.models[0]?.enabled, true);
 });
 
 test('manual models are selectable when enabled without verification', () => {
   const manual = addManualModel(makeRecord({ catalogState: 'ready' }), ' deployment-a ');
   assert.deepEqual(manual.models, [{ id: 'deployment-a', enabled: false, source: 'manual' }]);
+  assert.deepEqual(availableModelIds(manual), []);
   const enabled = {
     ...manual,
     models: [{ id: 'deployment-a', enabled: true, source: 'manual' as const }]
   };
   assert.deepEqual(availableModelIds(enabled), ['deployment-a']);
+});
+
+test('a blank model ID changes nothing and a new ID is appended', () => {
+  const record = makeRecord({ models: [{ id: 'deployment-a', enabled: true, source: 'manual' }] });
+  assert.equal(addManualModel(record, '   '), record);
+  assert.deepEqual(addManualModel(record, 'deployment-b').models.map(model => model.id), ['deployment-a', 'deployment-b']);
 });
 
 test('discovered models still require verification', () => {

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { afterEach, describe, it, mock } from 'node:test';
-import { OcrError, OCR_PATH, submitOcr } from '../../src/lib/ocr/api.ts';
+import { OcrError, submitOcr } from '../../src/lib/ocr/api.ts';
 
 function jsonResponse(status: number, body: unknown) {
   return {
@@ -17,7 +17,7 @@ afterEach(() => mock.restoreAll());
 describe('submitOcr', () => {
   it('posts multipart fields to the OCR route', async () => {
     mock.method(globalThis, 'fetch', async (url: string, init?: RequestInit) => {
-      assert.equal(url, OCR_PATH);
+      assert.equal(url, '/api/v1/probes/ocr');
       assert.equal(init?.method, 'POST');
       assert.ok(init.body instanceof FormData);
       const form = init.body;
