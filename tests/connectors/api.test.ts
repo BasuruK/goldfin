@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { afterEach, describe, it, mock } from 'node:test';
 import { ApiError } from '../../src/lib/request-core.ts';
 import {
-  CONNECTORS_PATH,
   createConnector,
   listConnectors,
   validateDraft
@@ -30,6 +29,13 @@ function firstRequest(fetchMock: ReturnType<typeof mockFetch>): [string, Request
   return call.arguments as [string, RequestInit];
 }
 
+/** The JSON the first request sent, parsed as the API would read it. */
+function sentBody(fetchMock: ReturnType<typeof mockFetch>): unknown {
+  const [, init] = firstRequest(fetchMock);
+  assert.ok(typeof init.body === 'string', 'request body is not a JSON string');
+  return JSON.parse(init.body);
+}
+
 async function rejectsWith(promise: Promise<unknown>, kind: ApiError['kind']) {
   await assert.rejects(promise, error => {
     assert.ok(error instanceof ApiError);
@@ -46,6 +52,8 @@ const draft = {
   credentialLabel: ''
 };
 
+const sentFields = { name: 'Gateway', providerType: 'web_request', baseUrl: 'https://example.com/extract' };
+
 const saved = { id: 'c1', name: 'Gateway', providerType: 'web_request', baseUrl: 'https://example.com/extract' };
 
 afterEach(() => mock.restoreAll());
@@ -55,31 +63,22 @@ describe('createConnector', () => {
     const fetchMock = mockFetch(async () => jsonResponse(201, saved));
     assert.deepEqual(await createConnector({ ...draft, name: ' Gateway ' }), saved);
     const [url, init] = firstRequest(fetchMock);
-    assert.equal(url, CONNECTORS_PATH);
+    assert.equal(url, '/api/v1/connectors');
     assert.equal(init.method, 'POST');
-    assert.deepEqual(JSON.parse(String(init.body)), {
-      name: 'Gateway',
-      providerType: 'web_request',
-      baseUrl: 'https://example.com/extract'
-    });
+    assert.deepEqual(sentBody(fetchMock), sentFields);
     assert.ok(init.signal instanceof AbortSignal);
   });
 
   it('omits apiVersion for web_request even when a draft still carries one', async () => {
     const fetchMock = mockFetch(async () => jsonResponse(201, saved));
     await createConnector({ ...draft, apiVersion: '2024-11-30' });
-    const [, init] = firstRequest(fetchMock);
-    const body = JSON.parse(String(init.body));
-    assert.equal(body.apiVersion, undefined);
+    assert.deepEqual(sentBody(fetchMock), sentFields);
   });
 
   it('sends Credential bytes untouched with their trimmed label', async () => {
     const fetchMock = mockFetch(async () => jsonResponse(201, { ...saved, credentialLabel: 'Prod key' }));
     await createConnector({ ...draft, credential: ' tok en ', credentialLabel: ' Prod key ' });
-    const [, init] = firstRequest(fetchMock);
-    const body = JSON.parse(String(init.body));
-    assert.equal(body.credential, ' tok en ');
-    assert.equal(body.credentialLabel, 'Prod key');
+    assert.deepEqual(sentBody(fetchMock), { ...sentFields, credential: ' tok en ', credentialLabel: 'Prod key' });
   });
 
   it('maps a 400 to the safe server message', async () => {

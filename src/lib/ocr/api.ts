@@ -5,7 +5,7 @@
 
 import { fetchApiRequest } from '../request-core.ts';
 
-export const OCR_PATH = '/api/v1/probes/ocr';
+const OCR_PATH = '/api/v1/probes/ocr';
 
 /** Route processing budget (5m) plus server write headroom. */
 const OCR_REQUEST_TIMEOUT_MS = 5 * 60 * 1000 + 35 * 1000;

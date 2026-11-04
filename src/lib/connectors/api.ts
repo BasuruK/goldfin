@@ -8,7 +8,7 @@ import { isJsonRecord, malformed, requestJson } from '../request-core.ts';
 // Other surfaces reach Connectors only through this module (`no-surface-to-surface`).
 export { AZURE_OCR_PROVIDER_TYPE } from './providers.ts';
 
-export const CONNECTORS_PATH = '/api/v1/connectors';
+const CONNECTORS_PATH = '/api/v1/connectors';
 const REJECTED = 'The Connector was rejected.';
 
 interface SavedConnectorModel {

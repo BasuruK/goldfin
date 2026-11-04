@@ -1,6 +1,5 @@
 import type { Locator, Page } from '@playwright/test';
-import { CONNECTORS_PATH, type SavedConnector } from '../src/lib/connectors/api.ts';
-import { OCR_PATH } from '../src/lib/ocr/api.ts';
+import type { SavedConnector } from '../src/lib/connectors/api.ts';
 
 async function mockRouteDelay(ms: number | undefined): Promise<void> {
   if (ms) await new Promise(resolve => setTimeout(resolve, ms));
@@ -9,7 +8,7 @@ async function mockRouteDelay(ms: number | undefined): Promise<void> {
 /** The element's bounding box; throws when it has none, so a test fails at the lookup. */
 export async function boxOf(locator: Locator) {
   const box = await locator.boundingBox();
-  if (!box) throw new Error(`${locator} has no bounding box`);
+  if (!box) throw new Error(`${locator.toString()} has no bounding box`);
   return box;
 }
 
@@ -25,7 +24,7 @@ export async function mockConnectorApi(page: Page, options: MockConnectorApiOpti
     connectors: [...(options.saved ?? [])],
     posts: [] as Record<string, unknown>[]
   };
-  await page.route(`**${CONNECTORS_PATH}`, async route => {
+  await page.route('**/api/v1/connectors', async route => {
     const request = route.request();
     if (request.method() === 'GET') return route.fulfill({ json: { connectors: state.connectors } });
     if (request.method() !== 'POST') return route.fulfill({ status: 405, json: { message: 'Method not allowed.' } });
@@ -60,7 +59,7 @@ interface MockOcrApiOptions {
 }
 
 export async function mockOcrApi(page: Page, options: MockOcrApiOptions = {}) {
-  await page.route(`**${OCR_PATH}`, async route => {
+  await page.route('**/api/v1/probes/ocr', async route => {
     await mockRouteDelay(options.delayMs);
     if (options.reject) {
       return route.fulfill({ status: options.reject.status, json: { message: options.reject.message } });
