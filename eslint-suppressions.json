@@ -3,10 +3,5 @@
     "svelte/prefer-svelte-reactivity": {
       "count": 1
     }
-  },
-  "src/lib/request-core.ts": {
-    "complexity": {
-      "count": 1
-    }
   }
 }

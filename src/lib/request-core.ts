@@ -22,10 +22,7 @@ async function readJsonRecord(response: Response): Promise<Record<string, unknow
   } catch {
     body = null;
   }
-  if (body && typeof body === 'object') {
-    return body as Record<string, unknown>;
-  }
-  return null;
+  return isJsonRecord(body) ? body : null;
 }
 
 export interface FetchApiRequestOptions {
@@ -41,6 +38,29 @@ export interface FetchApiRequestOptions {
   statusMessage?: (status: number) => string;
 }
 
+/** A fetch that threw: the caller's cancel (when the caller maps one), a timeout, or no connection. */
+function transportError(error: unknown, options: FetchApiRequestOptions): Error {
+  const name = error instanceof Error ? error.name : '';
+  if (name === 'AbortError' && options.canceledKind && options.canceledMessage) {
+    return options.createError(options.canceledKind, options.canceledMessage);
+  }
+  const kind = name === 'TimeoutError' ? 'timeout' : 'unreachable';
+  return options.createError(kind, options.messages[kind]);
+}
+
+function statusErrorKind(status: number, httpTimeoutStatuses = false): 'timeout' | 'unavailable' | 'rejected' {
+  if (httpTimeoutStatuses && (status === 408 || status === 504)) return 'timeout';
+  return status >= 500 ? 'unavailable' : 'rejected';
+}
+
+/** An error status. Only a rejection may carry the server's own message. */
+function statusError(status: number, record: Record<string, unknown> | null, options: FetchApiRequestOptions): Error {
+  const kind = statusErrorKind(status, options.httpTimeoutStatuses);
+  const fallback = options.statusMessage?.(status) ?? options.messages[kind];
+  const message = kind === 'rejected' && typeof record?.message === 'string' ? record.message : fallback;
+  return options.createError(kind, message);
+}
+
 export async function fetchApiRequest(
   options: FetchApiRequestOptions
 ): Promise<{ response: Response; record: Record<string, unknown> | null }> {
@@ -51,40 +71,10 @@ export async function fetchApiRequest(
       signal: requestSignal(options.timeoutMs, options.callerSignal)
     });
   } catch (error) {
-    if (
-      options.canceledKind &&
-      options.canceledMessage &&
-      error instanceof Error &&
-      error.name === 'AbortError'
-    ) {
-      throw options.createError(options.canceledKind, options.canceledMessage);
-    }
-    const kind = error instanceof Error && error.name === 'TimeoutError' ? 'timeout' : 'unreachable';
-    throw options.createError(kind, options.messages[kind]);
+    throw transportError(error, options);
   }
   const record = await readJsonRecord(response);
-  if (!response.ok) {
-    if (
-      options.httpTimeoutStatuses &&
-      (response.status === 408 || response.status === 504)
-    ) {
-      const message = options.statusMessage
-        ? options.statusMessage(response.status)
-        : options.messages.timeout;
-      throw options.createError('timeout', message);
-    }
-    if (response.status >= 500) {
-      const message = options.statusMessage
-        ? options.statusMessage(response.status)
-        : options.messages.unavailable;
-      throw options.createError('unavailable', message);
-    }
-    const fallback = options.statusMessage
-      ? options.statusMessage(response.status)
-      : options.messages.rejected;
-    const message = typeof record?.message === 'string' ? record.message : fallback;
-    throw options.createError('rejected', message);
-  }
+  if (!response.ok) throw statusError(response.status, record, options);
   return { response, record };
 }
 
