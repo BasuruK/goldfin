@@ -75,7 +75,7 @@ export async function submitOcr(
     httpTimeoutStatuses: true,
     statusMessage: mapStatus
   });
-  if (typeof record?.content !== 'string' || typeof record?.pages !== 'number') {
+  if (typeof record?.content !== 'string' || typeof record.pages !== 'number') {
     throw new OcrError('malformed', MESSAGES.malformed);
   }
   return { content: record.content, pages: record.pages };

@@ -19,8 +19,8 @@ describe('submitOcr', () => {
     mock.method(globalThis, 'fetch', async (url: string, init?: RequestInit) => {
       assert.equal(url, OCR_PATH);
       assert.equal(init?.method, 'POST');
-      assert.ok(init?.body instanceof FormData);
-      const form = init.body as FormData;
+      assert.ok(init.body instanceof FormData);
+      const form = init.body;
       assert.equal(form.get('connectorId'), 'c1');
       assert.ok(form.get('document') instanceof File);
       return jsonResponse(200, { content: 'Hello', pages: 2 });
