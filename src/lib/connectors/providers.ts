@@ -14,7 +14,7 @@ export interface ProviderOption {
   modelProbePath?: string;
 }
 
-const PROVIDERS: readonly ProviderOption[] = [
+const PROVIDERS: readonly [ProviderOption, ...ProviderOption[]] = [
   {
     value: 'openai',
     label: 'OpenAI',

@@ -24,6 +24,12 @@ function mockFetch(impl: (url: string, init?: RequestInit) => Promise<unknown>) 
   return globalThis.fetch as typeof fetch & { mock: { calls: { arguments: unknown[] }[] } };
 }
 
+function firstRequest(fetchMock: ReturnType<typeof mockFetch>): [string, RequestInit] {
+  const call = fetchMock.mock.calls[0];
+  assert.ok(call, 'fetch was not called');
+  return call.arguments as [string, RequestInit];
+}
+
 async function rejectsWith(promise: Promise<unknown>, kind: ApiError['kind']) {
   await assert.rejects(promise, error => {
     assert.ok(error instanceof ApiError);
@@ -48,30 +54,30 @@ describe('createConnector', () => {
   it('posts only the API fields, omits an absent Credential, and returns the saved Connector', async () => {
     const fetchMock = mockFetch(async () => jsonResponse(201, saved));
     assert.deepEqual(await createConnector({ ...draft, name: ' Gateway ' }), saved);
-    const [url, init] = fetchMock.mock.calls[0].arguments as [string, RequestInit];
+    const [url, init] = firstRequest(fetchMock);
     assert.equal(url, CONNECTORS_PATH);
-    assert.equal(init?.method, 'POST');
-    assert.deepEqual(JSON.parse(String(init?.body)), {
+    assert.equal(init.method, 'POST');
+    assert.deepEqual(JSON.parse(String(init.body)), {
       name: 'Gateway',
       providerType: 'web_request',
       baseUrl: 'https://example.com/extract'
     });
-    assert.ok(init?.signal instanceof AbortSignal);
+    assert.ok(init.signal instanceof AbortSignal);
   });
 
   it('omits apiVersion for web_request even when a draft still carries one', async () => {
     const fetchMock = mockFetch(async () => jsonResponse(201, saved));
     await createConnector({ ...draft, apiVersion: '2024-11-30' });
-    const init = fetchMock.mock.calls[0].arguments[1] as RequestInit | undefined;
-    const body = JSON.parse(String(init?.body));
+    const [, init] = firstRequest(fetchMock);
+    const body = JSON.parse(String(init.body));
     assert.equal(body.apiVersion, undefined);
   });
 
   it('sends Credential bytes untouched with their trimmed label', async () => {
     const fetchMock = mockFetch(async () => jsonResponse(201, { ...saved, credentialLabel: 'Prod key' }));
     await createConnector({ ...draft, credential: ' tok en ', credentialLabel: ' Prod key ' });
-    const init = fetchMock.mock.calls[0].arguments[1] as RequestInit | undefined;
-    const body = JSON.parse(String(init?.body));
+    const [, init] = firstRequest(fetchMock);
+    const body = JSON.parse(String(init.body));
     assert.equal(body.credential, ' tok en ');
     assert.equal(body.credentialLabel, 'Prod key');
   });
