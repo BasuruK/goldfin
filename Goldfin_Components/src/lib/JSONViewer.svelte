@@ -11,8 +11,8 @@
   });
   const lines = $derived(text.split('\n'));
   const counts = $derived(countChildItems(lines));
-  const ranges = $derived(lines.map((_, index) => nodeRange(lines, index)));
-  const hidden = $derived(hiddenLines(ranges, folded));
+  const rows = $derived(lines.map((line, index) => ({ ...nodeRange(lines, index), line })));
+  const hidden = $derived(hiddenLines(rows, folded));
   const toggle = (index: number) => {
     folded = toggleFold(folded, index);
   };
@@ -20,12 +20,12 @@
 
 <div class="jsonbox gf-json" role="region" aria-label={label}>
   <div class="gf-json-body">
-    {#each lines as line, index (index)}
+    {#each rows as { line, opens }, index (index)}
       {#if !hidden[index]}
         <JSONLine
           {line}
           {index}
-          opens={ranges[index].opens}
+          {opens}
           folded={folded.has(index)}
           count={counts[index]}
           ontoggle={toggle}
