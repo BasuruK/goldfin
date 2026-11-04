@@ -77,7 +77,38 @@ describe('submitOcr', () => {
     await assert.rejects(submitOcr('c1', new File(['x'], 'a.pdf')), error => {
       assert.ok(error instanceof OcrError);
       assert.equal(error.kind, 'unreachable');
+      assert.equal(error.message, 'Could not reach the API. Check that Goldfin is running, then try again.');
       return true;
     });
+  });
+
+  it('gives the request the 5-minute Azure budget plus 35 s of server write headroom', async () => {
+    const timeout = mock.method(AbortSignal, 'timeout');
+    mock.method(globalThis, 'fetch', async () => jsonResponse(200, { content: 'Hello', pages: 1 }));
+    await submitOcr('c1', new File(['x'], 'a.pdf'));
+    assert.deepEqual(timeout.mock.calls.map(call => call.arguments), [[335_000]]);
+  });
+
+  it('maps a body without string content and numeric pages to malformed', async () => {
+    for (const body of [null, { pages: 1 }, { content: 'Hello', pages: '2' }]) {
+      mock.method(globalThis, 'fetch', async () => jsonResponse(200, body));
+      await assert.rejects(
+        submitOcr('c1', new File(['x'], 'a.pdf')),
+        { name: 'OcrError', kind: 'malformed', message: 'Goldfin returned an unexpected response.' },
+        JSON.stringify(body)
+      );
+    }
+  });
+
+  it('maps a status without a server message to its OCR message', async () => {
+    const cases = [
+      [500, 'unavailable', 'Goldfin is unavailable right now. Try again.'],
+      [413, 'rejected', 'Request is too large.'],
+      [400, 'rejected', 'Invalid OCR request.']
+    ] as const;
+    for (const [status, kind, message] of cases) {
+      mock.method(globalThis, 'fetch', async () => jsonResponse(status, {}));
+      await assert.rejects(submitOcr('c1', new File(['x'], 'a.pdf')), { name: 'OcrError', kind, message }, String(status));
+    }
   });
 });

@@ -1,7 +1,6 @@
 import { AZURE_OCR_PROVIDER_TYPE, listConnectors, type SavedConnector } from '#lib/connectors/api.ts';
 import { ApiError } from '#lib/request-core.ts';
-import { OcrError, submitOcr } from './api.ts';
-import { validateDocument } from './documents.ts';
+import { OcrError, pagesHint, pickConnectorId, planAnalysis, submitOcr } from './api.ts';
 
 interface ExtractionView {
   content: string;
@@ -68,15 +67,7 @@ export async function loadOcrConnectors(): Promise<void> {
 
     playgroundStore.connectors = all.filter(c => c.providerType === AZURE_OCR_PROVIDER_TYPE);
     playgroundStore.listState = 'loaded';
-
-    if (!playgroundStore.connectorId && playgroundStore.connectors[0]) {
-      playgroundStore.connectorId = playgroundStore.connectors[0].id;
-    } else if (
-      playgroundStore.connectorId
-      && !playgroundStore.connectors.some(c => c.id === playgroundStore.connectorId)
-    ) {
-      playgroundStore.connectorId = playgroundStore.connectors[0]?.id ?? '';
-    }
+    playgroundStore.connectorId = pickConnectorId(playgroundStore.connectorId, playgroundStore.connectors);
   } catch (error) {
     if (operation !== listOperation) return;
     playgroundStore.listState = 'failed';
@@ -117,19 +108,12 @@ export async function analyzeDocument(): Promise<void> {
   if (playgroundStore.busy) return;
   playgroundStore.error = '';
   playgroundStore.stoppedNotice = '';
-  const docError = playgroundStore.document
-    ? validateDocument(playgroundStore.document)
-    : 'Choose a PDF, JPEG, PNG, or DOCX file.';
-  if (docError) {
-    playgroundStore.documentError = docError;
+  const plan = planAnalysis(playgroundStore.document, playgroundStore.connectorId);
+  if (plan.kind === 'invalid') {
+    if (plan.field === 'document') playgroundStore.documentError = plan.message;
+    else playgroundStore.error = plan.message;
     return;
   }
-  if (!playgroundStore.connectorId) {
-    playgroundStore.error = 'Choose an Azure OCR Connector.';
-    return;
-  }
-  const sourceDocument = playgroundStore.document;
-  if (!sourceDocument) return;
 
   const operation = ++activeOperation;
   abortController?.abort();
@@ -143,7 +127,7 @@ export async function analyzeDocument(): Promise<void> {
   elapsedTimer = setInterval(tickElapsed, 100);
 
   try {
-    const result = await submitOcr(playgroundStore.connectorId, sourceDocument, abortController.signal);
+    const result = await submitOcr(plan.connectorId, plan.document, abortController.signal);
     if (isStale(operation)) return;
     const elapsedSeconds = ((Date.now() - startedAt) / 1000).toFixed(1);
     playgroundStore.extraction = {
@@ -151,10 +135,10 @@ export async function analyzeDocument(): Promise<void> {
       pages: result.pages,
       characters: result.content.length,
       elapsedSeconds,
-      sourceName: sourceDocument.name
+      sourceName: plan.document.name
     };
     playgroundStore.statusLabel = 'Succeeded';
-    playgroundStore.statusHint = `${result.pages} ${result.pages === 1 ? 'page' : 'pages'}`;
+    playgroundStore.statusHint = pagesHint(result.pages);
     resetBusyUi();
   } catch (error) {
     if (isStale(operation)) return;
