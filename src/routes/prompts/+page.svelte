@@ -34,7 +34,7 @@
 </svelte:head>
 
 <div class="prompts-page">
-  <header class="prompts-head od-field">
+  <header class="od-field">
     <h1 class="page-title">Prompts</h1>
     <p class="page-lead">Save system instructions and select them on LLM nodes.</p>
   </header>
@@ -77,16 +77,18 @@
       </div>
 
       <Section title="Prompt content" id="prompt-content">
-        <label class="prompt-editor-label" for="prompt-content-field">System instructions</label>
-        <textarea
-          id="prompt-content-field"
-          class="prompt-editor"
-          spellcheck="false"
-          placeholder="Write system instructions in Markdown…"
-          bind:value={promptStore.content}
-          disabled={promptStore.saving}
-          oninput={() => markPromptDirty()}
-        ></textarea>
+        <div class="field">
+          <label class="label" for="prompt-content-field">System instructions</label>
+          <textarea
+            id="prompt-content-field"
+            class="input prompt-editor"
+            spellcheck="false"
+            placeholder="Write system instructions in Markdown…"
+            bind:value={promptStore.content}
+            disabled={promptStore.saving}
+            oninput={() => markPromptDirty()}
+          ></textarea>
+        </div>
       </Section>
 
       {#if promptStore.saveError}
@@ -101,25 +103,19 @@
   .prompts-page {
     display: flex;
     flex-direction: column;
-    gap: var(--space-6);
+    gap: 24px;
     max-inline-size: 960px;
-  }
-
-  .prompts-head {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
   }
 
   .prompt-form {
     display: flex;
     flex-direction: column;
-    gap: var(--space-4);
+    gap: 16px;
   }
 
   .prompt-toolbar {
     display: grid;
-    gap: var(--space-4);
+    gap: 16px;
   }
 
   @media (min-width: 768px) {
@@ -129,27 +125,12 @@
     }
   }
 
-  .prompt-editor-label {
-    display: block;
-    margin-block-end: var(--space-2);
-    font-size: var(--text-sm);
-    color: var(--tx-2);
-  }
-
+  /* `.input` gives the border, fill and focus ring; this makes it a tall editor. */
   .prompt-editor {
-    inline-size: 100%;
+    block-size: auto;
     min-block-size: 20rem;
-    padding: var(--space-4);
-    font: 12px/1.7 var(--mono);
-    color: var(--tx-2);
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: var(--r);
+    padding: 16px;
+    font: 12px/1.7 var(--font-mono);
     resize: vertical;
-  }
-
-  .prompt-editor:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
   }
 </style>
