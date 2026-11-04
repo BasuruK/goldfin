@@ -1,4 +1,4 @@
-import { applyConnectorPatch, addManualModel, canToggleModel, isCatalogEditable } from './models.ts';
+import { applyConnectorPatch, addManualModel, canToggleModel } from './models.ts';
 import {
   AZURE_OCR_PROVIDER_TYPE,
   DEFAULT_AZURE_OCR_API_VERSION,
@@ -130,7 +130,7 @@ export async function saveDraft(): Promise<void> {
       connectorStore.saveErrorField = 'credential';
       return;
     }
-    const enabledModels = (draft.models ?? []).filter(model => model.enabled);
+    const enabledModels = draft.models.filter(model => model.enabled);
     if (enabledModels.length === 0) {
       connectorStore.saveError = 'Enable at least one model ID before saving.';
       connectorStore.saveErrorField = 'models';
@@ -147,7 +147,7 @@ export async function saveDraft(): Promise<void> {
         : undefined,
     llmApiMode: isLlmProvider(draft.providerType) ? draft.llmApiMode : undefined,
     models: isLlmProvider(draft.providerType)
-      ? (draft.models ?? []).map(model => ({ id: model.id, enabled: model.enabled }))
+      ? draft.models.map(model => ({ id: model.id, enabled: model.enabled }))
       : undefined,
     credential: draft.apiKey,
     credentialLabel: draft.credentialLabel
@@ -181,11 +181,11 @@ export async function saveDraft(): Promise<void> {
 export function setDraftModelEnabled(modelId: string, enabled: boolean): void {
   const draft = connectorStore.draft;
   if (!draft) return;
-  const model = (draft.models ?? []).find(entry => entry.id === modelId);
+  const model = draft.models.find(entry => entry.id === modelId);
   if (!model || !canToggleModel(draft, model)) return;
   connectorStore.draft = {
     ...draft,
-    models: (draft.models ?? []).map(model => (model.id === modelId ? { ...model, enabled } : model))
+    models: draft.models.map(model => (model.id === modelId ? { ...model, enabled } : model))
   };
   clearModelsSaveError();
 }

@@ -9,7 +9,7 @@
     Select
   } from '$goldfin/lib/index.js';
   import ConnectorDialog from '#lib/connectors/ConnectorDialog.svelte';
-  import { closeDialog, connectorStore, openAddDialog } from '#lib/connectors/store.svelte.js';
+  import { connectorStore, openAddDialog } from '#lib/connectors/store.svelte.js';
   import { DOCUMENT_ACCEPT, MAX_DOCUMENT_BYTES, validateDocument } from '#lib/ocr/documents.js';
   import {
     analyzeDocument,

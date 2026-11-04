@@ -6,7 +6,7 @@
 
   let { record }: { record: ConnectorRecord } = $props();
   let manualId = $state('');
-  const models = $derived(record.models ?? []);
+  const models = $derived(record.models);
   const enabledCount = $derived(models.filter(model => model.enabled).length);
   const editable = $derived(isCatalogEditable(record));
   const modelSaveError = $derived(

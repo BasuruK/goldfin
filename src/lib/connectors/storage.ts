@@ -32,7 +32,7 @@ export interface ConnectorRecord {
 /** Clears the legacy store on every load; the Credentials in it must not stay at rest. */
 export function clearLegacyConnectors(): void {
   try {
-    globalThis.localStorage?.removeItem(STORAGE_KEY);
+    globalThis.localStorage.removeItem(STORAGE_KEY);
   } catch {
     // Storage is unavailable, so there is nothing to clear.
   }

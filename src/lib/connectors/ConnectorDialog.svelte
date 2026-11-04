@@ -93,7 +93,7 @@
         <div class="modal connector-form-panel">
         <DialogHeader
           parts={Primitive}
-          title={record.name?.trim() ? record.name : `Connect to ${provider.label}`}
+          title={record.name.trim() ? record.name : `Connect to ${provider.label}`}
           description="Nothing is stored until you Save."
           icon={provider.icon}
           close
