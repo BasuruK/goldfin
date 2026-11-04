@@ -5,6 +5,7 @@
     "checkJs": false,
     "strict": true,
     "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
     "paths": {
       "$goldfin": ["./Goldfin_Components/src"],
       "$goldfin/*": ["./Goldfin_Components/src/*"],

@@ -88,7 +88,7 @@
     </div>
 
     <div class="nav-groups">
-      {#each NAV as group (group.label ?? group.items[0].href)}
+      {#each NAV as group (group)}
         <div class="nav-group">
           {#if group.label}
             <button class="nav-link nav-disclosure" type="button" title={group.label}

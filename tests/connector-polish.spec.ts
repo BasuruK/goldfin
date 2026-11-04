@@ -25,7 +25,7 @@ test('Integrations opens and closes through intermediate sizes and keyboard acti
     const closing = await readFrames();
     return { opening, closing };
   });
-  const fullHeight = frames.opening[frames.opening.length - 1];
+  const fullHeight = frames.opening.at(-1) ?? 0;
   expect(fullHeight).toBeGreaterThan(0);
   expect(frames.opening.some(height => height > 0 && height < fullHeight)).toBe(true);
   expect(frames.closing.some(height => height > 0 && height < fullHeight)).toBe(true);

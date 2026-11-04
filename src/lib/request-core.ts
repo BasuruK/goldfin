@@ -33,7 +33,7 @@ export interface FetchApiRequestOptions {
   init: RequestInit;
   timeoutMs: number;
   callerSignal?: AbortSignal;
-  messages: Record<string, string>;
+  messages: Record<Exclude<RequestErrorKind, 'canceled'>, string>;
   createError: (kind: RequestErrorKind, message: string) => Error;
   canceledKind?: RequestErrorKind;
   canceledMessage?: string;

@@ -32,7 +32,7 @@ test('changing connection details blocks model use but retains selections', () =
     const changed = applyConnectorPatch(record, patch);
     assert.equal(changed.catalogState, 'idle');
     assert.deepEqual(availableModelIds(changed), []);
-    assert.equal(changed.models[0].enabled, false);
+    assert.equal(changed.models[0]?.enabled, false);
   }
   const patchesKeepEnabled: Partial<ConnectorRecord>[] = [
     { apiKey: 'changed' },
@@ -43,7 +43,7 @@ test('changing connection details blocks model use but retains selections', () =
     const changed = applyConnectorPatch(record, patch);
     assert.equal(changed.catalogState, 'idle');
     assert.deepEqual(availableModelIds(changed), []);
-    assert.equal(changed.models[0].enabled, true);
+    assert.equal(changed.models[0]?.enabled, true);
   }
   assert.deepEqual(availableModelIds(applyConnectorPatch(record, { name: 'Renamed' })), ['model-a']);
 });
@@ -61,7 +61,9 @@ test('manual models are selectable when enabled without verification', () => {
 test('discovered models still require verification', () => {
   const record = makeRecord({ catalogState: 'ready', models: [{ id: 'model-a', enabled: true, source: 'discovered' }] });
   assert.deepEqual(availableModelIds(record), []);
-  record.models[0].verified = true;
+  const [model] = record.models;
+  assert.ok(model);
+  model.verified = true;
   assert.deepEqual(availableModelIds(record), ['model-a']);
 });
 
@@ -74,7 +76,7 @@ test('re-entering an existing model ID restores catalog readiness without revivi
   const restored = addManualModel(record, 'deployment-a');
   assert.equal(restored.catalogState, 'ready');
   assert.equal(isCatalogEditable(restored), true);
-  assert.equal(restored.models[0].verified, false);
+  assert.equal(restored.models[0]?.verified, false);
   assert.equal(restored.models[0].enabled, true);
   assert.equal(addManualModel(restored, 'deployment-a'), restored);
 });
@@ -86,12 +88,16 @@ test('manual model toggles stay enabled when connection edits idle the catalog',
     models: [{ id: 'deployment-a', enabled: false, source: 'manual' }]
   });
   assert.equal(isCatalogEditable(record), false);
-  assert.equal(canToggleModel(record, record.models[0]), true);
+  const [manualModel] = record.models;
+  assert.ok(manualModel);
+  assert.equal(canToggleModel(record, manualModel), true);
   const discovered = makeRecord({
     catalogState: 'idle',
     models: [{ id: 'model-a', enabled: true, source: 'discovered', verified: true }]
   });
-  assert.equal(canToggleModel(discovered, discovered.models[0]), false);
+  const [discoveredModel] = discovered.models;
+  assert.ok(discoveredModel);
+  assert.equal(canToggleModel(discovered, discoveredModel), false);
 });
 
 test('manual IDs lose availability on connection changes until re-enabled', () => {

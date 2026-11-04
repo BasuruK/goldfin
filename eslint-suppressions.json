@@ -38,11 +38,6 @@
       "count": 1
     }
   },
-  "src/lib/ocr/documents.ts": {
-    "@typescript-eslint/no-unnecessary-condition": {
-      "count": 1
-    }
-  },
   "src/lib/ocr/store.svelte.ts": {
     "complexity": {
       "count": 2
@@ -60,9 +55,6 @@
   },
   "tests/connectors/api.test.ts": {
     "@typescript-eslint/no-base-to-string": {
-      "count": 3
-    },
-    "@typescript-eslint/no-unnecessary-condition": {
       "count": 3
     },
     "@typescript-eslint/no-unsafe-assignment": {

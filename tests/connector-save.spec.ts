@@ -53,7 +53,7 @@ test('a rejected Save retains an editable draft, adds no card, and keeps prior C
   await dialog.getByLabel('Base URL', { exact: true }).fill('https://fixed.example/extract');
   await expect(dialog.getByLabel('Base URL', { exact: true })).toHaveValue('https://fixed.example/extract');
   expect(api.posts).toHaveLength(1);
-  expect('credential' in api.posts[0]).toBe(false);
+  expect(api.posts[0]).not.toHaveProperty('credential');
   await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Gateway', exact: true })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Existing', exact: true })).toBeVisible();
@@ -129,7 +129,7 @@ test('LLM save posts every manual model id with its enabled state', async ({ pag
   await dialog.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(dialog).toBeHidden();
   expect(api.posts).toHaveLength(1);
-  expect(api.posts[0].models).toEqual([
+  expect(api.posts[0]?.models).toEqual([
     { id: 'alpha', enabled: true },
     { id: 'beta', enabled: true },
     { id: 'gamma', enabled: false }
