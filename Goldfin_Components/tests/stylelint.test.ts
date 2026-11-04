@@ -7,13 +7,16 @@ import hoverMedia from '../scripts/stylelint-hover-media.js';
 const projectRoot = fileURLToPath(new URL('..', import.meta.url));
 const configPath = fileURLToPath(new URL('../stylelint.config.js', import.meta.url));
 
-const lint = async (code: string) => {
-  const { results } = await stylelint.lint({
+const ruleIds = ({ results: [result] }: stylelint.LinterResult) => {
+  assert.ok(result, 'stylelint returned a result');
+  return result.warnings.map((warning) => warning.rule);
+};
+
+const lint = async (code: string) =>
+  ruleIds(await stylelint.lint({
     code,
     config: { plugins: [hoverMedia], rules: { 'goldfin/hover-in-hover-media': true } },
-  });
-  return results[0].warnings.map((warning) => warning.rule);
-};
+  }));
 
 test('a bare :hover rule is rejected', async () => {
   assert.deepEqual(await lint('.btn:hover { color: red; }'), ['goldfin/hover-in-hover-media']);
@@ -31,10 +34,8 @@ test('(hover: hover) alone is not enough: a touch laptop still reports it', asyn
   assert.deepEqual(await lint('@media (hover: hover) { .btn:hover { color: red; } }'), ['goldfin/hover-in-hover-media']);
 });
 
-const lintWithProjectConfig = async (code: string) => {
-  const { results } = await stylelint.lint({ code, configFile: configPath, configBasedir: projectRoot });
-  return results[0].warnings.map((warning) => warning.rule);
-};
+const lintWithProjectConfig = async (code: string) =>
+  ruleIds(await stylelint.lint({ code, configFile: configPath, configBasedir: projectRoot }));
 
 test('the project config bans physical sides, overflow: hidden and ease-in', async () => {
   const banned = [

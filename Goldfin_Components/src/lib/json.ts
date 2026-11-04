@@ -1,5 +1,4 @@
 const TOKEN = /("(?:[^"\\]|\\.)*")(\s*:)?|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|\b(true|false|null)\b|([{}[\],:])/g;
-const LITERAL_CLASS: Record<string, string> = { true: 'k-ok', false: 'k-ok', null: 'k-bad' };
 
 export function isNullLine(line: string): boolean {
   return /: null,?$/.test(line);
@@ -15,17 +14,10 @@ export interface NodeRange {
 
 export function nodeRange(lines: string[], index: number): NodeRange {
   const line = lines[index];
-  if (!OPENS_NODE.test(line)) return { opens: false, end: index };
+  if (line === undefined || !OPENS_NODE.test(line)) return { opens: false, end: index };
   const base = indentOf(line);
-  let end = lines.length - 1;
-  for (let next = index + 1; next < lines.length; next++) {
-    if (lines[next].trim() === '') continue;
-    if (indentOf(lines[next]) <= base) {
-      end = next;
-      break;
-    }
-  }
-  return { opens: true, end };
+  const close = lines.findIndex((next, at) => at > index && next.trim() !== '' && indentOf(next) <= base);
+  return { opens: true, end: close === -1 ? lines.length - 1 : close };
 }
 
 export function countChildItems(lines: string[]): (number | null)[] {
@@ -34,10 +26,10 @@ export function countChildItems(lines: string[]): (number | null)[] {
     const base = indentOf(line);
     let childIndent = 0;
     let count = 0;
-    for (let next = index + 1; next < lines.length; next++) {
-      if (lines[next].trim() === '') continue;
-      if (/^[}\]]/.test(lines[next].trim())) continue;
-      const indent = indentOf(lines[next]);
+    for (const next of lines.slice(index + 1)) {
+      const trimmed = next.trim();
+      if (trimmed === '' || /^[}\]]/.test(trimmed)) continue;
+      const indent = indentOf(next);
       if (indent <= base) break;
       if (childIndent === 0) childIndent = indent;
       if (indent === childIndent) count++;
@@ -81,7 +73,7 @@ export function tokenizeJsonLine(line: string): JsonToken[] {
     } else if (number !== undefined) {
       tokens.push({ text: number, cls: 'k-num' });
     } else if (literal !== undefined) {
-      tokens.push({ text: literal, cls: LITERAL_CLASS[literal] });
+      tokens.push({ text: literal, cls: literal === 'null' ? 'k-bad' : 'k-ok' });
     } else if (punctuation !== undefined) {
       tokens.push({ text: punctuation, cls: 'k-p' });
     }

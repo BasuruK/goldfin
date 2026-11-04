@@ -49,7 +49,7 @@
     {label:'Error Logging',description:'Capture and report runtime errors',checked:true,icon:'error'},
     {label:'CDN Caching',description:'Serve static assets from the edge network',checked:false,icon:'file'},
     {label:'Auto Backup',description:'Take daily snapshots of your database',checked:false,icon:'copy'}
-  ];
+  ] as const;
 </script>
 <Section title="Tabs" reference="Output · OCR text" id="tabs">
   <Tabs value="output" label="Result view" items={[{value:'output',label:'Output',content:'Sample JSON output: invoice INV-2024-001, amount 2499.00.'},{value:'ocr',label:'OCR text',content:'Sample OCR text: Invoice INV-2024-001 · Acme Corp · Amount 2,499.00.'}]}/>

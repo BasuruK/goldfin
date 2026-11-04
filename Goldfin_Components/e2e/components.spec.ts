@@ -265,8 +265,10 @@ test.describe('harness defaults', () => {
     const first = page.locator('#seg .seg-btn').first();
     await expect(first).toHaveClass(/active/);
     await expect(first).toHaveAttribute('data-state', 'on');
-    const [thumb, button] = await page.locator('#seg .seg').evaluate((el) =>
-      [el.querySelector('.seg-thumb')!, el.querySelector('.seg-btn')!].map((node) => node.getBoundingClientRect().width));
+    const { thumb, button } = await page.locator('#seg .seg').evaluate((el) => ({
+      thumb: el.querySelector('.seg-thumb')!.getBoundingClientRect().width,
+      button: el.querySelector('.seg-btn')!.getBoundingClientRect().width,
+    }));
     expect(thumb).toBeCloseTo(button, 0);
   });
 
