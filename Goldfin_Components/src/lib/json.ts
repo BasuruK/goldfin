@@ -16,8 +16,12 @@ export function nodeRange(lines: string[], index: number): NodeRange {
   const line = lines[index];
   if (line === undefined || !OPENS_NODE.test(line)) return { opens: false, end: index };
   const base = indentOf(line);
-  const close = lines.findIndex((next, at) => at > index && next.trim() !== '' && indentOf(next) <= base);
-  return { opens: true, end: close === -1 ? lines.length - 1 : close };
+  for (let at = index + 1; at < lines.length; at++) {
+    const next = lines[at];
+    if (next === undefined || next.trim() === '') continue;
+    if (indentOf(next) <= base) return { opens: true, end: at };
+  }
+  return { opens: true, end: lines.length - 1 };
 }
 
 export function countChildItems(lines: string[]): (number | null)[] {
@@ -26,7 +30,9 @@ export function countChildItems(lines: string[]): (number | null)[] {
     const base = indentOf(line);
     let childIndent = 0;
     let count = 0;
-    for (const next of lines.slice(index + 1)) {
+    for (let at = index + 1; at < lines.length; at++) {
+      const next = lines[at];
+      if (next === undefined) continue;
       const trimmed = next.trim();
       if (trimmed === '' || /^[}\]]/.test(trimmed)) continue;
       const indent = indentOf(next);
