@@ -1,13 +1,5 @@
 {
-  "src/lib/connectors/api.ts": {
-    "complexity": {
-      "count": 2
-    }
-  },
   "src/lib/connectors/store.svelte.ts": {
-    "complexity": {
-      "count": 1
-    },
     "svelte/prefer-svelte-reactivity": {
       "count": 1
     }

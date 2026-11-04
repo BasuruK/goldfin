@@ -6,15 +6,11 @@ import {
   defaultBaseUrlFor,
   defaultLlmApiMode,
   defaultNameFor,
-  isLlmProvider,
-  isSavableProvider,
   type ProviderType
 } from './providers.ts';
 import { clearLegacyConnectors, createEmptyConnector, type ConnectorRecord } from './storage.ts';
 import { ApiError } from '../request-core.ts';
-import { createConnector, listConnectors, validateDraft, type SaveDraft, type SavedConnector } from './api.ts';
-
-export type SaveErrorField = 'name' | 'baseUrl' | 'credential' | 'credentialLabel' | 'models';
+import { createConnector, listConnectors, planSave, type SaveErrorField, type SavedConnector } from './api.ts';
 
 function clearModelsSaveError(): void {
   if (connectorStore.saveErrorField !== 'models') return;
@@ -119,43 +115,10 @@ export function setDraftProviderType(providerType: ProviderType): void {
 export async function saveDraft(): Promise<void> {
   const draft = connectorStore.draft;
   if (!draft || connectorStore.saving) return;
-  if (!isSavableProvider(draft.providerType)) {
-    connectorStore.saveError = 'Saving is not available for this provider yet.';
-    connectorStore.saveErrorField = null;
-    return;
-  }
-  if (isLlmProvider(draft.providerType)) {
-    if (!draft.apiKey.trim()) {
-      connectorStore.saveError = 'API Key is required for this provider.';
-      connectorStore.saveErrorField = 'credential';
-      return;
-    }
-    const enabledModels = draft.models.filter(model => model.enabled);
-    if (enabledModels.length === 0) {
-      connectorStore.saveError = 'Enable at least one model ID before saving.';
-      connectorStore.saveErrorField = 'models';
-      return;
-    }
-  }
-  const request: SaveDraft = {
-    name: draft.name,
-    providerType: draft.providerType,
-    baseUrl: draft.baseUrl,
-    apiVersion:
-      draft.providerType === AZURE_OCR_PROVIDER_TYPE
-        ? draft.apiVersion.trim() || DEFAULT_AZURE_OCR_API_VERSION
-        : undefined,
-    llmApiMode: isLlmProvider(draft.providerType) ? draft.llmApiMode : undefined,
-    models: isLlmProvider(draft.providerType)
-      ? draft.models.map(model => ({ id: model.id, enabled: model.enabled }))
-      : undefined,
-    credential: draft.apiKey,
-    credentialLabel: draft.credentialLabel
-  };
-  const invalid = validateDraft(request);
-  if (invalid) {
-    connectorStore.saveError = invalid.message;
-    connectorStore.saveErrorField = invalid.field;
+  const plan = planSave(draft);
+  if (plan.kind === 'invalid') {
+    connectorStore.saveError = plan.message;
+    connectorStore.saveErrorField = plan.field;
     return;
   }
   connectorStore.saving = true;
@@ -164,7 +127,7 @@ export async function saveDraft(): Promise<void> {
   // A reply that lands after Cancel must not touch a dialog reopened for another draft.
   const stillOpen = () => connectorStore.draft?.id === draft.id;
   try {
-    const saved = await createConnector(request);
+    const saved = await createConnector(plan.request);
     // The Connector exists either way, so it is listed even if the dialog was cancelled.
     connectorStore.connectors = [...connectorStore.connectors, saved];
     if (!stillOpen()) return;
