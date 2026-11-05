@@ -237,6 +237,7 @@ This is why the shared reset deliberately omits `input { font-size: max(16px, 1r
 - Use `overflow: clip` to cut off overflow, and `overflow: hidden` only where `text-overflow: ellipsis` must draw on a browser where `clip` is untested. Keep `auto` on real scroll areas and add `overscroll-behavior: contain` to them.
 - Give an icon `flex: none` so it cannot be squeezed by the label beside it. Size travels as the `--icon-size` custom property, so a consumer can retune an icon to its label with a `cap` value without editing markup.
 - Space between siblings belongs to the parent, through `gap`. A child carries no block margin for a gap it could have inherited.
+- Name only custom properties that exist. A `var(--name)` that nothing declares invalidates its whole declaration, and the property silently drops to its initial value: no gap, no border, no focus ring. Give a `var()` a fallback only where a consumer may leave the property unset (`--od-cols`). `tests/css-variables.test.ts` fails on a fallback-less `var()` that nothing in `src/` or `Goldfin_Components/src/` declares; the `--bits-*` properties bits-ui sets at runtime are exempt.
 - Naming utilities beat inline `style` attributes. One-off showcase spacing gets a named class in the stylesheet, not a `style=""`.
 
 The shared CSS currently includes global selectors, legacy reference rules and showcase layout rules. Importing it affects the host document. Integrate deliberately; extracting a separately scoped production stylesheet is future work, not part of this handoff.
