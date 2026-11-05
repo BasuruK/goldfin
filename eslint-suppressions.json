@@ -1,7 +1,2 @@
 {
-  "src/lib/connectors/store.svelte.ts": {
-    "svelte/prefer-svelte-reactivity": {
-      "count": 1
-    }
-  }
 }

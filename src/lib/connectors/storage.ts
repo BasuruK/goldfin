@@ -23,7 +23,6 @@ export interface ConnectorRecord {
   credentialLabel: string;
   apiVersion: string;
   llmApiMode: LlmApiMode;
-  updatedAt: string;
   models: ConnectorModel[];
   catalogState: 'idle' | 'ready';
   catalogMessage: string;
@@ -39,7 +38,6 @@ export function clearLegacyConnectors(): void {
 }
 
 export function createEmptyConnector(providerType: ProviderType = DEFAULT_PROVIDER_TYPE): ConnectorRecord {
-  const now = new Date().toISOString();
   return {
     id: crypto.randomUUID(),
     providerType,
@@ -51,7 +49,6 @@ export function createEmptyConnector(providerType: ProviderType = DEFAULT_PROVID
     llmApiMode: defaultLlmApiMode(providerType),
     models: [],
     catalogState: 'ready',
-    catalogMessage: '',
-    updatedAt: now
+    catalogMessage: ''
   };
 }

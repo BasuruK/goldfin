@@ -86,7 +86,7 @@ export function disposeConnectorsPage(): void {
 export function patchDraft(patch: Partial<ConnectorRecord>): void {
   const draft = connectorStore.draft;
   if (!draft) return;
-  connectorStore.draft = { ...applyConnectorPatch(draft, patch), updatedAt: new Date().toISOString() };
+  connectorStore.draft = applyConnectorPatch(draft, patch);
   // The draft calls the Credential field `apiKey`; validation calls it `credential`.
   const errorField =
     connectorStore.saveErrorField === 'credential' ? 'apiKey' : connectorStore.saveErrorField;
