@@ -65,6 +65,20 @@ for (const providerLabel of ['OpenAI', 'OpenAI Compatible']) {
   });
 }
 
+test('a Select label is styled like an Input label', async ({ page }) => {
+  await mockConnectorApi(page);
+  await page.goto('/connectors/');
+  await page.getByRole('button', { name: 'Add connector', exact: true }).click();
+  // The click leaves the pointer over the dialog, and a hovered label changes colour.
+  await page.mouse.move(0, 0);
+  const labels = page.getByRole('dialog').locator('label');
+  const provider = labels.filter({ hasText: /^Provider$/ });
+  const name = labels.filter({ hasText: /^Name/ });
+  await expect(provider).toHaveCSS('font-weight', '700');
+  await expect(provider).toHaveCSS('font-size', '13px');
+  await expect(provider).toHaveCSS('color', await name.evaluate(node => getComputedStyle(node).color));
+});
+
 test('model table puts names before small toggles and scrolls without growing the panel', async ({ page }) => {
   await mockConnectorApi(page);
   await page.goto('/connectors/');

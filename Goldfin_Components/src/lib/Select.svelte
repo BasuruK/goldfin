@@ -52,7 +52,7 @@
     return 'var(--' + (item.tone || 'ufg3') + ')';
   }
 </script>
-<div class="dd">
+<div class="field dd">
   <Label.Root for={id} class="label">{label}</Label.Root>
   <Primitive.Root
     {...rest}
