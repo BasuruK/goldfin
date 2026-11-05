@@ -17,6 +17,7 @@
     setDraftProviderType
   } from './store.svelte.js';
   import {
+    AZURE_OCR_PROVIDER_TYPE,
     DEFAULT_AZURE_OCR_API_VERSION,
     DEFAULT_PROVIDER_TYPE,
     PROVIDER_SELECT_ITEMS,
@@ -27,7 +28,7 @@
     type LlmApiMode,
     type ProviderType
   } from './providers.js';
-  import type { SaveErrorField } from './store.svelte.js';
+  import type { SaveErrorField } from './api.js';
 
   const record = $derived(connectorStore.draft);
   const provider = $derived(record ? providerByType(record.providerType) : null);
@@ -69,7 +70,7 @@
   const fieldsDisabled = $derived(saving);
   const savableProvider = $derived(record ? isSavableProvider(record.providerType) : false);
   const saveUnavailable = $derived(record !== null && !savableProvider);
-  const isAzureOcr = $derived(record?.providerType === 'azure_document_intelligence');
+  const isAzureOcr = $derived(record?.providerType === AZURE_OCR_PROVIDER_TYPE);
   const showModels = $derived(record ? isLlmProvider(record.providerType) : false);
   const llmApiModeItems = [
     { value: 'responses' as LlmApiMode, label: 'Responses API' },
