@@ -1,11 +1,7 @@
 /* The trigger is the anchor; the menu is portalled and positioned by bits-ui,
    so only its look lives here. */
-.dd {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
+/* .field stacks the label over the trigger and styles the label. */
+.dd { position: relative; }
 
 .dd-trigger {
   display: flex;
