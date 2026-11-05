@@ -4,6 +4,7 @@
  */
 
 import { fetchApiRequest } from '../request-core.ts';
+import { CHOOSE_DOCUMENT, validateDocument } from './documents.ts';
 
 const OCR_PATH = '/api/v1/probes/ocr';
 
@@ -58,20 +59,7 @@ export async function submitOcr(
     canceledKind: 'canceled',
     canceledMessage: MESSAGES.canceled,
     messages: MESSAGES,
-    createError: (kind, message) => {
-      switch (kind) {
-        case 'timeout':
-        case 'unreachable':
-        case 'rejected':
-        case 'unavailable':
-        case 'canceled':
-          return new OcrError(kind, message);
-        default: {
-          const unreachable: never = kind;
-          return new OcrError(unreachable, message);
-        }
-      }
-    },
+    createError: (kind, message) => new OcrError(kind, message),
     httpTimeoutStatuses: true,
     statusMessage: mapStatus
   });
@@ -79,6 +67,30 @@ export async function submitOcr(
     throw new OcrError('malformed', MESSAGES.malformed);
   }
   return { content: record.content, pages: record.pages };
+}
+
+export type AnalysisPlan =
+  | { kind: 'invalid'; field: 'document' | 'connector'; message: string }
+  | { kind: 'run'; document: File; connectorId: string };
+
+/** What Analyze submits, or the first reason it cannot run yet. */
+export function planAnalysis(document: File | null, connectorId: string): AnalysisPlan {
+  if (!document) return { kind: 'invalid', field: 'document', message: CHOOSE_DOCUMENT };
+  const documentError = validateDocument(document);
+  if (documentError) return { kind: 'invalid', field: 'document', message: documentError };
+  if (!connectorId) return { kind: 'invalid', field: 'connector', message: 'Choose an Azure OCR Connector.' };
+  return { kind: 'run', document, connectorId };
+}
+
+/** The status hint after a run: "1 page", "3 pages". */
+export function pagesHint(pages: number): string {
+  return `${pages} ${pages === 1 ? 'page' : 'pages'}`;
+}
+
+/** Keeps the chosen Connector while it is still listed; otherwise the first listed one, or none. */
+export function pickConnectorId(current: string, connectors: readonly { id: string }[]): string {
+  if (connectors.some(connector => connector.id === current)) return current;
+  return connectors[0]?.id ?? '';
 }
 
 function mapStatus(status: number): string {

@@ -4,6 +4,8 @@ export const DOCUMENT_ACCEPT =
 
 export const MAX_DOCUMENT_BYTES = 30_000_000;
 
+export const CHOOSE_DOCUMENT = 'Choose a PDF, JPEG, PNG, or DOCX file.';
+
 const MIME_FOR_EXTENSION: Record<string, readonly string[]> = {
   pdf: ['application/pdf'],
   jpg: ['image/jpeg'],
@@ -20,15 +22,15 @@ function mimeMatchesExtension(file: File, ext: string): boolean {
 }
 
 /** @returns A user-facing message, or null when valid. */
-export function validateDocument(file: File | null | undefined): string | null {
-  if (!file || file.size === 0) return 'Choose a PDF, JPEG, PNG, or DOCX file.';
+export function validateDocument(file: File): string | null {
+  if (file.size === 0) return CHOOSE_DOCUMENT;
   if (file.size > MAX_DOCUMENT_BYTES) return 'Request is too large.';
   const ext = file.name.includes('.') ? file.name.split('.').pop()?.toLowerCase() : '';
   if (!ext || !Object.hasOwn(MIME_FOR_EXTENSION, ext)) {
-    return 'Choose a PDF, JPEG, PNG, or DOCX file.';
+    return CHOOSE_DOCUMENT;
   }
   if (!mimeMatchesExtension(file, ext)) {
-    return 'Choose a PDF, JPEG, PNG, or DOCX file.';
+    return CHOOSE_DOCUMENT;
   }
   return null;
 }
