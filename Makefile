@@ -11,7 +11,8 @@
 
 .DEFAULT_GOAL := help
 
-.PHONY: help check lint lint-go lint-types lint-ts up run watch down migrate logs
+.PHONY: help check lint lint-go lint-types lint-ts up run watch down migrate logs \
+	internal-watch internal-logs-f
 
 # `lint` runs its three groups in parallel; each group's lines still run in order.
 MAKEFLAGS += --jobs=3 --output-sync=target
@@ -21,8 +22,8 @@ help:
 	@echo ""
 	@echo "  make check    vet, lint, vulnerabilities, workflows, Go/unit tests, svelte-check, knip"
 	@echo "  make lint     build, vet, golangci-lint, svelte-check, eslint, dependency-cruiser, knip (pre-push hook)"
-	@echo "  make up       Start postgres, migrate, api; wait until running/healthy"
-	@echo "  make run      up, then Vite on the host"
+	@echo "  make up       Start postgres, migrate, api (run this first)"
+	@echo "  make run      Vite on the host (after make up)"
 	@echo "  make watch    Rebuild api on Go changes"
 	@echo "  make down     Stop all services"
 	@echo "  make migrate  Apply migrations"
@@ -52,13 +53,21 @@ check: lint
 	pnpm test:unit
 	pnpm --dir Goldfin_Components test
 
+# Run migrate explicitly so the stack does not rely on an implicit migrate container for `up`.
 up:
-	docker compose up -d --build --wait api
+	docker compose up -d --build postgres
+	docker compose run --rm migrate
+	docker compose up -d --build --no-deps api
 
-run: up
+# `run` does not call `up`; run `make up` first. Vite on 127.0.0.1:5174 (see package.json "dev").
+# If Vite logs never appear, `MAKEFLAGS` may be buffering (`--output-sync=target`); run `pnpm dev` instead.
+run:
 	pnpm dev
 
 watch:
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) -Onone --no-print-directory internal-watch
+
+internal-watch:
 	docker compose watch
 
 down:
@@ -68,4 +77,7 @@ migrate:
 	docker compose run --rm migrate
 
 logs:
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) -Onone --no-print-directory internal-logs-f
+
+internal-logs-f:
 	docker compose logs -f api
