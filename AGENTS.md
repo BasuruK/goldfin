@@ -18,7 +18,7 @@ Two containers over Postgres (ADR 0010 as amended by 0013; changing them needs a
 
 ## Commands
 
-- `make run`: Postgres and `api` in Docker on `127.0.0.1:8080`, then `pnpm dev` on `127.0.0.1:5174`. `make logs` tails the `api`; read it when a request fails and the page shows only a mapped message.
+- `make up` then `make run`: Postgres and `api` in Docker on `127.0.0.1:8080`, then Vite (`pnpm dev`) on `127.0.0.1:5174`. `make logs` tails the `api`; read it when a request fails and the page shows only a mapped message.
 - **While iterating**, run only the tests that cover your change: `go test ./internal/probe/...`, `node --test tests/ocr/<file>.test.ts`, `pnpm exec playwright test tests/<file>.spec.ts`. DB-backed Go tests need `TEST_DATABASE_URL` pointing at a disposable database.
 - `make check` runs everything CI's `make check` job runs, and is green before you push. CI also runs the Playwright suite. `make lint` (ESLint, svelte-check, dependency-cruiser, knip, Go linters) is also the pre-push hook in `.githooks/`, which `pnpm install` enables.
 
