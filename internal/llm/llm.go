@@ -78,6 +78,16 @@ func New(transport http.RoundTripper) *Executor {
 	return &Executor{client: http.Client{
 		Transport: transport,
 		Timeout:   CompletionBudget,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+						if len(via) >= 10 {
+							return errFailed
+						}
+						origin := via[0].URL
+						if req.URL.Scheme != "https" || !strings.EqualFold(req.URL.Host, origin.Host) {
+							return http.ErrUseLastResponse
+						}
+						return nil
+					},
 	}}
 }
 
