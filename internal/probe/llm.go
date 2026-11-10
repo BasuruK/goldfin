@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"mime"
 	"net/http"
 	"strings"
@@ -17,9 +18,10 @@ import (
 )
 
 const (
-	llmPath         = "/api/v1/probes/llm"
-	LLMPattern      = "POST " + llmPath
-	maxLLMBodyBytes = 2 << 20
+	llmPath          = "/api/v1/probes/llm"
+	LLMPattern       = "POST " + llmPath
+	maxLLMBodyBytes  = 2 << 20
+	llmResolveBudget = 5 * time.Second
 )
 
 type llmHandler struct {
@@ -61,8 +63,8 @@ func NewLLMHandler(pool *pgxpool.Pool, box *secretbox.Box, transport http.RoundT
 	h := llmHandler{pool: pool, box: box, executor: llm.New(transport)}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
-		routeBudget := llm.CompletionBudget + 30*time.Second
-		deadline := time.Now().Add(routeBudget)
+		prepBudget := llmResolveBudget + 30*time.Second
+		deadline := time.Now().Add(prepBudget)
 		rc := http.NewResponseController(w)
 		_ = rc.SetReadDeadline(deadline)
 		_ = rc.SetWriteDeadline(deadline)
@@ -79,8 +81,13 @@ func (h *llmHandler) serveLLM(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxLLMBodyBytes)
+	dec := json.NewDecoder(r.Body)
 	var in llmProbeRequest
-	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+	if err := dec.Decode(&in); err != nil {
+		rejectLLMBody(w, err)
+		return
+	}
+	if err := dec.Decode(new(any)); !errors.Is(err, io.EOF) {
 		rejectLLMBody(w, err)
 		return
 	}
@@ -95,9 +102,9 @@ func (h *llmHandler) serveLLM(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"message": "Invalid LLM request."})
 		return
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), llm.CompletionBudget)
-	defer cancel()
-	cfg, promptVersion, err := h.resolve(ctx, connectorID, modelID, in.PromptID)
+	resolveCtx, resolveCancel := context.WithTimeout(r.Context(), llmResolveBudget)
+	cfg, promptVersion, err := h.resolve(resolveCtx, connectorID, modelID, in.PromptID)
+	resolveCancel()
 	if err != nil {
 		if errors.Is(err, errWrongConnector) || isInvalidConnectorID(err) || errors.Is(err, errDisabledModel) || errors.Is(err, errUnknownPrompt) {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"message": "Invalid LLM request."})
@@ -106,7 +113,11 @@ func (h *llmHandler) serveLLM(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"message": "Could not run LLM."})
 		return
 	}
-	result, err := h.executor.Complete(ctx, cfg, input)
+	execBudget := llm.CompletionBudget + 30*time.Second
+	_ = http.NewResponseController(w).SetWriteDeadline(time.Now().Add(execBudget))
+	execCtx, execCancel := context.WithTimeout(r.Context(), llm.CompletionBudget)
+	defer execCancel()
+	result, err := h.executor.Complete(execCtx, cfg, input)
 	if err != nil {
 		if errors.Is(err, llm.ErrInvalidInput) {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"message": "Invalid LLM request."})
