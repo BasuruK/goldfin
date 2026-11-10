@@ -10,10 +10,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// New wires Connector create/list and the OCR Probe. Probe routes use the executor budget; Connector routes keep the short database guard.
+// New wires Connector create/list and Probe routes. Probe routes use the executor budget; Connector routes keep the short database guard.
 func New(pool *pgxpool.Pool, box *secretbox.Box, transport http.RoundTripper) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle(probe.OCRPattern, probe.NewOCRHandler(pool, box, transport))
+	mux.Handle(probe.LLMPattern, probe.NewLLMHandler(pool, box, transport))
 	mux.Handle("/", api.NewHandler(pool, box))
 	return mux
 }

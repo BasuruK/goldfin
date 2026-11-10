@@ -188,6 +188,26 @@ func TestProductionAPIServerExposesOCRProbeAndConnectors(t *testing.T) {
 	if !strings.Contains(string(body), "Invalid OCR request") {
 		t.Fatalf("unexpected OCR error body: %s", body)
 	}
+
+	llmReq, err := http.NewRequestWithContext(t.Context(), http.MethodPost, base+"/api/v1/probes/llm", strings.NewReader("not json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	llm, err := http.DefaultClient.Do(llmReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = llm.Body.Close() }()
+	if llm.StatusCode != http.StatusBadRequest {
+		t.Fatalf("LLM probe must be mounted, not 404: %d", llm.StatusCode)
+	}
+	llmBody, err := io.ReadAll(llm.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(llmBody), "Invalid LLM request") {
+		t.Fatalf("unexpected LLM error body: %s", llmBody)
+	}
 }
 
 func TestAPIServerTimeoutsKeepDefaultRoutesShort(t *testing.T) {
