@@ -97,7 +97,6 @@ func (h *llmHandler) serveLLM(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), llm.CompletionBudget)
 	defer cancel()
-	_ = http.NewResponseController(w).SetWriteDeadline(time.Now().Add(llm.CompletionBudget))
 	cfg, promptVersion, err := h.resolve(ctx, connectorID, modelID, in.PromptID)
 	if err != nil {
 		if errors.Is(err, errWrongConnector) || isInvalidConnectorID(err) || errors.Is(err, errDisabledModel) || errors.Is(err, errUnknownPrompt) {
