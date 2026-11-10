@@ -10,6 +10,8 @@ import (
 	"testing"
 	"testing/synctest"
 	"time"
+
+	"github.com/BasuruK/goldfin/internal/probe"
 )
 
 const (
@@ -216,7 +218,7 @@ func TestLLMProbeRejectsOversizeBodyAndEmptyInput(t *testing.T) {
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("empty input: %d %s", rec.Code, rec.Body.String())
 	}
-	oversize := strings.Repeat("x", maxLLMBodyBytes+1)
+	oversize := strings.Repeat("x", probe.MaxLLMBodyBytes+1)
 	rec = httptest.NewRecorder()
 	payload := `{"connectorId":"` + connectorID + `","modelId":"` + testLLMModel + `","input":"` + oversize + `"}`
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/probes/llm", strings.NewReader(payload))
@@ -227,8 +229,6 @@ func TestLLMProbeRejectsOversizeBodyAndEmptyInput(t *testing.T) {
 		t.Fatalf("oversize body: %d %s", rec.Code, rec.Body.String())
 	}
 }
-
-const maxLLMBodyBytes = 2 << 20
 
 func TestLLMProbeOutlivesConnectorDatabaseGuard(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
