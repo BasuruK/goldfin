@@ -4,7 +4,6 @@ package probe
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"io"
 	"mime"
@@ -15,8 +14,6 @@ import (
 
 	"github.com/BasuruK/goldfin/internal/azureocr"
 	"github.com/BasuruK/goldfin/internal/secretbox"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -140,16 +137,6 @@ func (h *ocrHandler) serveOCR(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"content": extraction.Content, "pages": extraction.Pages})
 }
 
-var errWrongConnector = errors.New("wrong Connector provider")
-
-func isInvalidConnectorID(err error) bool {
-	if errors.Is(err, pgx.ErrNoRows) {
-		return true
-	}
-	var pgErr *pgconn.PgError
-	return errors.As(err, &pgErr) && pgErr.Code == "22P02"
-}
-
 func normalizeDocumentMIME(header string, document []byte) string {
 	declared, _, err := mime.ParseMediaType(strings.TrimSpace(header))
 	if err != nil {
@@ -242,10 +229,4 @@ func ocrFailure(err error) (int, string) {
 	default:
 		return http.StatusBadGateway, "Could not extract the Document."
 	}
-}
-
-func writeJSON(w http.ResponseWriter, status int, body any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(body)
 }
