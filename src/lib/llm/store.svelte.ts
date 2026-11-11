@@ -77,6 +77,8 @@ export async function loadLlmConnectors(): Promise<void> {
 export function disposeLlm(): void {
   invalidateOperation();
   listOperation += 1;
+  llmStore.listState = 'idle';
+  llmStore.listError = '';
   abortController?.abort();
   abortController = null;
   resetBusy();
