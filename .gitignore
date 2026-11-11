@@ -6,6 +6,7 @@ node_modules/
 .pnpm-store/
 .svelte-kit/
 /build/
+src/lib/llm/.store.test-compiled.mjs
 # Repo-root build output only. Anchored: a bare "goldfin/" also matched cmd/goldfin/.
 /goldfin
 

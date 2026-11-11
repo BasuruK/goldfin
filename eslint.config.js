@@ -13,7 +13,8 @@ export default defineConfig(
       'test-results/',
       'Goldfin_Components/',
       'prototypes/',
-      'ref/'
+      'ref/',
+      'src/lib/llm/.store.test-compiled.mjs'
     ]
   },
   ts.configs.recommendedTypeChecked,

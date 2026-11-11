@@ -159,7 +159,7 @@ export function planLlmRun(
   if (!input.trim()) {
     return { kind: 'invalid', field: 'input', message: 'Run OCR on a Document first.' };
   }
-  if (!connectorId) {
+  if (!connectorId || !connector) {
     return { kind: 'invalid', field: 'connector', message: 'Choose an LLM Connector.' };
   }
   const enabledIds = enabledModelIds(connector);

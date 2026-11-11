@@ -28,6 +28,11 @@ test('planning refuses a run with no extraction, no Connector, or no enabled mod
     field: 'connector',
     message: 'Choose an LLM Connector.'
   });
+  assert.deepEqual(planLlmRun('text', 'c1', 'model-a', undefined), {
+    kind: 'invalid',
+    field: 'connector',
+    message: 'Choose an LLM Connector.'
+  });
   assert.deepEqual(planLlmRun('text', 'c1', 'model-a', connector({ models: [{ id: 'model-b', enabled: false }] })), {
     kind: 'invalid',
     field: 'model',
