@@ -13,7 +13,7 @@ import {
 import type { ConnectorRecord } from './storage.ts';
 
 // Other surfaces reach Connectors only through this module (`no-surface-to-surface`).
-export { AZURE_OCR_PROVIDER_TYPE } from './providers.ts';
+export { AZURE_OCR_PROVIDER_TYPE, isLlmProvider } from './providers.ts';
 
 const CONNECTORS_PATH = '/api/v1/connectors';
 const REJECTED = 'The Connector was rejected.';
