@@ -94,6 +94,11 @@ export function clearLlmResult(): void {
   llmStore.stoppedNotice = '';
 }
 
+export function selectLlmConnector(connectorId: string): void {
+  llmStore.connectorId = connectorId;
+  syncModelId();
+}
+
 function invalidateOperation(): void {
   activeOperation += 1;
 }
@@ -111,6 +116,8 @@ export async function runLlm(input: string): Promise<void> {
     llmStore.error = plan.message;
     return;
   }
+
+  llmStore.modelId = plan.modelId;
 
   const operation = ++activeOperation;
   abortController?.abort();
