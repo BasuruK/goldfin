@@ -1,5 +1,8 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "ignore": ["Goldfin_Components/**", "prototypes/**"],
+  "ignore": ["Goldfin_Components/**", "prototypes/**", "src/lib/llm/store.svelte.ts"],
+  "ignoreIssues": {
+    "src/lib/connectors/api.ts": ["exports"]
+  },
   "ignoreDependencies": ["@stryker-mutator/command-runner"]
 }
