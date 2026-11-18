@@ -73,3 +73,62 @@ export async function mockOcrApi(page: Page, options: MockOcrApiOptions = {}) {
     }
   });
 }
+
+interface MockPromptListEntry {
+  id: string;
+  name: string;
+  createdAt: string;
+  latestVersion?: {
+    id: string;
+    version: number;
+    content: string;
+    createdAt: string;
+  };
+}
+
+interface MockLlmApiOptions {
+  content?: string;
+  fullOutput?: string;
+  stopped?: string;
+  promptVersion?: MockPromptListEntry['latestVersion'] | null;
+  usage?: { inputTokens: number | null; outputTokens: number | null; totalTokens: number | null } | null;
+  delayMs?: number;
+  reject?: { status: number; message: string };
+}
+
+/** Lists saved Prompts for playground and probe specs. */
+export async function mockPromptListApi(page: Page, saved: MockPromptListEntry[] = []) {
+  await page.route('**/api/v1/prompts', async route => {
+    if (route.request().method() !== 'GET') return route.fulfill({ status: 405, json: { message: 'Method not allowed.' } });
+    await route.fulfill({ json: { prompts: saved } });
+  });
+}
+
+/** Intercepts the LLM Probe route; returns a call counter. */
+export async function mockLlmApi(page: Page, options: MockLlmApiOptions = {}) {
+  let calls = 0;
+  await page.route('**/api/v1/probes/llm', async route => {
+    calls += 1;
+    await mockRouteDelay(options.delayMs);
+    if (options.reject) {
+      return route.fulfill({ status: options.reject.status, json: { message: options.reject.message } });
+    }
+    try {
+      await route.fulfill({
+        json: {
+          content: options.content ?? 'Parsed LLM text',
+          fullOutput: options.fullOutput ?? '{"parsed":true,"raw":"fixture"}',
+          stopped: options.stopped ?? '',
+          promptVersion: options.promptVersion === undefined ? null : options.promptVersion,
+          usage:
+            options.usage === undefined
+              ? { inputTokens: 10, outputTokens: 5, totalTokens: 15 }
+              : options.usage
+        }
+      });
+    } catch {
+      // Client aborted while delayed; nothing left to fulfil.
+    }
+  });
+  return { getCalls: () => calls };
+}

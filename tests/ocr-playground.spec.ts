@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { mockConnectorApi, mockOcrApi } from './support.ts';
+import { mockConnectorApi, mockLlmApi, mockOcrApi, mockPromptListApi } from './support.ts';
 
 const fixtureDir = path.dirname(fileURLToPath(import.meta.url));
 const blankPdf = path.join(fixtureDir, 'fixtures', 'blank.pdf');
@@ -13,6 +13,16 @@ const azureConnector = {
   baseUrl: 'https://ocr.example.cognitiveservices.azure.com',
   apiVersion: '2024-11-30',
   credentialLabel: 'Fixture key'
+};
+
+const llmConnector = {
+  id: 'llm-1',
+  name: 'Fixture LLM',
+  providerType: 'openai',
+  baseUrl: 'https://api.openai.com/v1',
+  llmApiMode: 'responses',
+  credentialLabel: 'Fixture key',
+  models: [{ id: 'gpt-test', enabled: true }]
 };
 
 test('Analyze shows OCR text and rejects stale replies after Stop', async ({ page }) => {
@@ -44,7 +54,9 @@ for (const viewport of [{ width: 1280, height: 800 }, { width: 375, height: 720 
   test(`playground layout at ${viewport.width}px`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await mockConnectorApi(page, { saved: [azureConnector] });
+    await mockConnectorApi(page, { saved: [azureConnector, llmConnector] });
+    await mockPromptListApi(page, []);
+    await mockLlmApi(page);
     await page.goto('/playground/');
     if (viewport.width < 768) {
       await page.getByRole('button', { name: 'Open navigation', exact: true }).click();

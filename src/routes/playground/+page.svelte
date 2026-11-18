@@ -6,10 +6,21 @@
     FileDrop,
     Section,
     Spinner,
-    Select
+    Select,
+    Switch
   } from '$goldfin/lib/index.js';
   import ConnectorDialog from '#lib/connectors/ConnectorDialog.svelte';
   import { connectorStore, openAddDialog } from '#lib/connectors/store.svelte.js';
+  import { enabledModelIds } from '#lib/llm/api.ts';
+  import {
+    clearLlmResult,
+    disposeLlm,
+    llmStore,
+    loadLlmConnectors,
+    runLlm,
+    selectLlmConnector,
+    stopLlm
+  } from '#lib/llm/store.svelte.js';
   import { DOCUMENT_ACCEPT, MAX_DOCUMENT_BYTES, validateDocument } from '#lib/ocr/documents.js';
   import {
     analyzeDocument,
@@ -19,14 +30,25 @@
     playgroundStore,
     stopAnalyze
   } from '#lib/ocr/store.svelte.js';
+  import { loadPromptList, promptStore } from '#lib/prompts/store.svelte.js';
+
+  const NO_PROMPT_VALUE = '';
+  const EMPTY_LLM_HINT =
+    'No text extracted — switch on Full output to inspect the response.';
+
+  let promptSelectValue = $state(NO_PROMPT_VALUE);
+  let lastLlmConnectorId = $state('');
 
   onMount(() => {
     void loadOcrConnectors();
+    void loadLlmConnectors();
+    void loadPromptList();
   });
 
   onDestroy(() => {
     connectorStore.saveNotice = '';
     disposePlayground();
+    disposeLlm();
   });
 
   const connectorItems = $derived(
@@ -34,7 +56,10 @@
   );
 
   $effect(() => {
-    if (connectorStore.saveNotice) void loadOcrConnectors();
+    if (connectorStore.saveNotice) {
+      void loadOcrConnectors();
+      void loadLlmConnectors();
+    }
   });
 
   $effect(() => {
@@ -43,14 +68,96 @@
     playgroundStore.documentError = file ? (validateDocument(file) ?? '') : '';
   });
 
+  $effect(() => {
+    llmStore.promptId = promptSelectValue === NO_PROMPT_VALUE ? null : promptSelectValue;
+  });
+
+  function resetLlmWhenOcrInputChanges(connectorId: string, document: File | null): void {
+    void connectorId;
+    void document;
+    clearLlmResult();
+  }
+
+  $effect(() => {
+    resetLlmWhenOcrInputChanges(playgroundStore.connectorId, playgroundStore.document);
+  });
+
+  $effect(() => {
+    if (playgroundStore.extraction === null) clearLlmResult();
+  });
+
+  $effect(() => {
+    const connectorId = llmStore.connectorId;
+    if (connectorId === lastLlmConnectorId) return;
+    lastLlmConnectorId = connectorId;
+    if (connectorId) selectLlmConnector(connectorId);
+  });
+
+  const probeBusy = $derived(playgroundStore.busy || llmStore.busy);
+
   const analyzeDisabled = $derived(
-    playgroundStore.busy
+    probeBusy
     || !playgroundStore.connectorId
     || !playgroundStore.document
     || Boolean(playgroundStore.documentError)
   );
 
   const extractionText = $derived(playgroundStore.extraction?.content ?? '');
+
+  const llmConnectorItems = $derived(
+    llmStore.connectors.map(c => ({ value: c.id, label: c.name || c.baseUrl }))
+  );
+
+  const llmModelItems = $derived(
+    enabledModelIds(llmStore.connectors.find(c => c.id === llmStore.connectorId)).map(id => ({
+      value: id,
+      label: id
+    }))
+  );
+
+  const promptItems = $derived([
+    { value: NO_PROMPT_VALUE, label: 'No system instructions' },
+    ...promptStore.prompts.map(p => ({ value: p.id, label: p.name }))
+  ]);
+
+  const llmRunDisabled = $derived(
+    probeBusy
+    || !extractionText.trim()
+    || llmStore.listState !== 'loaded'
+    || !llmStore.connectorId
+    || !llmStore.modelId
+  );
+
+  const llmPaneText = $derived.by(() => {
+    if (llmStore.error) return '';
+    const result = llmStore.result;
+    if (!result) return '';
+    if (llmStore.showFullOutput) return result.fullOutput;
+    if (!result.content.trim()) return EMPTY_LLM_HINT;
+    return result.content;
+  });
+
+  const llmStoppedLabel = $derived(
+    llmStore.result?.stopped ? `Stopped early: ${llmStore.result.stopped}` : ''
+  );
+
+  const llmPromptLabel = $derived(
+    llmStore.result
+      ? (llmStore.result.promptVersion
+        ? `Prompt v${llmStore.result.promptVersion.version}`
+        : 'No prompt')
+      : ''
+  );
+
+  function formatTokenCount(value: number | null | undefined): string {
+    return value === null || value === undefined ? '—' : String(value);
+  }
+
+  const llmUsageLine = $derived.by(() => {
+    const usage = llmStore.result?.usage;
+    if (!usage) return '';
+    return `Input ${formatTokenCount(usage.inputTokens)} · Output ${formatTokenCount(usage.outputTokens)} · Total ${formatTokenCount(usage.totalTokens)}`;
+  });
 </script>
 
 <svelte:head>
@@ -94,14 +201,14 @@
         label="Connector"
         items={connectorItems}
         bind:value={playgroundStore.connectorId}
-        disabled={playgroundStore.busy}
+        disabled={probeBusy}
       />
       <FileDrop
         bind:file={playgroundStore.document}
         accept={DOCUMENT_ACCEPT}
         label="Document"
         name="Select a document"
-        disabled={playgroundStore.busy}
+        disabled={probeBusy}
         description={`PDF, JPEG, PNG, or DOCX · up to ${Math.round(MAX_DOCUMENT_BYTES / 1_000_000)} MB`}
       />
       {#if playgroundStore.documentError}
@@ -177,6 +284,96 @@
         {/if}
       </div>
     </Section>
+
+    <Section title="LLM extraction" id="playground-llm">
+      {#if llmStore.listState === 'loading' || llmStore.listState === 'idle'}
+        <p class="note" role="status">Loading LLM Connectors…</p>
+      {:else if llmStore.listState === 'failed'}
+        <p class="note error" role="alert">{llmStore.listError}</p>
+        <Button type="button" onclick={() => loadLlmConnectors()}>Retry</Button>
+      {:else if llmStore.connectors.length === 0}
+        <p class="note">
+          Save an LLM Connector, then return here to run the extraction through a Prompt.
+        </p>
+        <div class="playground-empty-actions">
+          <Button type="button" class="primary" onclick={() => openAddDialog()}>Add connector</Button>
+          <a class="btn" href="/connectors/">Open Connectors</a>
+        </div>
+      {:else}
+        <div class="playground-llm">
+          <div class="playground-controls">
+            <Select
+              label="Connector"
+              items={llmConnectorItems}
+              bind:value={llmStore.connectorId}
+              disabled={probeBusy}
+            />
+            <Select
+              label="Model"
+              items={llmModelItems}
+              bind:value={llmStore.modelId}
+              disabled={probeBusy || llmModelItems.length === 0}
+            />
+            <Select
+              label="Prompt"
+              items={promptItems}
+              bind:value={promptSelectValue}
+              disabled={probeBusy || promptStore.listState === 'loading'}
+            />
+          </div>
+
+          <div class="playground-actions">
+            <Button type="button" disabled={!llmStore.busy} onclick={() => stopLlm()}>Stop</Button>
+            <Button
+              type="button"
+              class="primary"
+              disabled={llmRunDisabled}
+              aria-busy={llmStore.busy}
+              onclick={() => runLlm(extractionText)}
+            >
+              {llmStore.busy ? 'Running…' : 'Run'}
+            </Button>
+          </div>
+
+          {#if llmStore.stoppedNotice}
+            <p class="note" role="status">{llmStore.stoppedNotice}</p>
+          {/if}
+          {#if llmStore.error}
+            <p class="note error" role="alert">{llmStore.error}</p>
+          {/if}
+
+          <Switch
+            label="Full output"
+            description="Show the raw provider response"
+            bind:checked={llmStore.showFullOutput}
+            disabled={!llmStore.result || probeBusy}
+          />
+
+          <div class="playground-output" aria-busy={llmStore.busy}>
+            {#if llmStore.busy}
+              <div class="playground-busy" role="status">
+                <Spinner tone="key" label="Running LLM" />
+                <span>Running LLM…</span>
+              </div>
+            {/if}
+            <pre class="playground-text">{llmPaneText}</pre>
+          </div>
+
+          {#if llmStore.result}
+            <div class="playground-llm-meta">
+              {#if llmStoppedLabel}
+                <p class="note" role="status">{llmStoppedLabel}</p>
+              {/if}
+              <p class="playground-llm-detail">{llmPromptLabel}</p>
+              {#if llmUsageLine}
+                <p class="playground-llm-detail">{llmUsageLine}</p>
+              {/if}
+            </div>
+            <CopyButton text={llmPaneText} label="Copy text" />
+          {/if}
+        </div>
+      {/if}
+    </Section>
   {/if}
 </div>
 
@@ -207,9 +404,22 @@
     gap: 12px;
   }
 
-  .playground-extraction {
+  .playground-extraction,
+  .playground-llm {
     display: grid;
     gap: 16px;
+  }
+
+  .playground-llm-meta {
+    display: grid;
+    gap: 4px;
+  }
+
+  .playground-llm-detail {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ufg2);
   }
 
   .playground-stats {

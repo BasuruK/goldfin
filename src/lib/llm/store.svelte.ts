@@ -1,4 +1,3 @@
-// ponytail: knip ignores this module until the playground page imports it (#168).
 import { isLlmProvider, listConnectors, type SavedConnector } from '#lib/connectors/api.ts';
 import { pickConnectorId } from '#lib/ocr/api.ts';
 import { ApiError } from '#lib/request-core.ts';
