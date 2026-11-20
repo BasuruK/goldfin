@@ -95,7 +95,8 @@ export function clearLlmResult(): void {
 
 export function selectLlmConnector(connectorId: string): void {
   llmStore.connectorId = connectorId;
-  syncModelId();
+  const enabled = enabledModelIds(selectedConnector());
+  llmStore.modelId = enabled[0] ?? '';
 }
 
 function invalidateOperation(): void {

@@ -62,7 +62,13 @@ test('OCR then LLM shows parsed output, metadata, and Full output without a seco
     usage: { inputTokens: 12, outputTokens: 4, totalTokens: 16 }
   });
   await mockOcrApi(page, { content: 'Known OCR text', pages: 1 });
-  await runOcrThenLlm(page);
+  await page.goto('/playground/');
+  await page.locator('input[type="file"]').setInputFiles(blankPdf);
+  await page.getByRole('button', { name: 'Analyze', exact: true }).click();
+  await expect(page.locator('.playground-text').first()).toHaveText('Known OCR text', { timeout: 5_000 });
+  await llmSection(page).getByLabel('Prompt', { exact: true }).click();
+  await page.getByRole('option', { name: 'Invoices', exact: true }).click();
+  await llmSection(page).getByRole('button', { name: 'Run', exact: true }).click();
 
   const llmPane = llmSection(page).locator('.playground-text');
   await expect(llmPane).toHaveText('Parsed LLM text', { timeout: 5_000 });

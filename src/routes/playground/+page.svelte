@@ -314,12 +314,19 @@
               bind:value={llmStore.modelId}
               disabled={probeBusy || llmModelItems.length === 0}
             />
-            <Select
-              label="Prompt"
-              items={promptItems}
-              bind:value={promptSelectValue}
-              disabled={probeBusy || promptStore.listState === 'loading'}
-            />
+            {#if promptStore.listState === 'failed'}
+              <div class="playground-field-error">
+                <p class="note error" role="alert">{promptStore.listError}</p>
+                <Button type="button" onclick={() => loadPromptList()}>Retry</Button>
+              </div>
+            {:else}
+              <Select
+                label="Prompt"
+                items={promptItems}
+                bind:value={promptSelectValue}
+                disabled={probeBusy || promptStore.listState === 'loading'}
+              />
+            {/if}
           </div>
 
           <div class="playground-actions">
@@ -408,6 +415,11 @@
   .playground-llm {
     display: grid;
     gap: 16px;
+  }
+
+  .playground-field-error {
+    display: grid;
+    gap: 8px;
   }
 
   .playground-llm-meta {
