@@ -82,15 +82,6 @@ type connectorResponse struct {
 	CredentialSetAt *time.Time               `json:"credentialSetAt,omitempty"`
 }
 
-func isLLMProvider(providerType string) bool {
-	switch providerType {
-	case "openai", "openai_compatible":
-		return true
-	default:
-		return false
-	}
-}
-
 func hasManualModels(providerType string) bool {
 	switch providerType {
 	case "openai", "openai_compatible", "azure_foundry":
