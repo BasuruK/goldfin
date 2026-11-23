@@ -91,6 +91,15 @@ func isLLMProvider(providerType string) bool {
 	}
 }
 
+func hasManualModels(providerType string) bool {
+	switch providerType {
+	case "openai", "openai_compatible", "azure_foundry":
+		return true
+	default:
+		return false
+	}
+}
+
 func defaultLLMApiMode(providerType string) string {
 	if providerType == "openai_compatible" {
 		return llmModeChat
@@ -112,7 +121,7 @@ func (s *server) createConnector(w http.ResponseWriter, r *http.Request) {
 		APIVersion:   in.APIVersion,
 		LLMApiMode:   in.LLMApiMode,
 	}
-	if isLLMProvider(in.ProviderType) {
+	if hasManualModels(in.ProviderType) {
 		out.Models = make([]connectorModelResponse, len(in.Models))
 		for i, model := range in.Models {
 			out.Models[i] = connectorModelResponse(model)
@@ -346,6 +355,19 @@ func decodeConnector(w http.ResponseWriter, r *http.Request) (connectorRequest, 
 			in.LLMApiMode = defaultLLMApiMode(in.ProviderType)
 		}
 		if in.LLMApiMode != llmModeResponses && in.LLMApiMode != llmModeChat {
+			return connectorRequest{}, invalid
+		}
+		if err := validateLLMModels(in.Models); err != nil {
+			return connectorRequest{}, invalid
+		}
+		if err := validateBaseURL(in.BaseURL, in.Credential, false); err != nil {
+			return connectorRequest{}, invalid
+		}
+	case "azure_foundry":
+		if in.APIVersion != "" || in.LLMApiMode != "" {
+			return connectorRequest{}, invalid
+		}
+		if in.Credential == "" || in.CredentialLabel == "" {
 			return connectorRequest{}, invalid
 		}
 		if err := validateLLMModels(in.Models); err != nil {

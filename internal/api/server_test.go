@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -214,6 +215,69 @@ func TestAPICreatesLLMConnectorWithModels(t *testing.T) {
 	}
 }
 
+func TestAPICreatesAzureFoundryConnectorWithModels(t *testing.T) {
+	handler, pool, box := newAPI(t)
+	secret := rand.Text()
+	body, err := json.Marshal(map[string]any{
+		"name": " Foundry ", "providerType": " azure_foundry ",
+		"baseUrl": " https://my-resource.services.ai.azure.com ", "credential": secret, "credentialLabel": "Foundry key",
+		"models": []map[string]any{
+			{"id": " mistral-document-ai-2505 ", "enabled": true},
+			{"id": "gpt-4o", "enabled": false},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	created := request(t, handler, http.MethodPost, "/api/v1/connectors", string(body))
+	if created.Code != http.StatusCreated || strings.Contains(created.Body.String(), secret) {
+		t.Fatalf("create: %d %s", created.Code, created.Body.String())
+	}
+	var got connector
+	if err := json.Unmarshal(created.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.ProviderType != "azure_foundry" || got.BaseURL != "https://my-resource.services.ai.azure.com" ||
+		got.APIVersion != "" || got.LLMApiMode != "" || len(got.Models) != 2 ||
+		got.Models[0].ID != "mistral-document-ai-2505" || !got.Models[0].Enabled ||
+		got.Models[1].ID != "gpt-4o" || got.Models[1].Enabled {
+		t.Fatalf("created Connector: %+v", got)
+	}
+	var apiVersion, llmMode sql.NullString
+	var modelCount int
+	if err := pool.QueryRow(t.Context(), `
+		SELECT api_version, llm_api_mode FROM connectors WHERE id = $1`, got.ID).Scan(&apiVersion, &llmMode); err != nil {
+		t.Fatal(err)
+	}
+	if apiVersion.Valid || llmMode.Valid {
+		t.Fatalf("persisted nulls: api=%v llm=%v", apiVersion, llmMode)
+	}
+	if err := pool.QueryRow(t.Context(), `SELECT count(*) FROM connector_models WHERE connector_id = $1`, got.ID).Scan(&modelCount); err != nil {
+		t.Fatal(err)
+	}
+	if modelCount != 2 {
+		t.Fatalf("model rows: %d", modelCount)
+	}
+	var ciphertext []byte
+	if err := pool.QueryRow(t.Context(), `SELECT credential_ciphertext FROM connectors WHERE id = $1`, got.ID).Scan(&ciphertext); err != nil {
+		t.Fatal(err)
+	}
+	plain, err := box.Decrypt(ciphertext)
+	if err != nil || string(plain) != secret {
+		t.Fatal("stored Credential does not round-trip")
+	}
+
+	listed := request(t, handler, http.MethodGet, "/api/v1/connectors", "")
+	var list struct{ Connectors []connector }
+	if err := json.Unmarshal(listed.Body.Bytes(), &list); err != nil || listed.Code != http.StatusOK {
+		t.Fatalf("list: %d %s", listed.Code, listed.Body.String())
+	}
+	if len(list.Connectors) != 1 || list.Connectors[0].ID != got.ID || len(list.Connectors[0].Models) != 2 ||
+		strings.Contains(listed.Body.String(), secret) {
+		t.Fatalf("list: %s", listed.Body.String())
+	}
+}
+
 func TestAPICreatesAConnectorWithoutACredential(t *testing.T) {
 	handler, _, _ := newAPI(t)
 	created := request(t, handler, http.MethodPost, "/api/v1/connectors", `{"name":"Local","providerType":"web_request","baseUrl":"http://127.0.0.1:9000"}`)
@@ -239,6 +303,12 @@ func TestAPIRejectsInvalidConnectorsWithoutInserting(t *testing.T) {
 		{"web_request_models", strings.TrimSuffix(valid, "}") + `,"models":[{"id":"x","enabled":true}]}`, "application/json"},
 		{"web_request_api_version", strings.TrimSuffix(valid, "}") + `,"apiVersion":"2024-11-30"}`, "application/json"},
 		{"azure_without_credential", `{"name":"Azure","providerType":"azure_document_intelligence","baseUrl":"https://ocr.example.cognitiveservices.azure.com","credentialLabel":"key"}`, "application/json"},
+		{"foundry_without_models", `{"name":"Foundry","providerType":"azure_foundry","baseUrl":"https://resource.services.ai.azure.com","credential":"secret","credentialLabel":"Prod"}`, "application/json"},
+		{"foundry_without_enabled_model", `{"name":"Foundry","providerType":"azure_foundry","baseUrl":"https://resource.services.ai.azure.com","credential":"secret","credentialLabel":"Prod","models":[{"id":"mistral-document-ai-2505","enabled":false}]}`, "application/json"},
+		{"foundry_duplicate_model", `{"name":"Foundry","providerType":"azure_foundry","baseUrl":"https://resource.services.ai.azure.com","credential":"secret","credentialLabel":"Prod","models":[{"id":"mistral-document-ai-2505","enabled":true},{"id":"mistral-document-ai-2505","enabled":false}]}`, "application/json"},
+		{"foundry_without_credential", `{"name":"Foundry","providerType":"azure_foundry","baseUrl":"https://resource.services.ai.azure.com","credentialLabel":"key","models":[{"id":"mistral-document-ai-2505","enabled":true}]}`, "application/json"},
+		{"foundry_api_version", `{"name":"Foundry","providerType":"azure_foundry","baseUrl":"https://resource.services.ai.azure.com","credential":"secret","credentialLabel":"Prod","apiVersion":"2024-11-30","models":[{"id":"mistral-document-ai-2505","enabled":true}]}`, "application/json"},
+		{"foundry_llm_api_mode", `{"name":"Foundry","providerType":"azure_foundry","baseUrl":"https://resource.services.ai.azure.com","credential":"secret","credentialLabel":"Prod","llmApiMode":"responses","models":[{"id":"mistral-document-ai-2505","enabled":true}]}`, "application/json"},
 		{"relative_url", withURL("/check"), "application/json"},
 		{"wrong_scheme", withURL("ftp://example.com"), "application/json"},
 		{"missing_host", withURL("https:///check"), "application/json"},
