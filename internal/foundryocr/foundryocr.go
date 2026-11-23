@@ -94,7 +94,7 @@ func (e *Executor) Extract(ctx context.Context, config Config, document Document
 	body, err := json.Marshal(map[string]any{
 		"model": config.Model,
 		"document": map[string]string{
-			"type":          docType,
+			"type":         docType,
 			"document_url": dataURL,
 		},
 	})
