@@ -224,20 +224,11 @@ func (h *ocrHandler) resolve(ctx context.Context, connectorID, modelID string) (
 	if len(ciphertext) == 0 {
 		return ocrResolved{}, errWrongConnector
 	}
-	plain, err := h.box.Decrypt(ciphertext)
-	if err != nil {
-		return ocrResolved{}, err
-	}
-	credential := string(plain)
 	switch providerType {
 	case "azure_document_intelligence":
 		if modelID != "" || apiVersion == "" {
 			return ocrResolved{}, errWrongConnector
 		}
-		return ocrResolved{
-			provider: providerType,
-			azure:    azureocr.Config{BaseURL: baseURL, APIVersion: apiVersion, Credential: credential},
-		}, nil
 	case "azure_foundry":
 		if modelID == "" {
 			return ocrResolved{}, errWrongConnector
@@ -256,13 +247,24 @@ func (h *ocrHandler) resolve(ctx context.Context, connectorID, modelID string) (
 		if !enabled {
 			return ocrResolved{}, errDisabledModel
 		}
-		return ocrResolved{
-			provider: providerType,
-			foundry:  foundryocr.Config{BaseURL: baseURL, Model: modelID, Credential: credential},
-		}, nil
 	default:
 		return ocrResolved{}, errWrongConnector
 	}
+	plain, err := h.box.Decrypt(ciphertext)
+	if err != nil {
+		return ocrResolved{}, err
+	}
+	credential := string(plain)
+	if providerType == "azure_document_intelligence" {
+		return ocrResolved{
+			provider: providerType,
+			azure:    azureocr.Config{BaseURL: baseURL, APIVersion: apiVersion, Credential: credential},
+		}, nil
+	}
+	return ocrResolved{
+		provider: providerType,
+		foundry:  foundryocr.Config{BaseURL: baseURL, Model: modelID, Credential: credential},
+	}, nil
 }
 
 var errTooLarge = errors.New("field too large")
