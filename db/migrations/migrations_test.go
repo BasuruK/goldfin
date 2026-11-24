@@ -15,6 +15,8 @@ const azureDocumentIntelligenceConnectorsVersion = 20261024120000
 
 const llmConnectorsVersion = 20261101120000
 
+const azureFoundryConnectorsVersion = 20261123120000
+
 func migrateTo(t *testing.T, db *sql.DB, version int64) {
 	t.Helper()
 	migrator, err := migrations.NewProvider(db)
@@ -262,5 +264,95 @@ func TestLLMConnectorSchemaRoundTripAndRollback(t *testing.T) {
 		!afterLabel.Valid || afterLabel.String != webLabel || !afterSetAt.Valid || !afterSetAt.Time.Equal(webSetAt) ||
 		afterAPI.Valid {
 		t.Fatalf("web_request row changed after rollback: %+v", afterName)
+	}
+}
+
+func TestAzureFoundryConnectorSchemaRoundTripAndRollback(t *testing.T) {
+	_, db := testdb.New(t)
+	ctx := t.Context()
+
+	migrateTo(t, db, plainConnectorsVersion)
+	webID, webCipher, webLabel, webSetAt := seedWebRequestConnector(t, db)
+
+	migrateTo(t, db, azureFoundryConnectorsVersion)
+
+	migrator, err := migrations.NewProvider(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var foundryID string
+	foundryCipher := []byte{0xee, 0xff}
+	foundrySetAt := time.Date(2026, 11, 23, 9, 0, 0, 0, time.UTC)
+	err = db.QueryRowContext(ctx, `
+		INSERT INTO connectors (name, provider_type, base_url, credential_label, credential_ciphertext, credential_set_at)
+		VALUES ('Foundry', 'azure_foundry', 'https://resource.services.ai.azure.com', 'Foundry key', $1, $2)
+		RETURNING id`, foundryCipher, foundrySetAt).Scan(&foundryID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO connector_models (connector_id, model_id, enabled, source)
+		VALUES ($1, 'mistral-document-ai-2505', true, 'manual'), ($1, 'gpt-4o', false, 'manual')`, foundryID); err != nil {
+		t.Fatal(err)
+	}
+
+	var apiVersion, llmMode sql.NullString
+	if err := db.QueryRowContext(ctx, `
+		SELECT api_version, llm_api_mode FROM connectors WHERE id = $1`, foundryID).Scan(&apiVersion, &llmMode); err != nil {
+		t.Fatal(err)
+	}
+	if apiVersion.Valid || llmMode.Valid {
+		t.Fatalf("azure_foundry must have null api_version and llm_api_mode, got api=%v llm=%v", apiVersion, llmMode)
+	}
+
+	_, err = db.ExecContext(ctx, `
+		INSERT INTO connectors (name, provider_type, base_url, llm_api_mode, credential_label, credential_ciphertext, credential_set_at)
+		VALUES ('Bad mode', 'azure_foundry', 'https://resource.services.ai.azure.com', 'responses', 'key', $1, $2)`,
+		foundryCipher, foundrySetAt)
+	if err == nil {
+		t.Fatal("expected azure_foundry with llm_api_mode to be rejected")
+	}
+
+	_, err = db.ExecContext(ctx, `
+		INSERT INTO connectors (name, provider_type, base_url, api_version, credential_label, credential_ciphertext, credential_set_at)
+		VALUES ('Bad version', 'azure_foundry', 'https://resource.services.ai.azure.com', '2024-11-30', 'key', $1, $2)`,
+		foundryCipher, foundrySetAt)
+	if err == nil {
+		t.Fatal("expected azure_foundry with api_version to be rejected")
+	}
+
+	if _, err := db.ExecContext(ctx, `DELETE FROM connectors WHERE id = $1`, foundryID); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := migrator.Down(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	var afterName, afterProvider string
+	var afterCipher []byte
+	var afterLabel sql.NullString
+	var afterSetAt sql.NullTime
+	var afterAPI sql.NullString
+	err = db.QueryRowContext(ctx, `
+		SELECT name, provider_type, credential_ciphertext, credential_label, credential_set_at, api_version
+		FROM connectors WHERE id = $1`, webID).Scan(&afterName, &afterProvider, &afterCipher, &afterLabel, &afterSetAt, &afterAPI)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if afterName != "Fixture" || afterProvider != "web_request" || string(afterCipher) != string(webCipher) ||
+		!afterLabel.Valid || afterLabel.String != webLabel || !afterSetAt.Valid || !afterSetAt.Time.Equal(webSetAt) ||
+		afterAPI.Valid {
+		t.Fatalf("web_request row changed after foundry rollback: %+v", afterName)
+	}
+
+	var rejectedID string
+	err = db.QueryRowContext(ctx, `
+		INSERT INTO connectors (name, provider_type, base_url, credential_label, credential_ciphertext, credential_set_at)
+		VALUES ('Foundry', 'azure_foundry', 'https://resource.services.ai.azure.com', 'key', $1, $2)
+		RETURNING id`, foundryCipher, foundrySetAt).Scan(&rejectedID)
+	if err == nil {
+		t.Fatal("expected azure_foundry insert to fail after rollback until migration is reapplied")
 	}
 }
