@@ -51,7 +51,6 @@ let listOperation = 0;
 let abortController: AbortController | null = null;
 let startedAt: number | null = null;
 let elapsedTimer: ReturnType<typeof setInterval> | null = null;
-let lastConnectorId = '';
 
 function selectedConnector(): SavedConnector | undefined {
   return playgroundStore.connectors.find(connector => connector.id === playgroundStore.connectorId);
@@ -97,23 +96,15 @@ export async function loadOcrConnectors(): Promise<void> {
   }
 }
 
-export function selectOcrConnector(connectorId: string): void {
+function selectOcrConnector(connectorId: string): void {
   playgroundStore.connectorId = connectorId;
   const enabled = enabledModelIds(selectedConnector());
   playgroundStore.modelId = enabled[0] ?? '';
 }
 
-$effect(() => {
-  const connectorId = playgroundStore.connectorId;
-  if (connectorId === lastConnectorId) return;
-  lastConnectorId = connectorId;
-  if (connectorId) selectOcrConnector(connectorId);
-});
-
 export function disposePlayground(): void {
   invalidateOperation();
   listOperation += 1;
-  lastConnectorId = '';
   abortController?.abort();
   abortController = null;
   resetBusyUi();
