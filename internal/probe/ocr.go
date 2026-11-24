@@ -13,7 +13,9 @@ import (
 	"time"
 
 	"github.com/BasuruK/goldfin/internal/azureocr"
+	"github.com/BasuruK/goldfin/internal/foundryocr"
 	"github.com/BasuruK/goldfin/internal/secretbox"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -25,14 +27,26 @@ const (
 )
 
 type ocrHandler struct {
-	pool     *pgxpool.Pool
-	box      *secretbox.Box
-	executor *azureocr.Executor
+	pool            *pgxpool.Pool
+	box             *secretbox.Box
+	azureExecutor   *azureocr.Executor
+	foundryExecutor *foundryocr.Executor
 }
 
-// NewOCRHandler decrypts the saved Connector Credential and calls Azure Document Intelligence synchronously.
+type ocrResolved struct {
+	provider string
+	azure    azureocr.Config
+	foundry  foundryocr.Config
+}
+
+// NewOCRHandler decrypts the saved Connector Credential and calls the Connector's OCR provider synchronously.
 func NewOCRHandler(pool *pgxpool.Pool, box *secretbox.Box, transport http.RoundTripper) http.Handler {
-	h := ocrHandler{pool: pool, box: box, executor: azureocr.New(transport)}
+	h := ocrHandler{
+		pool:            pool,
+		box:             box,
+		azureExecutor:   azureocr.New(transport),
+		foundryExecutor: foundryocr.New(transport),
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
 		routeBudget := azureocr.ProcessingBudget + 30*time.Second
@@ -56,10 +70,11 @@ func (h *ocrHandler) serveOCR(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"message": "Invalid OCR request."})
 		return
 	}
-	var connectorID string
+	var connectorID, modelID string
 	var document []byte
 	var documentMIME string
 	connectorIDSeen := false
+	modelIDSeen := false
 	documentSeen := false
 	for {
 		part, err := reader.NextPart()
@@ -81,6 +96,15 @@ func (h *ocrHandler) serveOCR(w http.ResponseWriter, r *http.Request) {
 			var data []byte
 			data, err = readBoundedBytes(part, 256)
 			connectorID = string(data)
+		case "modelId":
+			if modelIDSeen {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"message": "Invalid OCR request."})
+				return
+			}
+			modelIDSeen = true
+			var data []byte
+			data, err = readBoundedBytes(part, 256)
+			modelID = string(data)
 		case "document":
 			if documentSeen {
 				writeJSON(w, http.StatusBadRequest, map[string]string{"message": "Invalid OCR request."})
@@ -99,7 +123,7 @@ func (h *ocrHandler) serveOCR(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	connectorID = strings.TrimSpace(connectorID)
-	if connectorID == "" || len(document) == 0 {
+	if (modelIDSeen && strings.TrimSpace(modelID) == "") || connectorID == "" || len(document) == 0 {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"message": "Invalid OCR request."})
 		return
 	}
@@ -111,22 +135,30 @@ func (h *ocrHandler) serveOCR(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), azureocr.ProcessingBudget)
 	defer cancel()
 	_ = http.NewResponseController(w).SetWriteDeadline(time.Now().Add(azureocr.ProcessingBudget))
-	config, err := h.loadAzureConnector(ctx, connectorID)
+	resolved, err := h.resolve(ctx, connectorID, modelID)
 	if err != nil {
-		if errors.Is(err, errWrongConnector) {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"message": "Invalid OCR request."})
-			return
-		}
-		if isInvalidConnectorID(err) {
+		if errors.Is(err, errWrongConnector) || errors.Is(err, errDisabledModel) || isInvalidConnectorID(err) {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"message": "Invalid OCR request."})
 			return
 		}
 		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"message": "Could not run OCR."})
 		return
 	}
-	extraction, err := h.executor.Extract(ctx, config, azureocr.Document{Bytes: document, MIMEType: documentMIME})
+	doc := azureocr.Document{Bytes: document, MIMEType: documentMIME}
+	var extraction azureocr.Extraction
+	switch resolved.provider {
+	case "azure_document_intelligence":
+		extraction, err = h.azureExecutor.Extract(ctx, resolved.azure, doc)
+	case "azure_foundry":
+		var foundryResult foundryocr.Extraction
+		foundryResult, err = h.foundryExecutor.Extract(ctx, resolved.foundry, foundryocr.Document{Bytes: document, MIMEType: documentMIME})
+		extraction = azureocr.Extraction{Content: foundryResult.Content, Pages: foundryResult.Pages}
+	default:
+		writeJSON(w, http.StatusBadRequest, map[string]string{"message": "Invalid OCR request."})
+		return
+	}
 	if err != nil {
-		if errors.Is(err, azureocr.ErrInvalidInput) {
+		if errors.Is(err, azureocr.ErrInvalidInput) || errors.Is(err, foundryocr.ErrInvalidInput) {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"message": "Invalid OCR request."})
 			return
 		}
@@ -178,24 +210,61 @@ func documentMatchesMIME(mimeType string, document []byte) bool {
 	}
 }
 
-func (h *ocrHandler) loadAzureConnector(ctx context.Context, id string) (azureocr.Config, error) {
+func (h *ocrHandler) resolve(ctx context.Context, connectorID, modelID string) (ocrResolved, error) {
+	modelID = strings.TrimSpace(modelID)
 	var providerType, baseURL, apiVersion string
 	var ciphertext []byte
 	err := h.pool.QueryRow(ctx, `
 		SELECT provider_type, base_url, COALESCE(api_version, ''), credential_ciphertext
-		FROM connectors WHERE id = $1`, id,
+		FROM connectors WHERE id = $1`, connectorID,
 	).Scan(&providerType, &baseURL, &apiVersion, &ciphertext)
 	if err != nil {
-		return azureocr.Config{}, err
+		return ocrResolved{}, err
 	}
-	if providerType != "azure_document_intelligence" || len(ciphertext) == 0 || apiVersion == "" {
-		return azureocr.Config{}, errWrongConnector
+	if len(ciphertext) == 0 {
+		return ocrResolved{}, errWrongConnector
+	}
+	switch providerType {
+	case "azure_document_intelligence":
+		if modelID != "" || apiVersion == "" {
+			return ocrResolved{}, errWrongConnector
+		}
+	case "azure_foundry":
+		if modelID == "" {
+			return ocrResolved{}, errWrongConnector
+		}
+		var enabled bool
+		err = h.pool.QueryRow(ctx, `
+			SELECT enabled FROM connector_models
+			WHERE connector_id = $1 AND model_id = $2`, connectorID, modelID,
+		).Scan(&enabled)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ocrResolved{}, errDisabledModel
+		}
+		if err != nil {
+			return ocrResolved{}, err
+		}
+		if !enabled {
+			return ocrResolved{}, errDisabledModel
+		}
+	default:
+		return ocrResolved{}, errWrongConnector
 	}
 	plain, err := h.box.Decrypt(ciphertext)
 	if err != nil {
-		return azureocr.Config{}, err
+		return ocrResolved{}, err
 	}
-	return azureocr.Config{BaseURL: baseURL, APIVersion: apiVersion, Credential: string(plain)}, nil
+	credential := string(plain)
+	if providerType == "azure_document_intelligence" {
+		return ocrResolved{
+			provider: providerType,
+			azure:    azureocr.Config{BaseURL: baseURL, APIVersion: apiVersion, Credential: credential},
+		}, nil
+	}
+	return ocrResolved{
+		provider: providerType,
+		foundry:  foundryocr.Config{BaseURL: baseURL, Model: modelID, Credential: credential},
+	}, nil
 }
 
 var errTooLarge = errors.New("field too large")

@@ -23,6 +23,10 @@ import (
 const testCredential = "synthetic-ocr-Credential" // #nosec G101 -- fixture Credential with no provider access.
 const testBaseURL = "https://ocr.example.test"
 const testOperationURL = testBaseURL + "/documentintelligence/documentModels/prebuilt-read/analyzeResults/fixture?api-version=2024-11-30"
+const testFoundryBaseURL = "https://foundry.example.test"
+const testFoundryCredential = "synthetic-foundry-Credential" // #nosec G101 -- fixture Credential with no provider access.
+const testFoundryModel = "mistral-document-ai-2505"
+const testFoundryDisabledModel = "gpt-disabled-foundry"
 
 func newHandler(t *testing.T, transport http.RoundTripper) http.Handler {
 	t.Helper()
@@ -60,12 +64,36 @@ func createAzureConnector(t *testing.T, h http.Handler) string {
 	return created.ID
 }
 
-func ocrRequest(t *testing.T, connectorID string, document []byte, mime string) *http.Request {
+func createFoundryConnector(t *testing.T, h http.Handler) string {
+	t.Helper()
+	body := `{"name":"Fixture Foundry","providerType":"azure_foundry","baseUrl":"` + testFoundryBaseURL + `","credential":"` + testFoundryCredential + `","credentialLabel":"Fixture key","models":[{"id":"` + testFoundryModel + `","enabled":true},{"id":"` + testFoundryDisabledModel + `","enabled":false}]}`
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/connectors", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("create Foundry Connector: %d %s", rec.Code, rec.Body.String())
+	}
+	var created struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &created); err != nil || created.ID == "" {
+		t.Fatalf("created Connector: %s", rec.Body.String())
+	}
+	return created.ID
+}
+
+func ocrRequest(t *testing.T, connectorID string, document []byte, mime string, modelID string) *http.Request {
 	t.Helper()
 	var buf bytes.Buffer
 	writer := multipart.NewWriter(&buf)
 	if err := writer.WriteField("connectorId", connectorID); err != nil {
 		t.Fatal(err)
+	}
+	if modelID != "" {
+		if err := writer.WriteField("modelId", modelID); err != nil {
+			t.Fatal(err)
+		}
 	}
 	header := textproto.MIMEHeader{}
 	header.Set("Content-Disposition", `form-data; name="document"; filename="fixture.docx"`)
@@ -107,7 +135,7 @@ func TestOCRProbeReturnsRecordedExtraction(t *testing.T) {
 	h := newHandler(t, transport)
 	connectorID := createAzureConnector(t, h)
 	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, ocrRequest(t, connectorID, document, "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+	h.ServeHTTP(rec, ocrRequest(t, connectorID, document, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", ""))
 	if rec.Code != http.StatusOK || rec.Header().Get("Cache-Control") != "no-store" {
 		t.Fatalf("OCR: %d %s", rec.Code, rec.Body.String())
 	}
@@ -143,7 +171,7 @@ func TestOCRProbeOutlivesConnectorDatabaseGuard(t *testing.T) {
 		h := newHandler(t, transport)
 		connectorID := createAzureConnector(t, h)
 		rec := httptest.NewRecorder()
-		h.ServeHTTP(rec, ocrRequest(t, connectorID, syntheticPDFDocument(), "application/pdf"))
+		h.ServeHTTP(rec, ocrRequest(t, connectorID, syntheticPDFDocument(), "application/pdf", ""))
 		if rec.Code != http.StatusOK || time.Since(start) < 6*time.Second {
 			t.Fatalf("OCR was cut off by the short Connector guard: %d after %s", rec.Code, time.Since(start))
 		}
@@ -161,8 +189,8 @@ func TestOCRProbeRejectsInvalidRequests(t *testing.T) {
 		name string
 		req  *http.Request
 	}{
-		{"wrong_connector", ocrRequest(t, webID, []byte("x"), "application/pdf")},
-		{"non_uuid_connector_id", ocrRequest(t, "not-a-valid-uuid", []byte("x"), "application/pdf")},
+		{"wrong_connector", ocrRequest(t, webID, []byte("x"), "application/pdf", "")},
+		{"non_uuid_connector_id", ocrRequest(t, "not-a-valid-uuid", []byte("x"), "application/pdf", "")},
 		{"missing_document", func() *http.Request {
 			var buf bytes.Buffer
 			writer := multipart.NewWriter(&buf)
@@ -247,7 +275,7 @@ func TestOCRProbeAcceptsDOCXWithGenericPartType(t *testing.T) {
 	h := newHandler(t, transport)
 	connectorID := createAzureConnector(t, h)
 	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, ocrRequest(t, connectorID, document, "application/octet-stream"))
+	h.ServeHTTP(rec, ocrRequest(t, connectorID, document, "application/octet-stream", ""))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("DOCX with generic part type: %d %s", rec.Code, rec.Body.String())
 	}
@@ -261,7 +289,7 @@ func TestOCRProbeRejectsMismatchedDocumentType(t *testing.T) {
 	connectorID := createAzureConnector(t, h)
 	rec := httptest.NewRecorder()
 	jpeg := []byte{0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10}
-	h.ServeHTTP(rec, ocrRequest(t, connectorID, jpeg, "application/pdf"))
+	h.ServeHTTP(rec, ocrRequest(t, connectorID, jpeg, "application/pdf", ""))
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("JPEG labelled PDF: %d %s", rec.Code, rec.Body.String())
 	}
@@ -274,9 +302,138 @@ func TestOCRProbeRejectsOversizeDocument(t *testing.T) {
 	}))
 	connectorID := createAzureConnector(t, h)
 	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, ocrRequest(t, connectorID, make([]byte, 30_000_001), "application/pdf"))
+	h.ServeHTTP(rec, ocrRequest(t, connectorID, make([]byte, 30_000_001), "application/pdf", ""))
 	if rec.Code != http.StatusRequestEntityTooLarge {
 		t.Fatalf("oversize Document: %d %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestOCRProbeFoundryReturnsRecordedExtraction(t *testing.T) {
+	document := syntheticPDFDocument()
+	transport := roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		if r.Method != http.MethodPost || r.URL.Path != "/providers/mistral/azure/ocr" {
+			t.Fatalf("provider request: %s %s", r.Method, r.URL.Path)
+		}
+		if r.Header.Get("Authorization") != "Bearer "+testFoundryCredential {
+			t.Fatal("Authorization header")
+		}
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var payload struct {
+			Model string `json:"model"`
+		}
+		if json.Unmarshal(body, &payload) != nil || payload.Model != testFoundryModel {
+			t.Fatalf("model in request: %q", payload.Model)
+		}
+		return response(http.StatusOK, []byte(`{"pages":[{"markdown":"line one"},{"markdown":"line two"}]}`)), nil
+	})
+	h := newHandler(t, transport)
+	connectorID := createFoundryConnector(t, h)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, ocrRequest(t, connectorID, document, "application/pdf", testFoundryModel))
+	if rec.Code != http.StatusOK || rec.Header().Get("Cache-Control") != "no-store" {
+		t.Fatalf("OCR Foundry: %d %s", rec.Code, rec.Body.String())
+	}
+	if strings.Contains(rec.Body.String(), testFoundryCredential) {
+		t.Fatal("OCR response leaked the Credential")
+	}
+	var got struct {
+		Content string `json:"content"`
+		Pages   int    `json:"pages"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil || got.Content != "line one\n\nline two" || got.Pages != 2 {
+		t.Fatalf("OCR Extraction: %+v err=%v", got, err)
+	}
+}
+
+func TestOCRProbeRejectsFoundryWithoutModelId(t *testing.T) {
+	h := newHandler(t, roundTripFunc(func(*http.Request) (*http.Response, error) {
+		t.Fatal("Foundry request without modelId reached the provider")
+		return nil, nil
+	}))
+	connectorID := createFoundryConnector(t, h)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, ocrRequest(t, connectorID, syntheticPDFDocument(), "application/pdf", ""))
+	if rec.Code != http.StatusBadRequest || strings.Contains(rec.Body.String(), testFoundryCredential) {
+		t.Fatalf("missing modelId: %d %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestOCRProbeRejectsMissingFoundryModel(t *testing.T) {
+	calls := 0
+	h := newHandler(t, roundTripFunc(func(*http.Request) (*http.Response, error) {
+		calls++
+		return response(http.StatusOK, nil), nil
+	}))
+	connectorID := createFoundryConnector(t, h)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, ocrRequest(t, connectorID, syntheticPDFDocument(), "application/pdf", "unknown-deployment"))
+	if rec.Code != http.StatusBadRequest || calls != 0 {
+		t.Fatalf("missing model: %d calls=%d %s", rec.Code, calls, rec.Body.String())
+	}
+}
+
+func TestOCRProbeRejectsDisabledFoundryModel(t *testing.T) {
+	calls := 0
+	h := newHandler(t, roundTripFunc(func(*http.Request) (*http.Response, error) {
+		calls++
+		return response(http.StatusOK, nil), nil
+	}))
+	connectorID := createFoundryConnector(t, h)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, ocrRequest(t, connectorID, syntheticPDFDocument(), "application/pdf", testFoundryDisabledModel))
+	if rec.Code != http.StatusBadRequest || calls != 0 {
+		t.Fatalf("disabled model: %d calls=%d %s", rec.Code, calls, rec.Body.String())
+	}
+}
+
+func TestOCRProbeRejectsModelIdOnDocumentIntelligenceConnector(t *testing.T) {
+	h := newHandler(t, roundTripFunc(func(*http.Request) (*http.Response, error) {
+		t.Fatal("Document Intelligence with modelId reached the provider")
+		return nil, nil
+	}))
+	connectorID := createAzureConnector(t, h)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, ocrRequest(t, connectorID, syntheticPDFDocument(), "application/pdf", testFoundryModel))
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("modelId on Document Intelligence: %d %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestOCRProbeRejectsBlankModelId(t *testing.T) {
+	h := newHandler(t, roundTripFunc(func(*http.Request) (*http.Response, error) {
+		t.Fatal("blank modelId reached the provider")
+		return nil, nil
+	}))
+	connectorID := createAzureConnector(t, h)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, ocrRequest(t, connectorID, syntheticPDFDocument(), "application/pdf", " "))
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("blank modelId: %d %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestOCRProbeRejectsDuplicateModelId(t *testing.T) {
+	h := newHandler(t, roundTripFunc(func(*http.Request) (*http.Response, error) {
+		t.Fatal("duplicate modelId reached the provider")
+		return nil, nil
+	}))
+	connectorID := createFoundryConnector(t, h)
+	var buf bytes.Buffer
+	writer := multipart.NewWriter(&buf)
+	_ = writer.WriteField("connectorId", connectorID)
+	_ = writer.WriteField("modelId", testFoundryModel)
+	_ = writer.WriteField("modelId", testFoundryModel)
+	_ = writer.WriteField("document", string(syntheticPDFDocument()))
+	_ = writer.Close()
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/probes/ocr", &buf)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("duplicate modelId: %d %s", rec.Code, rec.Body.String())
 	}
 }
 
@@ -287,7 +444,7 @@ func TestOCRProbeMapsProviderFailure(t *testing.T) {
 	h := newHandler(t, transport)
 	connectorID := createAzureConnector(t, h)
 	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, ocrRequest(t, connectorID, syntheticPDFDocument(), "application/pdf"))
+	h.ServeHTTP(rec, ocrRequest(t, connectorID, syntheticPDFDocument(), "application/pdf", ""))
 	if rec.Code != http.StatusBadGateway || !strings.Contains(rec.Body.String(), "Could not extract the Document.") {
 		t.Fatalf("provider failure: %d %s", rec.Code, rec.Body.String())
 	}
@@ -306,7 +463,7 @@ func TestOCRProbeTimesOut(t *testing.T) {
 		h := newHandler(t, transport)
 		connectorID := createAzureConnector(t, h)
 		rec := httptest.NewRecorder()
-		h.ServeHTTP(rec, ocrRequest(t, connectorID, syntheticPDFDocument(), "application/pdf"))
+		h.ServeHTTP(rec, ocrRequest(t, connectorID, syntheticPDFDocument(), "application/pdf", ""))
 		if rec.Code != http.StatusGatewayTimeout || !strings.Contains(rec.Body.String(), "OCR timed out.") {
 			t.Fatalf("stuck OCR: %d %s", rec.Code, rec.Body.String())
 		}
