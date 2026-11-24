@@ -96,12 +96,6 @@ export async function loadOcrConnectors(): Promise<void> {
   }
 }
 
-function selectOcrConnector(connectorId: string): void {
-  playgroundStore.connectorId = connectorId;
-  const enabled = enabledModelIds(selectedConnector());
-  playgroundStore.modelId = enabled[0] ?? '';
-}
-
 export function disposePlayground(): void {
   invalidateOperation();
   listOperation += 1;
