@@ -402,6 +402,19 @@ func TestOCRProbeRejectsModelIdOnDocumentIntelligenceConnector(t *testing.T) {
 	}
 }
 
+func TestOCRProbeRejectsBlankModelId(t *testing.T) {
+	h := newHandler(t, roundTripFunc(func(*http.Request) (*http.Response, error) {
+		t.Fatal("blank modelId reached the provider")
+		return nil, nil
+	}))
+	connectorID := createAzureConnector(t, h)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, ocrRequest(t, connectorID, syntheticPDFDocument(), "application/pdf", " "))
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("blank modelId: %d %s", rec.Code, rec.Body.String())
+	}
+}
+
 func TestOCRProbeRejectsDuplicateModelId(t *testing.T) {
 	h := newHandler(t, roundTripFunc(func(*http.Request) (*http.Response, error) {
 		t.Fatal("duplicate modelId reached the provider")

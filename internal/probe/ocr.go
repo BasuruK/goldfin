@@ -123,7 +123,7 @@ func (h *ocrHandler) serveOCR(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	connectorID = strings.TrimSpace(connectorID)
-	if connectorID == "" || len(document) == 0 {
+	if (modelIDSeen && strings.TrimSpace(modelID) == "") || connectorID == "" || len(document) == 0 {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"message": "Invalid OCR request."})
 		return
 	}
