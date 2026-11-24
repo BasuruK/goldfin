@@ -58,8 +58,32 @@ test('an Azure OCR draft sends its trimmed API version, or the default when blan
   });
 });
 
-test('a draft is refused for a provider that cannot save, an LLM without a key, or no enabled model', () => {
-  assert.deepEqual(planSave(makeRecord({ providerType: 'azure' })), {
+test('a Foundry draft sends its models without apiVersion or LLM API mode', () => {
+  const foundry = makeRecord({
+    providerType: 'azure_foundry',
+    name: 'Foundry',
+    baseUrl: 'https://my-resource.services.ai.azure.com',
+    apiKey: 'key',
+    credentialLabel: 'Prod',
+    models: [{ id: 'mistral-document-ai-2505', enabled: true, source: 'manual' }]
+  });
+  assert.deepEqual(planSave(foundry), {
+    kind: 'save',
+    request: {
+      name: 'Foundry',
+      providerType: 'azure_foundry',
+      baseUrl: 'https://my-resource.services.ai.azure.com',
+      apiVersion: undefined,
+      llmApiMode: undefined,
+      models: [{ id: 'mistral-document-ai-2505', enabled: true }],
+      credential: 'key',
+      credentialLabel: 'Prod'
+    }
+  });
+});
+
+test('a draft is refused for a provider that cannot save, a model-owning provider without a key, or no enabled model', () => {
+  assert.deepEqual(planSave(makeRecord({ providerType: 'legacy_azure' as 'openai' })), {
     kind: 'invalid',
     field: null,
     message: 'Saving is not available for this provider yet.'

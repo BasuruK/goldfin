@@ -90,6 +90,34 @@ describe('createConnector', () => {
     }
   });
 
+  it('sends Foundry models like an LLM draft and omits apiVersion and llmApiMode', async () => {
+    const foundry = {
+      ...draft,
+      providerType: 'azure_foundry',
+      credential: 'secret',
+      credentialLabel: 'Prod'
+    };
+    const foundryFields = {
+      ...sentFields,
+      providerType: 'azure_foundry',
+      credential: 'secret',
+      credentialLabel: 'Prod'
+    };
+    const fetchMock = mockFetch(async () =>
+      jsonResponse(201, { ...saved, providerType: 'azure_foundry', models: [{ id: 'mistral-document-ai-2505', enabled: true }] })
+    );
+    await createConnector({
+      ...foundry,
+      models: [{ id: 'mistral-document-ai-2505', enabled: true }],
+      apiVersion: '2024-11-30',
+      llmApiMode: 'responses'
+    });
+    assert.deepEqual(sentBody(fetchMock), {
+      ...foundryFields,
+      models: [{ id: 'mistral-document-ai-2505', enabled: true }]
+    });
+  });
+
   it('sends the LLM API mode and each model as { id, enabled }, and omits an empty model list', async () => {
     const llm = { ...draft, providerType: 'openai', llmApiMode: 'responses' };
     const llmFields = { ...sentFields, providerType: 'openai', llmApiMode: 'responses' };
@@ -230,8 +258,8 @@ describe('validateDraft', () => {
     assert.equal(validateDraft({ ...azure, credential: 'key', credentialLabel: 'Prod' }), null);
   });
 
-  it('requires a Credential for OpenAI and OpenAI-compatible providers', () => {
-    for (const providerType of ['openai', 'openai_compatible']) {
+  it('requires a Credential for Azure Foundry and other model-owning providers', () => {
+    for (const providerType of ['openai', 'openai_compatible', 'azure_foundry']) {
       assert.deepEqual(
         validateDraft({ ...draft, providerType }),
         { field: 'credential', message: 'API Key is required for this provider.' },

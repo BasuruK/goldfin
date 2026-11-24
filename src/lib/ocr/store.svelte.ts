@@ -1,6 +1,10 @@
-import { AZURE_OCR_PROVIDER_TYPE, listConnectors, type SavedConnector } from '#lib/connectors/api.ts';
+import {
+  isOcrConnectorProvider,
+  listConnectors,
+  type SavedConnector
+} from '#lib/connectors/api.ts';
 import { ApiError } from '#lib/request-core.ts';
-import { OcrError, pagesHint, pickConnectorId, planAnalysis, submitOcr } from './api.ts';
+import { OcrError, pagesHint, pickConnectorId, planAnalysis, submitOcr, type AnalysisPlan } from './api.ts';
 
 interface ExtractionView {
   content: string;
@@ -15,6 +19,7 @@ interface PlaygroundStoreState {
   listState: 'idle' | 'loading' | 'loaded' | 'failed';
   listError: string;
   connectorId: string;
+  modelId: string;
   document: File | null;
   documentError: string;
   busy: boolean;
@@ -30,6 +35,7 @@ export const playgroundStore = $state<PlaygroundStoreState>({
   listState: 'idle',
   listError: '',
   connectorId: '',
+  modelId: '',
   document: null,
   documentError: '',
   busy: false,
@@ -45,6 +51,21 @@ let listOperation = 0;
 let abortController: AbortController | null = null;
 let startedAt: number | null = null;
 let elapsedTimer: ReturnType<typeof setInterval> | null = null;
+let lastConnectorId = '';
+
+function selectedConnector(): SavedConnector | undefined {
+  return playgroundStore.connectors.find(connector => connector.id === playgroundStore.connectorId);
+}
+
+function enabledModelIds(connector: SavedConnector | undefined): string[] {
+  return connector?.models?.filter(model => model.enabled).map(model => model.id) ?? [];
+}
+
+function syncModelId(): void {
+  const enabled = enabledModelIds(selectedConnector());
+  const current = playgroundStore.modelId;
+  playgroundStore.modelId = enabled.includes(current) ? current : (enabled[0] ?? '');
+}
 
 function clearElapsedTimer(): void {
   if (elapsedTimer) clearInterval(elapsedTimer);
@@ -65,9 +86,10 @@ export async function loadOcrConnectors(): Promise<void> {
     const all = await listConnectors();
     if (operation !== listOperation) return;
 
-    playgroundStore.connectors = all.filter(c => c.providerType === AZURE_OCR_PROVIDER_TYPE);
+    playgroundStore.connectors = all.filter(connector => isOcrConnectorProvider(connector.providerType));
     playgroundStore.listState = 'loaded';
     playgroundStore.connectorId = pickConnectorId(playgroundStore.connectorId, playgroundStore.connectors);
+    syncModelId();
   } catch (error) {
     if (operation !== listOperation) return;
     playgroundStore.listState = 'failed';
@@ -75,14 +97,30 @@ export async function loadOcrConnectors(): Promise<void> {
   }
 }
 
+export function selectOcrConnector(connectorId: string): void {
+  playgroundStore.connectorId = connectorId;
+  const enabled = enabledModelIds(selectedConnector());
+  playgroundStore.modelId = enabled[0] ?? '';
+}
+
+$effect(() => {
+  const connectorId = playgroundStore.connectorId;
+  if (connectorId === lastConnectorId) return;
+  lastConnectorId = connectorId;
+  if (connectorId) selectOcrConnector(connectorId);
+});
+
 export function disposePlayground(): void {
   invalidateOperation();
   listOperation += 1;
+  lastConnectorId = '';
   abortController?.abort();
   abortController = null;
   resetBusyUi();
   playgroundStore.document = null;
   playgroundStore.documentError = '';
+  playgroundStore.connectorId = '';
+  playgroundStore.modelId = '';
   playgroundStore.error = '';
   playgroundStore.stoppedNotice = '';
   playgroundStore.extraction = null;
@@ -104,17 +142,12 @@ function isStale(operation: number): boolean {
   return operation !== activeOperation;
 }
 
-export async function analyzeDocument(): Promise<void> {
-  if (playgroundStore.busy) return;
-  playgroundStore.error = '';
-  playgroundStore.stoppedNotice = '';
-  const plan = planAnalysis(playgroundStore.document, playgroundStore.connectorId);
-  if (plan.kind === 'invalid') {
-    if (plan.field === 'document') playgroundStore.documentError = plan.message;
-    else playgroundStore.error = plan.message;
-    return;
-  }
+function showInvalidPlan(plan: Extract<AnalysisPlan, { kind: 'invalid' }>): void {
+  if (plan.field === 'document') playgroundStore.documentError = plan.message;
+  else playgroundStore.error = plan.message;
+}
 
+function beginOcrRun(): number {
   const operation = ++activeOperation;
   abortController?.abort();
   abortController = new AbortController();
@@ -125,11 +158,14 @@ export async function analyzeDocument(): Promise<void> {
   startedAt = Date.now();
   clearElapsedTimer();
   elapsedTimer = setInterval(tickElapsed, 100);
+  return operation;
+}
 
+async function executeOcrRun(plan: Extract<AnalysisPlan, { kind: 'run' }>, operation: number): Promise<void> {
   try {
-    const result = await submitOcr(plan.connectorId, plan.document, abortController.signal);
+    const result = await submitOcr(plan.connectorId, plan.document, plan.modelId, abortController?.signal);
     if (isStale(operation)) return;
-    const elapsedSeconds = ((Date.now() - startedAt) / 1000).toFixed(1);
+    const elapsedSeconds = ((Date.now() - (startedAt ?? Date.now())) / 1000).toFixed(1);
     playgroundStore.extraction = {
       content: result.content,
       pages: result.pages,
@@ -149,6 +185,25 @@ export async function analyzeDocument(): Promise<void> {
   } finally {
     if (!isStale(operation)) abortController = null;
   }
+}
+
+export async function analyzeDocument(): Promise<void> {
+  if (playgroundStore.busy) return;
+  playgroundStore.error = '';
+  playgroundStore.stoppedNotice = '';
+  const plan = planAnalysis(
+    playgroundStore.document,
+    playgroundStore.connectorId,
+    selectedConnector(),
+    playgroundStore.modelId
+  );
+  if (plan.kind === 'invalid') {
+    showInvalidPlan(plan);
+    return;
+  }
+
+  playgroundStore.modelId = plan.modelId ?? '';
+  await executeOcrRun(plan, beginOcrRun());
 }
 
 export function stopAnalyze(): void {
