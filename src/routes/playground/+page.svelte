@@ -10,8 +10,7 @@
     Switch
   } from '$goldfin/lib/index.js';
   import ConnectorDialog from '#lib/connectors/ConnectorDialog.svelte';
-  import { AZURE_FOUNDRY_PROVIDER_TYPE } from '#lib/connectors/api.ts';
-  import { providerByType } from '#lib/connectors/providers.js';
+  import { AZURE_FOUNDRY_PROVIDER_TYPE, providerByType } from '#lib/connectors/api.ts';
   import { connectorStore, openAddDialog } from '#lib/connectors/store.svelte.js';
   import { enabledModelIds } from '#lib/llm/api.ts';
   import {

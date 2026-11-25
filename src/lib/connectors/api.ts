@@ -18,7 +18,8 @@ export {
   AZURE_FOUNDRY_PROVIDER_TYPE,
   AZURE_OCR_PROVIDER_TYPE,
   isLlmProvider,
-  isOcrConnectorProvider
+  isOcrConnectorProvider,
+  providerByType
 } from './providers.ts';
 
 const CONNECTORS_PATH = '/api/v1/connectors';
