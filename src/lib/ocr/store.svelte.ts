@@ -96,6 +96,20 @@ export async function loadOcrConnectors(): Promise<void> {
   }
 }
 
+export function clearOcrExtraction(): void {
+  playgroundStore.extraction = null;
+  playgroundStore.error = '';
+  playgroundStore.stoppedNotice = '';
+  playgroundStore.statusLabel = 'Idle';
+  playgroundStore.statusHint = 'Choose a Connector and Document.';
+}
+
+export function selectOcrConnector(connectorId: string): void {
+  playgroundStore.connectorId = connectorId;
+  const enabled = enabledModelIds(selectedConnector());
+  playgroundStore.modelId = enabled[0] ?? '';
+}
+
 export function disposePlayground(): void {
   invalidateOperation();
   listOperation += 1;
