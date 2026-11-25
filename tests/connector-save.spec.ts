@@ -99,16 +99,31 @@ test('Cancel discards the draft without saving', async ({ page }) => {
   await expect(reopened.getByLabel('Name', { exact: true })).toHaveValue('Web Request');
 });
 
-test('an unsupported provider cannot be saved and shows no model panel', async ({ page }) => {
-  await mockConnectorApi(page);
+test('Azure Foundry shows the model panel without an LLM API mode and saves its models', async ({ page }) => {
+  const api = await mockConnectorApi(page);
   await page.goto('/connectors/');
   await page.getByRole('button', { name: 'Add connector', exact: true }).click();
   const dialog = page.getByRole('dialog');
-  await selectProvider(dialog, 'Azure');
-  await expect(dialog.getByRole('button', { name: 'Delete connector', exact: true })).toHaveCount(0);
-  await expect(dialog.getByText(/Saving is not available for Azure yet/)).toBeVisible();
-  await expect(dialog.getByRole('button', { name: 'Save', exact: true })).toBeDisabled();
-  await expect(dialog.getByRole('heading', { name: 'Models', exact: true })).toHaveCount(0);
+  await selectProvider(dialog, 'Azure Foundry');
+  await expect(dialog.getByRole('heading', { name: 'Models', exact: true })).toBeVisible();
+  await expect(dialog.getByLabel('LLM API mode', { exact: true })).toHaveCount(0);
+  await dialog.getByLabel('Name', { exact: true }).fill('Foundry prod');
+  await dialog.getByLabel('Base URL', { exact: true }).fill('https://my-resource.services.ai.azure.com');
+  await dialog.getByLabel('API Key', { exact: true }).fill('secret-token');
+  await dialog.getByLabel('Credential label', { exact: true }).fill('Prod key');
+  await dialog.getByLabel('Model ID', { exact: true }).fill('mistral-document-ai-2505');
+  await dialog.getByLabel('Model ID', { exact: true }).press('Enter');
+  await dialog.getByRole('switch', { name: 'mistral-document-ai-2505', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(dialog).toBeHidden();
+  expect(api.posts).toEqual([{
+    name: 'Foundry prod',
+    providerType: 'azure_foundry',
+    baseUrl: 'https://my-resource.services.ai.azure.com',
+    credential: 'secret-token',
+    credentialLabel: 'Prod key',
+    models: [{ id: 'mistral-document-ai-2505', enabled: true }]
+  }]);
 });
 
 test('LLM save posts every manual model id with its enabled state', async ({ page }) => {
