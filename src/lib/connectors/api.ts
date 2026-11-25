@@ -8,12 +8,18 @@ import {
   AZURE_OCR_PROVIDER_TYPE,
   DEFAULT_AZURE_OCR_API_VERSION,
   isLlmProvider,
+  isModelOwningProvider,
   isSavableProvider
 } from './providers.ts';
 import type { ConnectorRecord } from './storage.ts';
 
 // Other surfaces reach Connectors only through this module (`no-surface-to-surface`).
-export { AZURE_OCR_PROVIDER_TYPE, isLlmProvider } from './providers.ts';
+export {
+  AZURE_FOUNDRY_PROVIDER_TYPE,
+  AZURE_OCR_PROVIDER_TYPE,
+  isLlmProvider,
+  isOcrConnectorProvider
+} from './providers.ts';
 
 const CONNECTORS_PATH = '/api/v1/connectors';
 const REJECTED = 'The Connector was rejected.';
@@ -108,10 +114,10 @@ export async function createConnector(draft: SaveDraft): Promise<SavedConnector>
   if (draft.providerType === AZURE_OCR_PROVIDER_TYPE && draft.apiVersion?.trim()) {
     payload.apiVersion = draft.apiVersion.trim();
   }
-  if (draft.llmApiMode) {
+  if (isLlmProvider(draft.providerType) && draft.llmApiMode) {
     payload.llmApiMode = draft.llmApiMode;
   }
-  if (draft.models?.length) {
+  if (isModelOwningProvider(draft.providerType) && draft.models?.length) {
     payload.models = draft.models.map(model => ({ id: model.id, enabled: model.enabled }));
   }
   if (draft.credential !== '') {
@@ -137,7 +143,7 @@ export async function listConnectors(): Promise<SavedConnector[]> {
 
 function credentialRequiredMessage(providerType: string): string | null {
   if (providerType === AZURE_OCR_PROVIDER_TYPE) return 'API Key is required for Azure Document Intelligence.';
-  return isLlmProvider(providerType) ? 'API Key is required for this provider.' : null;
+  return isModelOwningProvider(providerType) ? 'API Key is required for this provider.' : null;
 }
 
 const SECRET_QUERY_KEYS = ['api_key', 'token', 'access_token', 'sig', 'key', 'subscription-key', 'x-amz-signature'];
@@ -192,6 +198,7 @@ export type SavePlan =
 
 function saveRequest(draft: ConnectorRecord): SaveDraft {
   const llm = isLlmProvider(draft.providerType);
+  const modelOwning = isModelOwningProvider(draft.providerType);
   return {
     name: draft.name,
     providerType: draft.providerType,
@@ -201,7 +208,7 @@ function saveRequest(draft: ConnectorRecord): SaveDraft {
         ? draft.apiVersion.trim() || DEFAULT_AZURE_OCR_API_VERSION
         : undefined,
     llmApiMode: llm ? draft.llmApiMode : undefined,
-    models: llm ? draft.models.map(model => ({ id: model.id, enabled: model.enabled })) : undefined,
+    models: modelOwning ? draft.models.map(model => ({ id: model.id, enabled: model.enabled })) : undefined,
     credential: draft.apiKey,
     credentialLabel: draft.credentialLabel
   };
@@ -212,11 +219,11 @@ export function planSave(draft: ConnectorRecord): SavePlan {
   if (!isSavableProvider(draft.providerType)) {
     return { kind: 'invalid', field: null, message: 'Saving is not available for this provider yet.' };
   }
-  const llm = isLlmProvider(draft.providerType);
-  if (llm && !draft.apiKey.trim()) {
+  const modelOwning = isModelOwningProvider(draft.providerType);
+  if (modelOwning && !draft.apiKey.trim()) {
     return { kind: 'invalid', field: 'credential', message: 'API Key is required for this provider.' };
   }
-  if (llm && !draft.models.some(model => model.enabled)) {
+  if (modelOwning && !draft.models.some(model => model.enabled)) {
     return { kind: 'invalid', field: 'models', message: 'Enable at least one model ID before saving.' };
   }
   const request = saveRequest(draft);

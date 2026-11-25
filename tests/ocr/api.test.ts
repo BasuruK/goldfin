@@ -15,6 +15,24 @@ function jsonResponse(status: number, body: unknown) {
 afterEach(() => mock.restoreAll());
 
 describe('submitOcr', () => {
+  it('includes modelId in multipart only when one is given for Foundry', async () => {
+    mock.method(globalThis, 'fetch', async (_url: string, init?: RequestInit) => {
+      const form = init?.body;
+      assert.ok(form instanceof FormData);
+      assert.equal(form.get('modelId'), 'mistral-document-ai-2505');
+      return jsonResponse(200, { content: 'Hello', pages: 1 });
+    });
+    await submitOcr('c2', new File(['x'], 'a.pdf'), 'mistral-document-ai-2505');
+    mock.restoreAll();
+    mock.method(globalThis, 'fetch', async (_url: string, init?: RequestInit) => {
+      const form = init?.body;
+      assert.ok(form instanceof FormData);
+      assert.equal(form.get('modelId'), null);
+      return jsonResponse(200, { content: 'Hello', pages: 1 });
+    });
+    await submitOcr('c1', new File(['x'], 'a.pdf'));
+  });
+
   it('posts multipart fields to the OCR route', async () => {
     mock.method(globalThis, 'fetch', async (url: string, init?: RequestInit) => {
       assert.equal(url, '/api/v1/probes/ocr');
@@ -53,7 +71,7 @@ describe('submitOcr', () => {
       throw new DOMException('The operation was aborted.', 'AbortError');
     });
     await assert.rejects(
-      submitOcr('c1', new File(['x'], 'a.pdf'), new AbortController().signal),
+      submitOcr('c1', new File(['x'], 'a.pdf'), undefined, new AbortController().signal),
       error => {
         assert.ok(error instanceof OcrError);
         assert.equal(error.kind, 'canceled');

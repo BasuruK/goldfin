@@ -23,6 +23,7 @@
     PROVIDER_SELECT_ITEMS,
     defaultLlmApiMode,
     isLlmProvider,
+    isModelOwningProvider,
     isSavableProvider,
     providerByType,
     type LlmApiMode,
@@ -71,7 +72,8 @@
   const savableProvider = $derived(record ? isSavableProvider(record.providerType) : false);
   const saveUnavailable = $derived(record !== null && !savableProvider);
   const isAzureOcr = $derived(record?.providerType === AZURE_OCR_PROVIDER_TYPE);
-  const showModels = $derived(record ? isLlmProvider(record.providerType) : false);
+  const showModels = $derived(record ? isModelOwningProvider(record.providerType) : false);
+  const showLlmApiMode = $derived(record ? isLlmProvider(record.providerType) : false);
   const llmApiModeItems = [
     { value: 'responses' as LlmApiMode, label: 'Responses API' },
     { value: 'chat_completions' as LlmApiMode, label: 'Chat completions' }
@@ -136,7 +138,7 @@
                 disabled={fieldsDisabled}
                 description="Azure Document Intelligence REST API version."
               />
-            {:else if showModels}
+            {:else if showLlmApiMode}
               <Select
                 label="LLM API mode"
                 items={llmApiModeItems}
@@ -152,7 +154,7 @@
               type="password"
               autocomplete="off"
               placeholder={record.providerType === 'web_request' ? 'Optional' : 'Paste your key'}
-              description={record.providerType === 'web_request' ? 'Optional for public endpoints.' : isAzureOcr ? 'Required for Azure Document Intelligence.' : showModels ? 'Required for LLM Connectors.' : ''}
+              description={record.providerType === 'web_request' ? 'Optional for public endpoints.' : isAzureOcr ? 'Required for Azure Document Intelligence.' : showModels ? 'Required for this provider.' : ''}
               disabled={fieldsDisabled}
               error={fieldError('credential')}
             />

@@ -4,6 +4,11 @@
  */
 
 import { fetchApiRequest } from '../request-core.ts';
+import {
+  AZURE_FOUNDRY_PROVIDER_TYPE,
+  AZURE_OCR_PROVIDER_TYPE,
+  type SavedConnector
+} from '../connectors/api.ts';
 import { CHOOSE_DOCUMENT, validateDocument } from './documents.ts';
 
 const OCR_PATH = '/api/v1/probes/ocr';
@@ -46,11 +51,13 @@ const MESSAGES: Record<OcrErrorKind, string> = {
 export async function submitOcr(
   connectorId: string,
   document: File,
+  modelId?: string,
   signal?: AbortSignal
 ): Promise<OcrResult> {
   const form = new FormData();
   form.set('connectorId', connectorId);
   form.set('document', document, document.name);
+  if (modelId) form.set('modelId', modelId);
   const { record } = await fetchApiRequest({
     path: OCR_PATH,
     init: { method: 'POST', body: form },
@@ -70,16 +77,44 @@ export async function submitOcr(
 }
 
 export type AnalysisPlan =
-  | { kind: 'invalid'; field: 'document' | 'connector'; message: string }
-  | { kind: 'run'; document: File; connectorId: string };
+  | { kind: 'invalid'; field: 'document' | 'connector' | 'model'; message: string }
+  | { kind: 'run'; document: File; connectorId: string; modelId?: string };
+
+/** Enabled model ids on a Connector, in list order. */
+function enabledModelIds(connector: SavedConnector | undefined): readonly string[] {
+  return connector?.models?.filter(model => model.enabled).map(model => model.id) ?? [];
+}
+
+/** The chosen model while it is still enabled; otherwise the first enabled one, or none. */
+function pickModelId(current: string, enabledIds: readonly string[]): string {
+  if (enabledIds.includes(current)) return current;
+  return enabledIds[0] ?? '';
+}
 
 /** What Analyze submits, or the first reason it cannot run yet. */
-export function planAnalysis(document: File | null, connectorId: string): AnalysisPlan {
+export function planAnalysis(
+  document: File | null,
+  connectorId: string,
+  connector: SavedConnector | undefined,
+  modelId: string
+): AnalysisPlan {
   if (!document) return { kind: 'invalid', field: 'document', message: CHOOSE_DOCUMENT };
   const documentError = validateDocument(document);
   if (documentError) return { kind: 'invalid', field: 'document', message: documentError };
-  if (!connectorId) return { kind: 'invalid', field: 'connector', message: 'Choose an Azure OCR Connector.' };
-  return { kind: 'run', document, connectorId };
+  if (!connectorId || !connector) {
+    return { kind: 'invalid', field: 'connector', message: 'Choose an Azure OCR Connector.' };
+  }
+  if (connector.providerType === AZURE_FOUNDRY_PROVIDER_TYPE) {
+    const resolvedModelId = pickModelId(modelId, enabledModelIds(connector));
+    if (!resolvedModelId) {
+      return { kind: 'invalid', field: 'model', message: 'Choose an enabled model on this Connector.' };
+    }
+    return { kind: 'run', document, connectorId, modelId: resolvedModelId };
+  }
+  if (connector.providerType === AZURE_OCR_PROVIDER_TYPE) {
+    return { kind: 'run', document, connectorId };
+  }
+  return { kind: 'invalid', field: 'connector', message: 'Choose an Azure OCR Connector.' };
 }
 
 /** The status hint after a run: "1 page", "3 pages". */

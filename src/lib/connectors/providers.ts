@@ -1,6 +1,6 @@
 export type ProviderType =
   | 'openai'
-  | 'azure'
+  | 'azure_foundry'
   | 'openai_compatible'
   | 'web_request'
   | 'azure_document_intelligence';
@@ -24,10 +24,10 @@ const PROVIDERS: readonly [ProviderOption, ...ProviderOption[]] = [
     modelProbePath: '/models'
   },
   {
-    value: 'azure',
-    label: 'Azure',
-    description: 'Azure OpenAI Service deployment endpoint.',
-    defaultBaseUrl: 'https://YOUR-RESOURCE.openai.azure.com/openai/deployments/YOUR-DEPLOYMENT',
+    value: 'azure_foundry',
+    label: 'Azure Foundry',
+    description: 'Microsoft Foundry models, including Mistral OCR deployments.',
+    defaultBaseUrl: 'https://YOUR-RESOURCE.services.ai.azure.com',
     icon: 'settings'
   },
   {
@@ -56,12 +56,15 @@ const PROVIDERS: readonly [ProviderOption, ...ProviderOption[]] = [
 
 export const AZURE_OCR_PROVIDER_TYPE = 'azure_document_intelligence';
 
+export const AZURE_FOUNDRY_PROVIDER_TYPE = 'azure_foundry';
+
 export const DEFAULT_AZURE_OCR_API_VERSION = '2024-11-30';
 
 export function isSavableProvider(providerType: string): boolean {
   return (
     providerType === 'web_request'
     || providerType === AZURE_OCR_PROVIDER_TYPE
+    || providerType === AZURE_FOUNDRY_PROVIDER_TYPE
     || providerType === 'openai'
     || providerType === 'openai_compatible'
   );
@@ -69,6 +72,14 @@ export function isSavableProvider(providerType: string): boolean {
 
 export function isLlmProvider(providerType: string): boolean {
   return providerType === 'openai' || providerType === 'openai_compatible';
+}
+
+export function isModelOwningProvider(providerType: string): boolean {
+  return isLlmProvider(providerType) || providerType === AZURE_FOUNDRY_PROVIDER_TYPE;
+}
+
+export function isOcrConnectorProvider(providerType: string): boolean {
+  return providerType === AZURE_OCR_PROVIDER_TYPE || providerType === AZURE_FOUNDRY_PROVIDER_TYPE;
 }
 
 export type LlmApiMode = 'responses' | 'chat_completions';
