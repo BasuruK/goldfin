@@ -10,6 +10,7 @@
     Switch
   } from '$goldfin/lib/index.js';
   import ConnectorDialog from '#lib/connectors/ConnectorDialog.svelte';
+  import { AZURE_FOUNDRY_PROVIDER_TYPE, providerByType } from '#lib/connectors/api.ts';
   import { connectorStore, openAddDialog } from '#lib/connectors/store.svelte.js';
   import { enabledModelIds } from '#lib/llm/api.ts';
   import {
@@ -24,10 +25,12 @@
   import { DOCUMENT_ACCEPT, MAX_DOCUMENT_BYTES, validateDocument } from '#lib/ocr/documents.js';
   import {
     analyzeDocument,
+    clearOcrExtraction,
     disposePlayground,
     downloadExtraction,
     loadOcrConnectors,
     playgroundStore,
+    selectOcrConnector,
     stopAnalyze
   } from '#lib/ocr/store.svelte.js';
   import { loadPromptList, promptStore } from '#lib/prompts/store.svelte.js';
@@ -37,6 +40,7 @@
     'No text extracted — switch on Full output to inspect the response.';
 
   let promptSelectValue = $state(NO_PROMPT_VALUE);
+  let lastOcrConnectorId = $state('');
   let lastLlmConnectorId = $state('');
 
   onMount(() => {
@@ -52,7 +56,21 @@
   });
 
   const connectorItems = $derived(
-    playgroundStore.connectors.map(c => ({ value: c.id, label: c.name || c.baseUrl }))
+    playgroundStore.connectors.map(c => {
+      const base = c.name || c.baseUrl;
+      const provider = providerByType(c.providerType).label;
+      return { value: c.id, label: `${base} · ${provider}` };
+    })
+  );
+
+  const selectedOcrConnector = $derived(
+    playgroundStore.connectors.find(c => c.id === playgroundStore.connectorId)
+  );
+
+  const showOcrModelSelect = $derived(selectedOcrConnector?.providerType === AZURE_FOUNDRY_PROVIDER_TYPE);
+
+  const ocrModelItems = $derived(
+    enabledModelIds(selectedOcrConnector).map(id => ({ value: id, label: id }))
   );
 
   $effect(() => {
@@ -72,14 +90,22 @@
     llmStore.promptId = promptSelectValue === NO_PROMPT_VALUE ? null : promptSelectValue;
   });
 
-  function resetLlmWhenOcrInputChanges(connectorId: string, document: File | null): void {
+  function resetWhenOcrInputChanges(connectorId: string, document: File | null): void {
     void connectorId;
     void document;
+    clearOcrExtraction();
     clearLlmResult();
   }
 
   $effect(() => {
-    resetLlmWhenOcrInputChanges(playgroundStore.connectorId, playgroundStore.document);
+    resetWhenOcrInputChanges(playgroundStore.connectorId, playgroundStore.document);
+  });
+
+  $effect(() => {
+    const connectorId = playgroundStore.connectorId;
+    if (connectorId === lastOcrConnectorId) return;
+    lastOcrConnectorId = connectorId;
+    if (connectorId) selectOcrConnector(connectorId);
   });
 
   $effect(() => {
@@ -100,6 +126,7 @@
     || !playgroundStore.connectorId
     || !playgroundStore.document
     || Boolean(playgroundStore.documentError)
+    || (showOcrModelSelect && !playgroundStore.modelId)
   );
 
   const extractionText = $derived(playgroundStore.extraction?.content ?? '');
@@ -168,7 +195,7 @@
   <header class="playground-head od-field">
     <h1 class="page-title">OCR Playground</h1>
     <p class="page-lead">
-      Run one Document through a saved Azure Document Intelligence Connector and inspect the extracted text.
+      Run one Document through a saved Azure OCR Connector and inspect the extracted text.
     </p>
   </header>
 
@@ -188,7 +215,7 @@
   {:else if playgroundStore.connectors.length === 0}
     <Section title="No Azure OCR Connectors" id="playground-empty">
       <p class="note">
-        Save an Azure Document Intelligence Connector, then return here to analyze a Document.
+        Save an Azure Document Intelligence or Azure Foundry Connector, then return here to analyze a Document.
       </p>
       <div class="playground-empty-actions">
         <Button type="button" class="primary" onclick={() => openAddDialog()}>Add connector</Button>
@@ -203,6 +230,14 @@
         bind:value={playgroundStore.connectorId}
         disabled={probeBusy}
       />
+      {#if showOcrModelSelect}
+        <Select
+          label="Model"
+          items={ocrModelItems}
+          bind:value={playgroundStore.modelId}
+          disabled={probeBusy || ocrModelItems.length === 0}
+        />
+      {/if}
       <FileDrop
         bind:file={playgroundStore.document}
         accept={DOCUMENT_ACCEPT}
