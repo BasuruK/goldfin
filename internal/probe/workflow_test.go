@@ -12,7 +12,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/BasuruK/goldfin/db/migrations"
 	"github.com/BasuruK/goldfin/internal/handler"
 	"github.com/BasuruK/goldfin/internal/secretbox"
 	"github.com/BasuruK/goldfin/internal/testdb"
@@ -28,13 +27,7 @@ func foundryHost(r *http.Request) bool {
 func newHandlerWithPool(t *testing.T, transport http.RoundTripper) (http.Handler, *pgxpool.Pool) {
 	t.Helper()
 	pool, db := testdb.New(t)
-	migrator, err := migrations.NewProvider(db)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := migrator.Up(t.Context()); err != nil {
-		t.Fatal(err)
-	}
+	testdb.MigrateUp(t, t.Context(), db)
 	box, err := secretbox.New(bytes.Repeat([]byte{1}, 32))
 	if err != nil {
 		t.Fatal(err)
