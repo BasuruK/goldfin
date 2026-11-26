@@ -743,7 +743,8 @@
 /* ── Connectors ───────────────────────────────────────────────────────────── */
 
 .view:has(.connectors-page),
-.view:has(.playground-page) {
+.view:has(.playground-page),
+.view:has(.workflows-page) {
   max-inline-size: 1120px;
 }
 
