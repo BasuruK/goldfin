@@ -16,6 +16,7 @@ make run   # Vite via portless → https://<prefix>goldfin.localhost (branch/wor
 
 Postgres stays on `127.0.0.1:5432`. Set `API_URL=https://api.goldfin.localhost` in `.env` so the Vite `/api` proxy reaches the api container.
 
-`docker-compose.yml` sets `name: goldfin`, so the Postgres data volume is always `goldfin_goldfin-pgdata`, not `<checkout-dir>_goldfin-pgdata`. If you already have data under an older directory-named volume, stop the stack and copy or reattach that volume before relying on the new name.
+`docker-compose.yml` sets `name: goldfin`, so Postgres data lives in `goldfin_goldfin-pgdata`, not `<checkout-dir>_goldfin-pgdata`.
+If you used a directory-named project before, run `docker compose -p <old-dir> down` first so `127.0.0.1:5432` is free, then either keep using that volume name or copy the data into `goldfin_goldfin-pgdata` before `make up`.
 
 CI and `make check` do not use portless.
