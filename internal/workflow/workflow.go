@@ -65,6 +65,70 @@ func Validate(g Graph, catalog Catalog) (Graph, []string, error) {
 	return validate(g, catalog)
 }
 
+// ExecutionOrder returns node ids in deterministic topological order for a persisted graph.
+// It checks wiring only and does not re-validate Connectors.
+func ExecutionOrder(g Graph) ([]string, error) {
+	if len(g.Nodes) == 0 {
+		return nil, ErrInvalid
+	}
+	byID := make(map[string]int, len(g.Nodes))
+	normalized := make([]Node, len(g.Nodes))
+	for i, node := range g.Nodes {
+		id, nodeName, connectorID, modelID, promptID, inputs, err := normalizeNode(node)
+		if err != nil {
+			return nil, err
+		}
+		if id == "" {
+			return nil, ErrInvalid
+		}
+		if _, ok := byID[id]; ok {
+			return nil, ErrInvalid
+		}
+		byID[id] = i
+		normalized[i] = Node{
+			ID: id, Name: nodeName, ConnectorID: connectorID,
+			ModelID: modelID, PromptID: promptID, InputNodeIDs: inputs,
+		}
+	}
+	inDegree, edges, err := wireDAG(normalized, byID)
+	if err != nil {
+		return nil, err
+	}
+	order, err := topologicalOrder(inDegree, edges)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]string, len(order))
+	for i, idx := range order {
+		out[i] = normalized[idx].ID
+	}
+	return out, nil
+}
+
+func wireDAG(normalized []Node, byID map[string]int) ([]int, [][]int, error) {
+	inDegree := make([]int, len(normalized))
+	edges := make([][]int, len(normalized))
+	for i, node := range normalized {
+		seen := make(map[string]struct{}, len(node.InputNodeIDs))
+		for _, fromID := range node.InputNodeIDs {
+			if fromID == node.ID {
+				return nil, nil, ErrInvalid
+			}
+			if _, dup := seen[fromID]; dup {
+				return nil, nil, ErrInvalid
+			}
+			seen[fromID] = struct{}{}
+			fromIdx, ok := byID[fromID]
+			if !ok {
+				return nil, nil, ErrInvalid
+			}
+			inDegree[i]++
+			edges[fromIdx] = append(edges[fromIdx], i)
+		}
+	}
+	return inDegree, edges, nil
+}
+
 func validate(g Graph, catalog Catalog) (Graph, []string, error) {
 	if strings.ContainsRune(g.Name, 0) {
 		return Graph{}, nil, ErrInvalid

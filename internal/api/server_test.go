@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/BasuruK/goldfin/db/migrations"
 	"github.com/BasuruK/goldfin/internal/handler"
 	"github.com/BasuruK/goldfin/internal/secretbox"
 	"github.com/BasuruK/goldfin/internal/testdb"
@@ -22,13 +21,7 @@ import (
 func newAPI(t *testing.T) (http.Handler, *pgxpool.Pool, *secretbox.Box) {
 	t.Helper()
 	pool, db := testdb.New(t)
-	migrator, err := migrations.NewProvider(db)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := migrator.Up(t.Context()); err != nil {
-		t.Fatal(err)
-	}
+	testdb.MigrateUp(t, t.Context(), db)
 	box, err := secretbox.New(bytes.Repeat([]byte{1}, 32))
 	if err != nil {
 		t.Fatal(err)

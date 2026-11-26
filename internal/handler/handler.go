@@ -15,6 +15,7 @@ func New(pool *pgxpool.Pool, box *secretbox.Box, transport http.RoundTripper) ht
 	mux := http.NewServeMux()
 	mux.Handle(probe.OCRPattern, probe.NewOCRHandler(pool, box, transport))
 	mux.Handle(probe.LLMPattern, probe.NewLLMHandler(pool, box, transport))
+	mux.Handle(probe.WorkflowProbePattern, probe.NewWorkflowHandler(pool, box, transport))
 	mux.Handle("/", api.NewHandler(pool, box))
 	return mux
 }
