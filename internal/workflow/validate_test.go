@@ -354,3 +354,30 @@ func TestValidatePropagatesCatalogErrors(t *testing.T) {
 		t.Fatalf("want catalog error, got %v", err)
 	}
 }
+
+func TestExecutionOrderMatchesValidateWithoutCatalog(t *testing.T) {
+	g := validLinearGraph()
+	_, want, err := workflow.Validate(g, baseCatalog())
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := workflow.ExecutionOrder(g)
+	if err != nil || len(got) != len(want) {
+		t.Fatalf("ExecutionOrder: %v err=%v", got, err)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("index %d: got %q want %q", i, got[i], want[i])
+		}
+	}
+}
+
+func TestExecutionOrderRejectsCycle(t *testing.T) {
+	g := workflow.Graph{Name: "cycle", Nodes: []workflow.Node{
+		{ID: "a", Name: "A", ConnectorID: "ocr", InputNodeIDs: []string{"b"}},
+		{ID: "b", Name: "B", ConnectorID: "llm", ModelID: "m", PromptID: "p", InputNodeIDs: []string{"a"}},
+	}}
+	if _, err := workflow.ExecutionOrder(g); !errors.Is(err, workflow.ErrInvalid) {
+		t.Fatalf("cycle: %v", err)
+	}
+}

@@ -11,7 +11,7 @@ import (
 
 var migrateMu sync.Mutex
 
-// MigrateUp runs Goose migrations against one test schema. It serializes Up calls so parallel packages do not fight the Postgres session lock.
+// MigrateUp runs Goose migrations against one test schema. migrateMu serializes Up calls within one test binary so parallel packages in go test ./... do not fight the Postgres session lock.
 func MigrateUp(t *testing.T, ctx context.Context, db *sql.DB) {
 	t.Helper()
 	migrateMu.Lock()

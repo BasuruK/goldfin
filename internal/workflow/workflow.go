@@ -90,25 +90,9 @@ func ExecutionOrder(g Graph) ([]string, error) {
 			ModelID: modelID, PromptID: promptID, InputNodeIDs: inputs,
 		}
 	}
-	inDegree := make([]int, len(normalized))
-	edges := make([][]int, len(normalized))
-	for i, node := range normalized {
-		seen := make(map[string]struct{}, len(node.InputNodeIDs))
-		for _, fromID := range node.InputNodeIDs {
-			if fromID == node.ID {
-				return nil, ErrInvalid
-			}
-			if _, dup := seen[fromID]; dup {
-				return nil, ErrInvalid
-			}
-			seen[fromID] = struct{}{}
-			fromIdx, ok := byID[fromID]
-			if !ok {
-				return nil, ErrInvalid
-			}
-			inDegree[i]++
-			edges[fromIdx] = append(edges[fromIdx], i)
-		}
+	inDegree, edges, err := wireDAG(normalized, byID)
+	if err != nil {
+		return nil, err
 	}
 	order, err := topologicalOrder(inDegree, edges)
 	if err != nil {
@@ -119,6 +103,30 @@ func ExecutionOrder(g Graph) ([]string, error) {
 		out[i] = normalized[idx].ID
 	}
 	return out, nil
+}
+
+func wireDAG(normalized []Node, byID map[string]int) ([]int, [][]int, error) {
+	inDegree := make([]int, len(normalized))
+	edges := make([][]int, len(normalized))
+	for i, node := range normalized {
+		seen := make(map[string]struct{}, len(node.InputNodeIDs))
+		for _, fromID := range node.InputNodeIDs {
+			if fromID == node.ID {
+				return nil, nil, ErrInvalid
+			}
+			if _, dup := seen[fromID]; dup {
+				return nil, nil, ErrInvalid
+			}
+			seen[fromID] = struct{}{}
+			fromIdx, ok := byID[fromID]
+			if !ok {
+				return nil, nil, ErrInvalid
+			}
+			inDegree[i]++
+			edges[fromIdx] = append(edges[fromIdx], i)
+		}
+	}
+	return inDegree, edges, nil
 }
 
 func validate(g Graph, catalog Catalog) (Graph, []string, error) {

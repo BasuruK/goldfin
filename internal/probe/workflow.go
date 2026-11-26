@@ -21,8 +21,10 @@ import (
 )
 
 const (
-	workflowProbePath    = "/api/v1/workflows/{id}/probe"
-	WorkflowProbePattern = "POST " + workflowProbePath
+	workflowProbePath      = "/api/v1/workflows/{id}/probe"
+	WorkflowProbePattern   = "POST " + workflowProbePath
+	workflowResolveBudget  = 5 * time.Second
+	workflowUploadRoutePad = 30 * time.Second
 )
 
 type workflowHandler struct {
@@ -63,6 +65,11 @@ func NewWorkflowHandler(pool *pgxpool.Pool, box *secretbox.Box, transport http.R
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
+		uploadBudget := workflowRouteBudget(1)
+		deadline := time.Now().Add(uploadBudget)
+		rc := http.NewResponseController(w)
+		_ = rc.SetReadDeadline(deadline)
+		_ = rc.SetWriteDeadline(deadline)
 		h.serveWorkflowProbe(w, r)
 	})
 }
@@ -77,7 +84,9 @@ func (h *workflowHandler) serveWorkflowProbe(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		return
 	}
-	wf, err := h.loadWorkflow(r.Context(), workflowID)
+	loadCtx, loadCancel := context.WithTimeout(r.Context(), workflowResolveBudget)
+	wf, err := h.loadWorkflow(loadCtx, workflowID)
+	loadCancel()
 	if errors.Is(err, errWorkflowMissing) {
 		writeJSON(w, http.StatusNotFound, map[string]string{"message": "Workflow not found."})
 		return
@@ -93,10 +102,10 @@ func (h *workflowHandler) serveWorkflowProbe(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	routeBudget := workflowRouteBudget(len(order))
-	deadline := time.Now().Add(routeBudget)
+	routeDeadline := time.Now().Add(routeBudget)
 	rc := http.NewResponseController(w)
-	_ = rc.SetReadDeadline(deadline)
-	_ = rc.SetWriteDeadline(deadline)
+	_ = rc.SetReadDeadline(routeDeadline)
+	_ = rc.SetWriteDeadline(routeDeadline)
 
 	byID := make(map[string]workflow.Node, len(wf.Nodes))
 	for _, node := range wf.Nodes {
@@ -110,42 +119,46 @@ func (h *workflowHandler) serveWorkflowProbe(w http.ResponseWriter, r *http.Requ
 	results := make([]workflowNodeProbe, 0, len(order))
 	for _, nodeID := range order {
 		node := byID[nodeID]
-		kind, kindErr := h.nodeKind(r.Context(), node.ConnectorID)
-		if kindErr != nil {
-			writeJSON(w, http.StatusServiceUnavailable, map[string]string{"message": "Could not run the Workflow Probe."})
-			return
-		}
+		connectorID := strings.TrimSpace(node.ConnectorID)
+		modelID := strings.TrimSpace(node.ModelID)
+		kindCtx, kindCancel := context.WithTimeout(r.Context(), workflowResolveBudget)
+		kind, kindErr := h.nodeKind(kindCtx, connectorID)
+		kindCancel()
 		started := time.Now()
 		item := workflowNodeProbe{
 			NodeID:   nodeID,
 			NodeName: names[nodeID],
-			Kind:     kind,
-			ModelID:  strings.TrimSpace(node.ModelID),
+			ModelID:  modelID,
 		}
+		if kindErr != nil {
+			if isInvalidConnectorID(kindErr) || errors.Is(kindErr, pgx.ErrNoRows) {
+				item.Status = "failed"
+				item.DurationMs = time.Since(started).Milliseconds()
+				item.Error = "The Connector cannot run this node."
+				results = append(results, item)
+				break
+			}
+			writeJSON(w, http.StatusServiceUnavailable, map[string]string{"message": "Could not run the Workflow Probe."})
+			return
+		}
+		item.Kind = kind
 		switch kind {
 		case "ocr":
-			item, done := h.runOCRNode(r.Context(), w, node, document, documentMIME, &item, started)
-			results = append(results, item)
-			if !done {
-				break
-			}
-			outputs[nodeID] = item.Text
+			item = h.runOCRNode(r.Context(), document, documentMIME, item, started, connectorID, modelID)
 		case "llm":
 			input := joinNodeInputs(node, outputs, names)
-			item, done := h.runLLMNode(r.Context(), w, node, input, &item, started)
-			results = append(results, item)
-			if !done {
-				break
-			}
-			outputs[nodeID] = item.Text
+			item = h.runLLMNode(r.Context(), item, started, connectorID, modelID, input, strings.TrimSpace(node.PromptID))
 		default:
 			item.Status = "failed"
 			item.DurationMs = time.Since(started).Milliseconds()
 			item.Error = "The Connector cannot run this node."
-			results = append(results, item)
 		}
-		if len(results) > 0 && results[len(results)-1].Status == "failed" {
+		results = append(results, item)
+		if item.Status == "failed" {
 			break
+		}
+		if item.Status == "completed" || item.Status == "incomplete" {
+			outputs[nodeID] = item.Text
 		}
 	}
 	writeJSON(w, http.StatusOK, workflowProbeResponse{WorkflowID: workflowID, Nodes: results})
@@ -156,7 +169,7 @@ func workflowRouteBudget(nodeCount int) time.Duration {
 		nodeCount = 1
 	}
 	perNode := azureocr.ProcessingBudget + llm.CompletionBudget
-	return perNode*time.Duration(nodeCount) + 30*time.Second
+	return perNode*time.Duration(nodeCount) + workflowUploadRoutePad
 }
 
 var errWorkflowMissing = errors.New("workflow not found")
@@ -219,16 +232,15 @@ func joinNodeInputs(node workflow.Node, outputs map[string]string, names map[str
 	return b.String()
 }
 
-func (h *workflowHandler) runOCRNode(ctx context.Context, w http.ResponseWriter, node workflow.Node, document []byte, documentMIME string, item *workflowNodeProbe, started time.Time) (workflowNodeProbe, bool) {
+func (h *workflowHandler) runOCRNode(ctx context.Context, document []byte, documentMIME string, item workflowNodeProbe, started time.Time, connectorID, modelID string) workflowNodeProbe {
 	execCtx, cancel := context.WithTimeout(ctx, azureocr.ProcessingBudget)
 	defer cancel()
-	_ = http.NewResponseController(w).SetWriteDeadline(time.Now().Add(azureocr.ProcessingBudget))
-	resolved, err := h.ocr.resolve(execCtx, node.ConnectorID, node.ModelID)
+	resolved, err := h.ocr.resolve(execCtx, connectorID, modelID)
 	if err != nil {
 		item.Status = "failed"
 		item.DurationMs = time.Since(started).Milliseconds()
 		item.Error = workflowNodeOCRError(err)
-		return *item, false
+		return item
 	}
 	doc := azureocr.Document{Bytes: document, MIMEType: documentMIME}
 	var content string
@@ -245,30 +257,29 @@ func (h *workflowHandler) runOCRNode(ctx context.Context, w http.ResponseWriter,
 		item.Status = "failed"
 		item.DurationMs = time.Since(started).Milliseconds()
 		item.Error = "The Connector cannot run this node."
-		return *item, false
+		return item
 	}
 	if err != nil {
 		item.Status = "failed"
 		item.DurationMs = time.Since(started).Milliseconds()
 		item.Error = workflowNodeOCRError(err)
-		return *item, false
+		return item
 	}
 	item.Status = "completed"
 	item.Text = content
 	item.DurationMs = time.Since(started).Milliseconds()
-	return *item, true
+	return item
 }
 
-func (h *workflowHandler) runLLMNode(ctx context.Context, w http.ResponseWriter, node workflow.Node, input string, item *workflowNodeProbe, started time.Time) (workflowNodeProbe, bool) {
-	promptID := strings.TrimSpace(node.PromptID)
+func (h *workflowHandler) runLLMNode(ctx context.Context, item workflowNodeProbe, started time.Time, connectorID, modelID, input, promptID string) workflowNodeProbe {
 	resolveCtx, resolveCancel := context.WithTimeout(ctx, llmResolveBudget)
-	cfg, promptVersion, err := h.llm.resolve(resolveCtx, node.ConnectorID, node.ModelID, &promptID)
+	cfg, promptVersion, err := h.llm.resolve(resolveCtx, connectorID, modelID, &promptID)
 	resolveCancel()
 	if err != nil {
 		item.Status = "failed"
 		item.DurationMs = time.Since(started).Milliseconds()
 		item.Error = workflowNodeLLMError(err)
-		return *item, false
+		return item
 	}
 	if promptVersion != nil {
 		v := promptVersion.Version
@@ -276,24 +287,23 @@ func (h *workflowHandler) runLLMNode(ctx context.Context, w http.ResponseWriter,
 	}
 	execCtx, execCancel := context.WithTimeout(ctx, llm.CompletionBudget)
 	defer execCancel()
-	_ = http.NewResponseController(w).SetWriteDeadline(time.Now().Add(llm.CompletionBudget))
 	result, err := h.llm.executor.Complete(execCtx, cfg, input)
 	if err != nil {
 		item.Status = "failed"
 		item.DurationMs = time.Since(started).Milliseconds()
 		item.Error = workflowNodeLLMError(err)
-		return *item, false
+		return item
 	}
 	item.DurationMs = time.Since(started).Milliseconds()
 	if result.Stopped != "" {
 		item.Status = "incomplete"
 		item.StopReason = result.Stopped
 		item.Text = result.Content
-		return *item, true
+		return item
 	}
 	item.Status = "completed"
 	item.Text = result.Content
-	return *item, true
+	return item
 }
 
 func readWorkflowDocument(w http.ResponseWriter, r *http.Request) ([]byte, string, error) {
