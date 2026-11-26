@@ -58,6 +58,15 @@ export interface WorkflowProbeResult {
   nodes: WorkflowProbeNode[];
 }
 
+export function badgeForProvider(providerType: string | undefined): string {
+  if (!providerType) return 'Unset';
+  if (providerType === 'web_request') return 'REST';
+  const kind = nodeKindForProvider(providerType);
+  if (kind === 'llm') return 'LLM';
+  if (kind === 'document') return 'OCR';
+  return 'Unset';
+}
+
 export function nodeKindForProvider(providerType: string): NodeKind | null {
   if (providerType === 'openai' || providerType === 'openai_compatible') return 'llm';
   if (
@@ -108,7 +117,13 @@ function parseWorkflow(value: unknown): SavedWorkflow {
 
 function probeNodeCore(value: Record<string, unknown>): WorkflowProbeNode {
   const { nodeId, nodeName, kind, status, durationMs } = value;
-  if (typeof nodeId !== 'string' || typeof nodeName !== 'string' || typeof kind !== 'string' || typeof durationMs !== 'number') {
+  if (
+    typeof nodeId !== 'string'
+    || typeof nodeName !== 'string'
+    || typeof kind !== 'string'
+    || typeof durationMs !== 'number'
+    || !Number.isFinite(durationMs)
+  ) {
     throw malformed();
   }
   const normalized = status;
@@ -207,7 +222,7 @@ export async function updateWorkflow(
 }
 
 export async function deleteWorkflow(id: string): Promise<void> {
-  const { response } = await fetchApiRequest({
+  await fetchApiRequest({
     path: `${WORKFLOWS_PATH}/${encodeURIComponent(id)}`,
     init: { method: 'DELETE' },
     timeoutMs: 10_000,
@@ -219,7 +234,6 @@ export async function deleteWorkflow(id: string): Promise<void> {
     },
     createError: (kind, message) => new ApiError(kind === 'canceled' ? 'malformed' : kind, message)
   });
-  if (!response.ok) throw new ApiError('rejected', REJECTED);
 }
 
 export async function runWorkflowProbe(

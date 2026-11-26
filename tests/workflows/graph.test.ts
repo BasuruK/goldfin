@@ -47,6 +47,12 @@ describe('validateWorkflowGraph', () => {
     const result = validateWorkflowGraph('W', [ocr, llm], provider);
     assert.equal(result.kind, 'valid');
   });
+
+  it('counts workflow name length in Unicode code points', () => {
+    const long = '日'.repeat(81);
+    const result = validateWorkflowGraph(long, [ocr, llm], provider);
+    assert.ok(result.kind === 'invalid' && /80 characters/i.test(result.message));
+  });
 });
 
 describe('sinkNodeIds', () => {

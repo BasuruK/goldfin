@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { afterEach, describe, it, mock } from 'node:test';
 import { ApiError } from '../../src/lib/request-core.ts';
 import {
+  badgeForProvider,
   createWorkflow,
   deleteWorkflow,
   listWorkflows,
@@ -34,6 +35,15 @@ function replyWith(status: number, body: unknown) {
 }
 
 afterEach(() => mock.restoreAll());
+
+describe('badgeForProvider', () => {
+  it('maps connector provider types to badges', () => {
+    assert.equal(badgeForProvider('openai'), 'LLM');
+    assert.equal(badgeForProvider('azure_document_intelligence'), 'OCR');
+    assert.equal(badgeForProvider('web_request'), 'REST');
+    assert.equal(badgeForProvider(undefined), 'Unset');
+  });
+});
 
 describe('nodeKindForProvider', () => {
   it('maps OCR and LLM provider kinds', () => {

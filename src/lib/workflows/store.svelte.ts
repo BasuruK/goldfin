@@ -16,13 +16,8 @@ import {
   type WorkflowNodeDraft,
   type WorkflowProbeResult
 } from './api.ts';
-import { validateWorkflowGraph } from './graph.ts';
-
-interface WorkflowDraft {
-  workflowId: string | null;
-  name: string;
-  nodes: WorkflowNodeDraft[];
-}
+import { draftFingerprint, isAutoDefaultNodeName, type WorkflowDraft } from './draft.ts';
+import { sinkNodeIds, validateWorkflowGraph } from './graph.ts';
 
 export interface WorkflowStoreState {
   workflows: SavedWorkflow[];
@@ -42,6 +37,7 @@ export interface WorkflowStoreState {
   probeError: string;
   probeBusy: boolean;
   probeResult: WorkflowProbeResult | null;
+  probeSinkIds: Record<string, true>;
 }
 
 export const workflowStore = $state<WorkflowStoreState>({
@@ -61,8 +57,13 @@ export const workflowStore = $state<WorkflowStoreState>({
   probeDocument: null,
   probeError: '',
   probeBusy: false,
-  probeResult: null
+  probeResult: null,
+  probeSinkIds: {}
 });
+
+let listOperation = 0;
+let probeOperation = 0;
+let probeAbort: AbortController | null = null;
 
 function connectorById(id: string): SavedConnector | undefined {
   return workflowStore.connectors.find(connector => connector.id === id);
@@ -91,7 +92,47 @@ function syncNodeForConnector(node: WorkflowNodeDraft): WorkflowNodeDraft {
   return { ...node, modelId: '', promptId: '', inputNodeIds: [] };
 }
 
+function cancelProbe(): void {
+  probeOperation += 1;
+  probeAbort?.abort();
+  probeAbort = null;
+  workflowStore.probeBusy = false;
+}
+
+function clearProbeState(): void {
+  workflowStore.probeResult = null;
+  workflowStore.probeError = '';
+  workflowStore.probeSinkIds = {};
+}
+
+function savedDraftForId(id: string): WorkflowDraft | null {
+  const saved = workflowStore.workflows.find(workflow => workflow.id === id);
+  if (!saved) return null;
+  return { workflowId: saved.id, name: saved.name, nodes: draftFromSaved(saved) };
+}
+
+export function isWorkflowDraftDirty(): boolean {
+  const draft = workflowStore.draft;
+  if (!draft?.workflowId) return false;
+  const savedDraft = savedDraftForId(draft.workflowId);
+  if (!savedDraft) return true;
+  return draftFingerprint(draft) !== draftFingerprint(savedDraft);
+}
+
+function reconcileSelectionAfterLoad(workflows: SavedWorkflow[]): void {
+  if (!workflowStore.selection) return;
+  const saved = workflows.find(workflow => workflow.id === workflowStore.selection);
+  if (!saved) {
+    workflowStore.selection = null;
+    workflowStore.draft = null;
+    return;
+  }
+  workflowStore.draft = { workflowId: saved.id, name: saved.name, nodes: draftFromSaved(saved) };
+}
+
 export async function loadWorkflowPage(): Promise<void> {
+  const operation = ++listOperation;
+  cancelProbe();
   workflowStore.listState = 'loading';
   workflowStore.connectorsState = 'loading';
   workflowStore.promptsState = 'loading';
@@ -102,13 +143,16 @@ export async function loadWorkflowPage(): Promise<void> {
       listConnectors(),
       listPrompts()
     ]);
+    if (operation !== listOperation) return;
     workflowStore.workflows = workflows;
     workflowStore.connectors = connectors;
     workflowStore.prompts = prompts;
     workflowStore.listState = 'loaded';
     workflowStore.connectorsState = 'loaded';
     workflowStore.promptsState = 'loaded';
+    reconcileSelectionAfterLoad(workflows);
   } catch (error) {
+    if (operation !== listOperation) return;
     workflowStore.listState = 'failed';
     workflowStore.connectorsState = 'failed';
     workflowStore.promptsState = 'failed';
@@ -118,37 +162,37 @@ export async function loadWorkflowPage(): Promise<void> {
 }
 
 export function disposeWorkflowsPage(): void {
+  listOperation += 1;
+  cancelProbe();
   workflowStore.saveNotice = '';
-  workflowStore.probeResult = null;
-  workflowStore.probeError = '';
-  workflowStore.probeBusy = false;
+  clearProbeState();
 }
 
 export function startNewWorkflow(): void {
+  cancelProbe();
   workflowStore.selection = null;
   workflowStore.draft = { workflowId: null, name: 'New workflow', nodes: [] };
   workflowStore.saveError = '';
   workflowStore.saveNotice = '';
-  workflowStore.probeResult = null;
-  workflowStore.probeError = '';
+  clearProbeState();
 }
 
 export function selectWorkflow(id: string): void {
   const saved = workflowStore.workflows.find(workflow => workflow.id === id);
   if (!saved) return;
+  cancelProbe();
   workflowStore.selection = id;
   workflowStore.draft = { workflowId: id, name: saved.name, nodes: draftFromSaved(saved) };
   workflowStore.saveError = '';
   workflowStore.saveNotice = '';
-  workflowStore.probeResult = null;
-  workflowStore.probeError = '';
+  clearProbeState();
 }
 
 function replaceDraft(draft: WorkflowDraft): void {
   workflowStore.draft = draft;
   workflowStore.saveError = '';
-  workflowStore.probeResult = null;
-  workflowStore.probeError = '';
+  workflowStore.saveNotice = '';
+  clearProbeState();
 }
 
 export function setWorkflowName(name: string): void {
@@ -185,7 +229,7 @@ export function patchWorkflowNode(nodeId: string, patch: Partial<WorkflowNodeDra
     if ('connectorId' in patch && patch.connectorId !== undefined) {
       const connector = connectorById(patch.connectorId);
       const defaultName = connector?.name ?? 'Node';
-      if (node.name.trim() === '' || node.name === 'Node') {
+      if (node.name.trim() === '' || isAutoDefaultNodeName(node.name)) {
         next.name = createBlankNode(existingNodeNames(nodeId), defaultName).name;
       }
       next = syncNodeForConnector(next);
@@ -235,10 +279,12 @@ export async function saveWorkflowDraft(): Promise<void> {
   const validation = validateWorkflowGraph(draft.name, draft.nodes, providerForConnector);
   if (validation.kind === 'invalid') {
     workflowStore.saveError = validation.message;
+    workflowStore.saveNotice = '';
     return;
   }
   workflowStore.saving = true;
   workflowStore.saveError = '';
+  workflowStore.saveNotice = '';
   const workflowId = draft.workflowId;
   try {
     const saved = workflowId
@@ -249,11 +295,10 @@ export async function saveWorkflowDraft(): Promise<void> {
     workflowStore.selection = saved.id;
     workflowStore.draft = { workflowId: saved.id, name: saved.name, nodes: draftFromSaved(saved) };
     workflowStore.saveNotice = `${saved.name} is saved.`;
+    clearProbeState();
   } catch (error) {
     workflowStore.saveError =
-      error instanceof ApiError || error instanceof Error
-        ? error.message
-        : 'Could not save the Workflow. Try again.';
+      error instanceof ApiError ? error.message : 'Could not save the Workflow. Try again.';
   } finally {
     workflowStore.saving = false;
   }
@@ -263,38 +308,77 @@ export async function deleteSelectedWorkflow(): Promise<void> {
   const id = workflowStore.selection;
   if (!id || workflowStore.deleteBusy) return;
   workflowStore.deleteBusy = true;
+  workflowStore.saveError = '';
+  workflowStore.probeError = '';
+  cancelProbe();
   try {
     await deleteWorkflow(id);
     workflowStore.workflows = workflowStore.workflows.filter(workflow => workflow.id !== id);
     workflowStore.selection = null;
     workflowStore.draft = null;
     workflowStore.saveNotice = '';
-    workflowStore.probeResult = null;
+    clearProbeState();
   } catch (error) {
-    workflowStore.saveError = error instanceof Error ? error.message : 'Could not delete the Workflow. Try again.';
+    workflowStore.saveError =
+      error instanceof ApiError ? error.message : 'Could not delete the Workflow. Try again.';
   } finally {
     workflowStore.deleteBusy = false;
   }
 }
 
-export async function runWorkflowProbeFromStore(): Promise<void> {
+export function stopWorkflowProbe(): void {
+  if (!workflowStore.probeBusy) return;
+  cancelProbe();
+  clearProbeState();
+}
+
+function savedNodesForProbe(workflowId: string): WorkflowNodeDraft[] {
+  const saved = workflowStore.workflows.find(workflow => workflow.id === workflowId);
+  return saved ? draftFromSaved(saved) : [];
+}
+
+function probeStartBlocked(): boolean {
   const draft = workflowStore.draft;
   const file = workflowStore.probeDocument;
-  if (!draft?.workflowId || !file || workflowStore.probeBusy) return;
+  if (!draft?.workflowId || !file || workflowStore.probeBusy) return true;
+  return isWorkflowDraftDirty();
+}
+
+function mapProbeError(error: unknown): string {
+  return error instanceof ApiError ? error.message : 'Could not run the Workflow Probe. Try again.';
+}
+
+export async function runWorkflowProbeFromStore(): Promise<void> {
+  if (probeStartBlocked()) return;
+
+  cancelProbe();
+  const draft = workflowStore.draft;
+  const file = workflowStore.probeDocument;
+  if (!draft?.workflowId || !file) return;
+  const operation = ++probeOperation;
+  const controller = new AbortController();
+  probeAbort = controller;
   workflowStore.probeBusy = true;
   workflowStore.probeError = '';
   workflowStore.probeResult = null;
+
   const workflowId = draft.workflowId;
-  const nodeCount = draft.nodes.length;
+  const savedNodes = savedNodesForProbe(workflowId);
+  const nodeCount = savedNodes.length || draft.nodes.length;
+
   try {
-    workflowStore.probeResult = await runWorkflowProbe(workflowId, file, nodeCount);
+    const result = await runWorkflowProbe(workflowId, file, nodeCount, controller.signal);
+    if (operation !== probeOperation) return;
+    workflowStore.probeResult = result;
+    workflowStore.probeSinkIds = sinkNodeIds(savedNodes);
   } catch (error) {
-    workflowStore.probeError =
-      error instanceof ApiError || error instanceof Error
-        ? error.message
-        : 'Could not run the Workflow Probe. Try again.';
+    if (operation !== probeOperation) return;
+    workflowStore.probeError = mapProbeError(error);
   } finally {
-    workflowStore.probeBusy = false;
+    if (operation === probeOperation) {
+      workflowStore.probeBusy = false;
+      probeAbort = null;
+    }
   }
 }
 
@@ -316,4 +400,10 @@ export function upstreamCandidates(nodeId: string): { value: string; label: stri
   return draft.nodes
     .filter(node => node.id !== nodeId)
     .map(node => ({ value: node.id, label: node.name.trim() || node.id }));
+}
+
+export function nodeLabel(nodeId: string): string {
+  const draft = workflowStore.draft;
+  const node = draft?.nodes.find(entry => entry.id === nodeId);
+  return node?.name.trim() || nodeId;
 }

@@ -1,4 +1,5 @@
-import { expect, test, type Page, type Request } from '@playwright/test';
+import assert from 'node:assert/strict';
+import { expect, test, type Page, type Request, type Route } from '@playwright/test';
 
 interface WfNode {
   id: string;
@@ -39,6 +40,76 @@ const connectors = [
 ];
 
 const prompts = [{ id: 'p1', name: 'Extract', createdAt: CREATED, latestVersion: { id: 'v1', version: 1, content: 'body', createdAt: CREATED } }];
+
+type RouteRecord = (request: Request) => unknown;
+
+async function workflowNotFound(route: Route): Promise<void> {
+  await route.fulfill({ status: 404, json: { message: 'Workflow not found.' } });
+}
+
+async function fulfillWorkflowItemRoute(
+  route: Route,
+  workflows: Workflow[],
+  record: RouteRecord
+): Promise<void> {
+  const request = route.request();
+  const path = new URL(request.url()).pathname;
+  const id = path.split('/').filter(Boolean)[3] ?? '';
+  const wf = workflows.find(item => item.id === id);
+  if (path.endsWith('/probe')) {
+    record(request);
+    await route.fulfill({ json: { workflowId: id, nodes: defaultProbeNodes(wf?.nodes ?? []) } });
+    return;
+  }
+  const method = request.method();
+  if (method === 'GET') {
+    if (!wf) await workflowNotFound(route);
+    else await route.fulfill({ json: wf });
+    return;
+  }
+  if (!wf) {
+    await workflowNotFound(route);
+    return;
+  }
+  if (method === 'PUT') {
+    const body = record(request) as { name: string; nodes: WfNode[] };
+    wf.name = body.name;
+    wf.nodes = body.nodes;
+    await route.fulfill({ json: wf });
+    return;
+  }
+  if (method === 'DELETE') {
+    record(request);
+    workflows.splice(workflows.indexOf(wf), 1);
+    await route.fulfill({ status: 204, body: '' });
+    return;
+  }
+  await route.fulfill({ status: 405, json: { message: 'Method not allowed.' } });
+}
+
+function defaultProbeNodes(nodes: WfNode[]) {
+  return nodes.map(node => {
+    if (node.name === 'OCR') {
+      return {
+        nodeId: node.id,
+        nodeName: node.name,
+        kind: 'ocr',
+        status: 'completed',
+        text: 'Known OCR text',
+        durationMs: 10
+      };
+    }
+    return {
+      nodeId: node.id,
+      nodeName: node.name,
+      kind: 'llm',
+      status: 'completed',
+      text: 'Parsed LLM text',
+      promptVersion: 1,
+      durationMs: 20
+    };
+  });
+}
 
 async function mockWorkflowFixtures(page: Page) {
   const workflows: Workflow[] = [];
@@ -85,57 +156,7 @@ async function mockWorkflowFixtures(page: Page) {
     return route.fulfill({ status: 405, json: { message: 'Method not allowed.' } });
   });
 
-  await page.route('**/api/v1/workflows/**', async route => {
-    const request = route.request();
-    const path = new URL(request.url()).pathname;
-    const segments = path.split('/').filter(Boolean);
-    const id = segments[2] ?? '';
-    const wf = workflows.find(item => item.id === id);
-    if (path.endsWith('/probe')) {
-      record(request);
-      return route.fulfill({
-        json: {
-          workflowId: id,
-          nodes: [
-            {
-              nodeId: 'n-ocr',
-              nodeName: 'OCR',
-              kind: 'ocr',
-              status: 'completed',
-              text: 'Known OCR text',
-              durationMs: 10
-            },
-            {
-              nodeId: 'n-llm',
-              nodeName: 'Extract',
-              kind: 'llm',
-              status: 'completed',
-              text: 'Parsed LLM text',
-              promptVersion: 1,
-              durationMs: 20
-            }
-          ]
-        }
-      });
-    }
-    if (request.method() === 'GET') {
-      if (!wf) return route.fulfill({ status: 404, json: { message: 'Workflow not found.' } });
-      return route.fulfill({ json: wf });
-    }
-    if (request.method() === 'PUT') {
-      if (!wf) return route.fulfill({ status: 404, json: { message: 'Workflow not found.' } });
-      const body = record(request) as { name: string; nodes: WfNode[] };
-      wf.name = body.name;
-      wf.nodes = body.nodes;
-      return route.fulfill({ json: wf });
-    }
-    if (request.method() === 'DELETE') {
-      if (!wf) return route.fulfill({ status: 404, json: { message: 'Workflow not found.' } });
-      workflows.splice(workflows.indexOf(wf), 1);
-      return route.fulfill({ status: 204, body: '' });
-    }
-    return route.fulfill({ status: 405, json: { message: 'Method not allowed.' } });
-  });
+  await page.route('**/api/v1/workflows/**', route => fulfillWorkflowItemRoute(route, workflows, record));
 
   return { workflows, writes };
 }
@@ -163,9 +184,9 @@ async function addLlmNode(page: Page, extraInput?: string) {
   await page.getByRole('option', { name: 'gpt-4o', exact: true }).click();
   await card.getByLabel('Prompt', { exact: true }).click();
   await page.getByRole('option', { name: 'Extract', exact: true }).click();
-  await card.getByRole('checkbox', { name: 'OCR', exact: true }).check();
+  await card.locator('.wf-input-pool').getByRole('checkbox', { name: 'OCR', exact: true }).click();
   if (extraInput) {
-    await card.getByRole('checkbox', { name: extraInput, exact: true }).check();
+    await card.locator('.wf-input-pool').getByRole('checkbox', { name: extraInput, exact: true }).click();
   }
 }
 
@@ -180,7 +201,7 @@ test('creates and saves a linear Workflow', async ({ page }) => {
 });
 
 test('reorders fan-in inputs with move up and move down', async ({ page }) => {
-  await mockWorkflowFixtures(page);
+  const { writes } = await mockWorkflowFixtures(page);
   await startDraft(page);
   await addOcrNode(page);
   await page.getByRole('button', { name: 'Add node', exact: true }).click();
@@ -192,13 +213,21 @@ test('reorders fan-in inputs with move up and move down', async ({ page }) => {
   await page.getByRole('option', { name: 'gpt-4o', exact: true }).click();
   await second.getByLabel('Prompt', { exact: true }).click();
   await page.getByRole('option', { name: 'Extract', exact: true }).click();
-  await second.getByRole('checkbox', { name: 'OCR', exact: true }).check();
+  await second.locator('.wf-input-pool').getByRole('checkbox', { name: 'OCR', exact: true }).click();
   await addLlmNode(page, 'Summary');
   const llm = page.locator('.wf-node').last();
   await expect(llm.getByRole('button', { name: /Move Summary up in input order/i })).toBeVisible();
   await llm.getByRole('button', { name: /Move Summary up in input order/i }).click();
   await page.getByRole('button', { name: 'Save workflow', exact: true }).click();
   await expect(page.getByText('Invoices is saved.', { exact: true })).toBeVisible();
+  const create = writes.find(entry => entry.method === 'POST' && entry.path === '/api/v1/workflows') as {
+    body: { nodes: WfNode[] };
+  };
+  const extract = create.body.nodes.find(node => node.name === 'Extract');
+  const summary = create.body.nodes.find(node => node.name === 'Summary');
+  const ocr = create.body.nodes.find(node => node.name === 'OCR');
+  assert.ok(extract && summary && ocr);
+  assert.deepEqual(extract.inputNodeIds, [summary.id, ocr.id]);
 });
 
 test('shows a cycle validation error before save', async ({ page }) => {
@@ -214,7 +243,7 @@ test('shows a cycle validation error before save', async ({ page }) => {
   await page.getByRole('option', { name: 'gpt-4o', exact: true }).click();
   await b.getByLabel('Prompt', { exact: true }).click();
   await page.getByRole('option', { name: 'Extract', exact: true }).click();
-  await b.getByRole('checkbox', { name: 'OCR', exact: true }).check();
+  await b.locator('.wf-input-pool').getByRole('checkbox', { name: 'OCR', exact: true }).click();
 
   await page.getByRole('button', { name: 'Add node', exact: true }).click();
   const c = page.locator('.wf-node').nth(2);
@@ -225,9 +254,9 @@ test('shows a cycle validation error before save', async ({ page }) => {
   await page.getByRole('option', { name: 'gpt-4o', exact: true }).click();
   await c.getByLabel('Prompt', { exact: true }).click();
   await page.getByRole('option', { name: 'Extract', exact: true }).click();
-  await c.getByRole('checkbox', { name: 'B', exact: true }).check();
+  await c.locator('.wf-input-pool').getByRole('checkbox', { name: 'B', exact: true }).click();
 
-  await b.getByRole('checkbox', { name: 'C', exact: true }).check();
+  await b.locator('.wf-input-pool').getByRole('checkbox', { name: 'C', exact: true }).click();
 
   await page.getByRole('button', { name: 'Save workflow', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText(/cycle/i);
@@ -245,22 +274,26 @@ test('runs a Workflow Probe and renders node outputs', async ({ page }) => {
     mimeType: 'application/pdf',
     buffer: Buffer.from('%PDF-1.4')
   });
-  await page.getByRole('button', { name: 'Run main LLM test case', exact: true }).click();
-  await expect(page.getByText('Test case complete.')).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByText('Known OCR text')).toBeVisible();
+  await page.getByRole('button', { name: 'Run Probe', exact: true }).click();
+  await expect(page.getByText('Known OCR text')).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText('Parsed LLM text')).toBeVisible();
   await expect(page.getByText('Prompt v1')).toBeVisible();
 });
 
 test('shows stopReason on an incomplete LLM node', async ({ page }) => {
-  await mockWorkflowFixtures(page);
+  const { workflows } = await mockWorkflowFixtures(page);
   await page.route('**/api/v1/workflows/**/probe', async route => {
+    const path = new URL(route.request().url()).pathname;
+    const id = path.split('/').filter(Boolean)[3] ?? 'w1';
+    const wf = workflows.find(item => item.id === id);
+    const ocr = wf?.nodes.find(node => node.name === 'OCR');
+    const extract = wf?.nodes.find(node => node.name === 'Extract');
     await route.fulfill({
       json: {
-        workflowId: 'w1',
+        workflowId: id,
         nodes: [
           {
-            nodeId: 'n-ocr',
+            nodeId: ocr?.id ?? 'ocr',
             nodeName: 'OCR',
             kind: 'ocr',
             status: 'completed',
@@ -268,7 +301,7 @@ test('shows stopReason on an incomplete LLM node', async ({ page }) => {
             durationMs: 1
           },
           {
-            nodeId: 'n-llm',
+            nodeId: extract?.id ?? 'llm',
             nodeName: 'Extract',
             kind: 'llm',
             status: 'incomplete',
@@ -290,21 +323,25 @@ test('shows stopReason on an incomplete LLM node', async ({ page }) => {
     mimeType: 'application/pdf',
     buffer: Buffer.from('%PDF-1.4')
   });
-  await page.getByRole('button', { name: 'Run main LLM test case', exact: true }).click();
+  await page.getByRole('button', { name: 'Run Probe', exact: true }).click();
   await expect(page.getByText('max_tokens')).toBeVisible();
   await expect(page.getByText('partial')).toBeVisible();
   await expect(page.getByText('Prompt v2')).toBeVisible();
 });
 
 test('shows fail-fast error output without fabricated text', async ({ page }) => {
-  await mockWorkflowFixtures(page);
+  const { workflows } = await mockWorkflowFixtures(page);
   await page.route('**/api/v1/workflows/**/probe', async route => {
+    const path = new URL(route.request().url()).pathname;
+    const id = path.split('/').filter(Boolean)[3] ?? 'w1';
+    const wf = workflows.find(item => item.id === id);
+    const ocr = wf?.nodes.find(node => node.name === 'OCR');
     await route.fulfill({
       json: {
-        workflowId: 'w1',
+        workflowId: id,
         nodes: [
           {
-            nodeId: 'n-ocr',
+            nodeId: ocr?.id ?? 'ocr',
             nodeName: 'OCR',
             kind: 'ocr',
             status: 'failed',
@@ -323,13 +360,26 @@ test('shows fail-fast error output without fabricated text', async ({ page }) =>
     mimeType: 'application/pdf',
     buffer: Buffer.from('%PDF-1.4')
   });
-  await page.getByRole('button', { name: 'Run main LLM test case', exact: true }).click();
+  await page.getByRole('button', { name: 'Run Probe', exact: true }).click();
   await expect(page.getByRole('alert').filter({ hasText: 'OCR failed.' })).toBeVisible();
   await expect(page.getByText('Parsed LLM text')).toHaveCount(0);
 });
 
+test('updates a saved Workflow with PUT', async ({ page }) => {
+  const { writes } = await mockWorkflowFixtures(page);
+  await startDraft(page);
+  await addOcrNode(page);
+  await addLlmNode(page);
+  await page.getByRole('button', { name: 'Save workflow', exact: true }).click();
+  await expect(page.getByText('Invoices is saved.', { exact: true })).toBeVisible();
+  await page.getByRole('textbox', { name: 'Workflow name' }).fill('Invoices v2');
+  await page.getByRole('button', { name: 'Save workflow', exact: true }).click();
+  await expect(page.getByText('Invoices v2 is saved.', { exact: true })).toBeVisible();
+  expect(writes.some(entry => entry.method === 'PUT' && entry.path === '/api/v1/workflows/w1')).toBe(true);
+});
+
 test('deletes a saved Workflow after confirmation', async ({ page }) => {
-  const { workflows } = await mockWorkflowFixtures(page);
+  const { workflows, writes } = await mockWorkflowFixtures(page);
   workflows.push({
     id: 'w1',
     name: 'Legacy',
@@ -342,8 +392,8 @@ test('deletes a saved Workflow after confirmation', async ({ page }) => {
   await page.getByRole('option', { name: 'Legacy', exact: true }).click();
   await page.getByRole('button', { name: 'Delete workflow', exact: true }).click();
   await page.getByRole('button', { name: 'Delete', exact: true }).click();
+  expect(writes.some(entry => entry.method === 'DELETE' && entry.path === '/api/v1/workflows/w1')).toBe(true);
+  assert.equal(workflows.length, 0);
   await page.reload();
-  await expect(page.locator('.workflows-toolbar').getByLabel('Saved workflow', { exact: true })).toContainText(
-    'New workflow'
-  );
+  await expect(page.getByRole('option', { name: 'Legacy', exact: true })).toHaveCount(0);
 });

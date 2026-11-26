@@ -12,7 +12,7 @@ function normalizeInputs(inputs: readonly string[]): string[] {
 function validateWorkflowName(name: string): GraphValidation | null {
   const trimmed = name.trim();
   if (!trimmed) return { kind: 'invalid', message: 'Enter a Workflow name before saving.' };
-  if (trimmed.length > 80) return { kind: 'invalid', message: 'Workflow name must be 80 characters or fewer.' };
+  if ([...trimmed].length > 80) return { kind: 'invalid', message: 'Workflow name must be 80 characters or fewer.' };
   return null;
 }
 

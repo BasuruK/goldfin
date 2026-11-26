@@ -5,6 +5,7 @@
   import {
     connectorSelectItems,
     moveNodeInput,
+    nodeLabel,
     patchWorkflowNode,
     promptSelectItems,
     removeWorkflowNode,
@@ -27,9 +28,9 @@
   );
   const promptItems = $derived(promptSelectItems());
   const upstreamItems = $derived(upstreamCandidates(node.id));
-
   const inputOrder = $derived(node.inputNodeIds);
   const reorderVisible = $derived(inputOrder.length >= 2);
+  const uncheckedUpstream = $derived(upstreamItems.filter(item => !inputOrder.includes(item.value)));
 </script>
 
 <article class="wf-node" aria-label={`Node ${node.name}`}>
@@ -78,52 +79,72 @@
     />
   {/if}
 
-  {#if showInputs && upstreamItems.length > 0}
+  {#if showInputs && (inputOrder.length > 0 || uncheckedUpstream.length > 0)}
     <fieldset class="wf-inputs">
       <legend class="label">Upstream inputs</legend>
       <p class="field-desc">Fan-in order sets the heading sequence for LLM input.</p>
-      <ul class="wf-input-list">
-        {#each upstreamItems as item (item.value)}
-          {@const checked = node.inputNodeIds.includes(item.value)}
-          <li class="wf-input-row">
-            <label class="wf-input-check">
-              <input
-                type="checkbox"
-                checked={checked}
-                disabled={workflowStore.saving || workflowStore.probeBusy}
-                onchange={(event) => toggleNodeInput(node.id, item.value, event.currentTarget.checked)}
-              />
-              <span>{item.label}</span>
-            </label>
-            {#if checked && reorderVisible}
-              <span class="wf-input-actions">
-                <Button
-                  type="button"
-                  class="icon"
-                  aria-label={`Move ${item.label} up in input order`}
-                  disabled={workflowStore.saving || workflowStore.probeBusy || inputOrder.indexOf(item.value) === 0}
-                  onclick={() => moveNodeInput(node.id, item.value, 'up')}
-                >
-                  <Icon name="chevron" size={14} />
-                </Button>
-                <Button
-                  type="button"
-                  class="icon"
-                  aria-label={`Move ${item.label} down in input order`}
-                  disabled={
-                    workflowStore.saving
-                    || workflowStore.probeBusy
-                    || inputOrder.indexOf(item.value) === inputOrder.length - 1
-                  }
-                  onclick={() => moveNodeInput(node.id, item.value, 'down')}
-                >
-                  <Icon name="chevron" size={14} />
-                </Button>
-              </span>
-            {/if}
-          </li>
-        {/each}
-      </ul>
+      {#if inputOrder.length > 0}
+        <ul class="wf-input-list">
+          {#each inputOrder as fromId, index (fromId)}
+            <li class="wf-input-row">
+              <span class="wf-input-order">#{index + 1}</span>
+              <span class="wf-input-name">{nodeLabel(fromId)}</span>
+              <label class="wf-input-check wf-sr-label">
+                <input
+                  type="checkbox"
+                  checked={true}
+                  disabled={workflowStore.saving || workflowStore.probeBusy}
+                  onchange={() => toggleNodeInput(node.id, fromId, false)}
+                />
+                <span>Remove {nodeLabel(fromId)}</span>
+              </label>
+              {#if reorderVisible}
+                <span class="wf-input-actions">
+                  <Button
+                    type="button"
+                    class="icon wf-chevron-up"
+                    aria-label={`Move ${nodeLabel(fromId)} up in input order`}
+                    disabled={workflowStore.saving || workflowStore.probeBusy || index === 0}
+                    onclick={() => moveNodeInput(node.id, fromId, 'up')}
+                  >
+                    <Icon name="chevron" size={14} />
+                  </Button>
+                  <Button
+                    type="button"
+                    class="icon"
+                    aria-label={`Move ${nodeLabel(fromId)} down in input order`}
+                    disabled={
+                      workflowStore.saving
+                      || workflowStore.probeBusy
+                      || index === inputOrder.length - 1
+                    }
+                    onclick={() => moveNodeInput(node.id, fromId, 'down')}
+                  >
+                    <Icon name="chevron" size={14} />
+                  </Button>
+                </span>
+              {/if}
+            </li>
+          {/each}
+        </ul>
+      {/if}
+      {#if uncheckedUpstream.length > 0}
+        <ul class="wf-input-list wf-input-pool">
+          {#each uncheckedUpstream as item (item.value)}
+            <li class="wf-input-row">
+              <label class="wf-input-check">
+                <input
+                  type="checkbox"
+                  checked={false}
+                  disabled={workflowStore.saving || workflowStore.probeBusy}
+                  onchange={(event) => toggleNodeInput(node.id, item.value, event.currentTarget.checked)}
+                />
+                <span>{item.label}</span>
+              </label>
+            </li>
+          {/each}
+        </ul>
+      {/if}
     </fieldset>
   {:else if showInputs}
     <p class="note">Add another node to wire upstream inputs.</p>
@@ -164,11 +185,27 @@
     display: grid;
     gap: 6px;
   }
+  .wf-input-pool {
+    margin-top: 4px;
+    padding-top: 8px;
+    border-top: 1px solid var(--uline);
+  }
   .wf-input-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: 8px;
+    flex-wrap: wrap;
+  }
+  .wf-input-order {
+    font: 600 11px var(--font-mono);
+    color: var(--ufg2);
+    min-inline-size: 1.75rem;
+  }
+  .wf-input-name {
+    flex: 1 1 auto;
+    font-size: 13px;
+    color: var(--ufg);
   }
   .wf-input-check {
     display: inline-flex;
@@ -177,11 +214,23 @@
     font-size: 13px;
     color: var(--ufg);
   }
+  .wf-sr-label {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
   .wf-input-actions {
     display: inline-flex;
     gap: 4px;
+    margin-inline-start: auto;
   }
-  .wf-input-actions :global(.btn.icon:last-child) :global(.lin) {
+  .wf-input-actions :global(.wf-chevron-up .lni) {
     transform: rotate(180deg);
   }
 </style>

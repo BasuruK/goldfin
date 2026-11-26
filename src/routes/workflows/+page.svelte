@@ -7,7 +7,6 @@
     Icon,
     Input,
     Pill,
-    RunButton,
     Section,
     Select,
     Spinner
@@ -15,22 +14,21 @@
   import { DOCUMENT_ACCEPT, validateDocument } from '#lib/ocr/documents.js';
   import DagView from '#lib/workflows/DagView.svelte';
   import WorkflowNodeCard from '#lib/workflows/WorkflowNodeCard.svelte';
-  import { sinkNodeIds } from '#lib/workflows/graph.ts';
   import {
     addWorkflowNode,
     disposeWorkflowsPage,
     loadWorkflowPage,
     deleteSelectedWorkflow,
+    isWorkflowDraftDirty,
     runWorkflowProbeFromStore,
     saveWorkflowDraft,
     selectWorkflow,
     setWorkflowName,
     startNewWorkflow,
+    stopWorkflowProbe,
     workflowStore,
     workflowSelectItems
   } from '#lib/workflows/store.svelte.js';
-
-  const NEW_VALUE = '__new__';
 
   onMount(() => {
     void loadWorkflowPage();
@@ -40,44 +38,38 @@
     disposeWorkflowsPage();
   });
 
-  const selectValue = $derived(workflowStore.selection ?? NEW_VALUE);
-  const selectItems = $derived([
-    { value: NEW_VALUE, label: 'New workflow' },
-    ...workflowSelectItems()
-  ]);
-
-  function selectWorkflowValue(value: string): void {
-    if (value === NEW_VALUE) startNewWorkflow();
-    else selectWorkflow(value);
-  }
+  const selectItems = $derived(workflowSelectItems());
 
   function providerType(connectorId: string): string | undefined {
     return workflowStore.connectors.find(connector => connector.id === connectorId)?.providerType;
   }
 
-  const sinks = $derived(workflowStore.draft ? sinkNodeIds(workflowStore.draft.nodes) : {});
-
   const documentValidation = $derived(
     workflowStore.probeDocument ? validateDocument(workflowStore.probeDocument) : null
   );
 
-  const probeDisabled = $derived(
+  const probeBlockedReason = $derived.by(() => {
+    if (isWorkflowDraftDirty()) return 'Save the Workflow before running a Probe.';
+    if (!workflowStore.draft?.workflowId) return 'Save the Workflow before running a Probe.';
+    if (!workflowStore.probeDocument) return null;
+    if (documentValidation) return documentValidation;
+    return null;
+  });
+
+  const probeRunDisabled = $derived(
     workflowStore.probeBusy
     || !workflowStore.draft?.workflowId
     || !workflowStore.probeDocument
     || documentValidation !== null
     || workflowStore.saving
+    || isWorkflowDraftDirty()
   );
 
-  $effect(() => {
-    const file = workflowStore.probeDocument;
+  function setProbeDocument(file: File | null): void {
+    workflowStore.probeDocument = file;
     workflowStore.probeResult = null;
-    if (!file) {
-      workflowStore.probeError = '';
-      return;
-    }
-    workflowStore.probeError = validateDocument(file) ?? '';
-  });
+    workflowStore.probeError = '';
+  }
 </script>
 
 <svelte:head>
@@ -96,23 +88,24 @@
     </Section>
   {:else if workflowStore.listState === 'failed'}
     <Section title="Workflows unavailable" id="workflows-failed">
-      <p class="note" role="alert">{workflowStore.listError}</p>
+      <p class="note error" role="alert">{workflowStore.listError}</p>
       <Button type="button" onclick={() => loadWorkflowPage()}>Retry</Button>
     </Section>
   {:else}
     <div class="workflows-toolbar">
-      {#key `${selectValue}-${workflowStore.workflows.length}`}
+      {#if selectItems.length > 0}
         <Select
           label="Saved workflow"
           items={selectItems}
-          bind:value={() => selectValue, selectWorkflowValue}
-          disabled={workflowStore.saving || workflowStore.probeBusy}
+          placeholder="Choose a saved Workflow"
+          bind:value={() => workflowStore.selection ?? '', (value: string) => selectWorkflow(value)}
+          disabled={workflowStore.saving || workflowStore.probeBusy || workflowStore.deleteBusy}
         />
-      {/key}
+      {/if}
       <Button
         type="button"
         class="primary"
-        disabled={workflowStore.saving || workflowStore.probeBusy}
+        disabled={workflowStore.saving || workflowStore.probeBusy || workflowStore.deleteBusy}
         onclick={() => startNewWorkflow()}
       >
         <Icon name="branch" size={16} />
@@ -189,27 +182,39 @@
 
       <Section title="Workflow Probe" id="workflow-probe">
         <FileDrop
-          bind:file={workflowStore.probeDocument}
+          bind:file={() => workflowStore.probeDocument, setProbeDocument}
           accept={DOCUMENT_ACCEPT}
           label="Document"
           name="Select a document"
           disabled={workflowStore.probeBusy}
         />
-        {#if workflowStore.probeError}
+        {#if documentValidation}
+          <p class="note error" role="alert">{documentValidation}</p>
+        {:else if workflowStore.probeError}
           <p class="note error" role="alert">{workflowStore.probeError}</p>
         {/if}
-        <RunButton
-          label={workflowStore.probeBusy ? 'Running…' : 'Run Probe'}
-          disabled={probeDisabled}
-          onRun={() => runWorkflowProbeFromStore()}
-        />
+        {#if probeBlockedReason && !workflowStore.probeBusy}
+          <p class="note" role="status">{probeBlockedReason}</p>
+        {/if}
+        <div class="probe-actions">
+          <Button type="button" disabled={!workflowStore.probeBusy} onclick={() => stopWorkflowProbe()}>Stop</Button>
+          <Button
+            type="button"
+            class="primary"
+            disabled={probeRunDisabled}
+            aria-busy={workflowStore.probeBusy}
+            onclick={() => runWorkflowProbeFromStore()}
+          >
+            {workflowStore.probeBusy ? 'Running…' : 'Run Probe'}
+          </Button>
+        </div>
         {#if workflowStore.probeBusy}
           <p class="note" role="status"><Spinner tone="key" label="Running Workflow Probe" /></p>
         {/if}
         {#if workflowStore.probeResult}
           <ol class="probe-results">
             {#each workflowStore.probeResult.nodes as item (item.nodeId)}
-              <li class="probe-node" data-sink={sinks[item.nodeId] ? 'true' : 'false'}>
+              <li class="probe-node" data-sink={workflowStore.probeSinkIds[item.nodeId] ? 'true' : 'false'}>
                 <header class="probe-node-head">
                   <h3 class="probe-node-title">{item.nodeName}</h3>
                   <Pill variant={item.status === 'failed' ? 'missing' : item.status === 'incomplete' ? 'running-pill' : 'ok-pill'}>
@@ -236,6 +241,10 @@
     {:else if workflowStore.workflows.length === 0}
       <Section title="No workflows yet" id="workflows-empty">
         <p class="note">Create a Workflow to wire OCR and LLM Connectors.</p>
+      </Section>
+    {:else}
+      <Section title="Pick or create" id="workflows-pick">
+        <p class="note">Choose a saved Workflow from the list or start a new one.</p>
       </Section>
     {/if}
   {/if}
@@ -272,6 +281,12 @@
     gap: 16px;
   }
   .workflow-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+  }
+  .probe-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
