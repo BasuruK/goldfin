@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -64,8 +65,9 @@ func (s *server) createWorkflow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	catalog := poolCatalog{ctx: r.Context(), pool: s.pool}
-	if _, err := workflow.Validate(graph, catalog); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"message": "Invalid Workflow."})
+	graph, _, err = workflow.Validate(graph, catalog)
+	if status, message := workflowValidationStatus(err); status != 0 {
+		writeJSON(w, status, map[string]string{"message": message})
 		return
 	}
 	out, err := s.insertWorkflow(r.Context(), graph)
@@ -106,8 +108,9 @@ func (s *server) updateWorkflow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	catalog := poolCatalog{ctx: r.Context(), pool: s.pool}
-	if _, err := workflow.Validate(graph, catalog); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"message": "Invalid Workflow."})
+	graph, _, err = workflow.Validate(graph, catalog)
+	if status, message := workflowValidationStatus(err); status != 0 {
+		writeJSON(w, status, map[string]string{"message": message})
 		return
 	}
 	out, err := s.replaceWorkflow(r.Context(), id, graph)
@@ -153,7 +156,7 @@ func (c poolCatalog) Connector(id string) (workflow.ConnectorInfo, error) {
 	var providerType string
 	err := c.pool.QueryRow(c.ctx, `SELECT provider_type FROM connectors WHERE id = $1`, id).Scan(&providerType)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return workflow.ConnectorInfo{}, errors.New("missing connector")
+		return workflow.ConnectorInfo{}, workflow.ErrMissingReference
 	}
 	if err != nil {
 		return workflow.ConnectorInfo{}, err
@@ -188,6 +191,16 @@ func (c poolCatalog) PromptExists(id string) (bool, error) {
 	return true, nil
 }
 
+func workflowValidationStatus(err error) (int, string) {
+	if err == nil {
+		return 0, ""
+	}
+	if errors.Is(err, workflow.ErrInvalid) {
+		return http.StatusBadRequest, "Invalid Workflow."
+	}
+	return http.StatusServiceUnavailable, "Could not validate the Workflow."
+}
+
 func (s *server) insertWorkflow(ctx context.Context, graph workflow.Graph) (workflowResponse, error) {
 	nodesJSON, err := json.Marshal(graph.Nodes)
 	if err != nil {
@@ -198,7 +211,7 @@ func (s *server) insertWorkflow(ctx context.Context, graph workflow.Graph) (work
 		INSERT INTO workflows (name, nodes_json)
 		VALUES ($1, $2::jsonb)
 		RETURNING id, name, nodes_json, created_at, updated_at`,
-		strings.TrimSpace(graph.Name), nodesJSON,
+		graph.Name, nodesJSON,
 	).Scan(&out.ID, &out.Name, &nodesJSON, &out.CreatedAt, &out.UpdatedAt)
 	if err != nil {
 		return workflowResponse{}, err
@@ -220,7 +233,7 @@ func (s *server) replaceWorkflow(ctx context.Context, id string, graph workflow.
 		SET name = $2, nodes_json = $3::jsonb, updated_at = now()
 		WHERE id = $1
 		RETURNING id, name, nodes_json, created_at, updated_at`,
-		id, strings.TrimSpace(graph.Name), nodesJSON,
+		id, graph.Name, nodesJSON,
 	).Scan(&out.ID, &out.Name, &nodesJSON, &out.CreatedAt, &out.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return workflowResponse{}, errWorkflowNotFound
@@ -279,15 +292,30 @@ func decodeWorkflowBody(w http.ResponseWriter, r *http.Request) (workflow.Graph,
 	if err := rejectDuplicateJSONKeys(raw); err != nil {
 		return workflow.Graph{}, errInvalidWorkflow
 	}
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.DisallowUnknownFields()
 	var body struct {
-		Name  string          `json:"name"`
-		Nodes []workflow.Node `json:"nodes"`
+		Name  string            `json:"name"`
+		Nodes []json.RawMessage `json:"nodes"`
 	}
-	if err := json.Unmarshal(raw, &body); err != nil {
+	if err := dec.Decode(&body); err != nil {
 		return workflow.Graph{}, errInvalidWorkflow
 	}
 	if body.Nodes == nil {
 		return workflow.Graph{}, errInvalidWorkflow
 	}
-	return workflow.Graph{Name: body.Name, Nodes: body.Nodes}, nil
+	nodes := make([]workflow.Node, 0, len(body.Nodes))
+	for _, nodeRaw := range body.Nodes {
+		nodeDec := json.NewDecoder(bytes.NewReader(nodeRaw))
+		nodeDec.DisallowUnknownFields()
+		var node workflow.Node
+		if err := nodeDec.Decode(&node); err != nil {
+			return workflow.Graph{}, errInvalidWorkflow
+		}
+		if node.InputNodeIDs == nil {
+			node.InputNodeIDs = []string{}
+		}
+		nodes = append(nodes, node)
+	}
+	return workflow.Graph{Name: body.Name, Nodes: nodes}, nil
 }

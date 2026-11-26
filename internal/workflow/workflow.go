@@ -2,6 +2,7 @@
 package workflow
 
 import (
+	"encoding/json"
 	"errors"
 	"strings"
 	"unicode/utf8"
@@ -9,6 +10,9 @@ import (
 
 // ErrInvalid marks a structurally invalid Workflow or node wiring.
 var ErrInvalid = errors.New("invalid workflow")
+
+// ErrMissingReference marks a Connector or Prompt id that does not exist.
+var ErrMissingReference = errors.New("missing workflow reference")
 
 // Node is one Connector (and Prompt for an LLM node) in a Workflow graph.
 type Node struct {
@@ -18,6 +22,16 @@ type Node struct {
 	ModelID      string   `json:"modelId,omitempty"`
 	PromptID     string   `json:"promptId,omitempty"`
 	InputNodeIDs []string `json:"inputNodeIds"`
+}
+
+// MarshalJSON always emits inputNodeIds as a JSON array, never null.
+func (n Node) MarshalJSON() ([]byte, error) {
+	type nodeAlias Node
+	copy := nodeAlias(n)
+	if copy.InputNodeIDs == nil {
+		copy.InputNodeIDs = []string{}
+	}
+	return json.Marshal(copy)
 }
 
 // Graph is the mutable graph fields of a Workflow.
@@ -42,71 +56,116 @@ type Catalog interface {
 
 // TopologicalOrder validates g and returns node ids in deterministic execution order.
 func TopologicalOrder(g Graph, catalog Catalog) ([]string, error) {
+	_, order, err := validate(g, catalog)
+	return order, err
+}
+
+// Validate checks the graph, returns a normalized graph, and a deterministic topological order of node ids.
+func Validate(g Graph, catalog Catalog) (Graph, []string, error) {
 	return validate(g, catalog)
 }
 
-// Validate checks the graph and returns a deterministic topological order of node ids.
-func Validate(g Graph, catalog Catalog) ([]string, error) {
-	return validate(g, catalog)
-}
-
-func validate(g Graph, catalog Catalog) ([]string, error) {
+func validate(g Graph, catalog Catalog) (Graph, []string, error) {
+	if strings.ContainsRune(g.Name, 0) {
+		return Graph{}, nil, ErrInvalid
+	}
 	name := strings.TrimSpace(g.Name)
-	if name == "" || utf8.RuneCountInString(name) > maxNameRunes || strings.ContainsRune(name, 0) {
-		return nil, ErrInvalid
+	if err := rejectText(name, maxNameRunes); err != nil {
+		return Graph{}, nil, err
 	}
 	if len(g.Nodes) == 0 {
-		return nil, ErrInvalid
+		return Graph{}, nil, ErrInvalid
 	}
 	byID := make(map[string]int, len(g.Nodes))
 	byName := make(map[string]struct{}, len(g.Nodes))
+	normalized := make([]Node, len(g.Nodes))
 	for i, node := range g.Nodes {
-		id := strings.TrimSpace(node.ID)
-		nodeName := strings.TrimSpace(node.Name)
-		connectorID := strings.TrimSpace(node.ConnectorID)
+		id, nodeName, connectorID, modelID, promptID, inputs, err := normalizeNode(node)
+		if err != nil {
+			return Graph{}, nil, err
+		}
 		if id == "" || nodeName == "" || connectorID == "" {
-			return nil, ErrInvalid
+			return Graph{}, nil, ErrInvalid
 		}
 		if _, ok := byID[id]; ok {
-			return nil, ErrInvalid
+			return Graph{}, nil, ErrInvalid
 		}
 		if _, ok := byName[nodeName]; ok {
-			return nil, ErrInvalid
+			return Graph{}, nil, ErrInvalid
 		}
 		byID[id] = i
 		byName[nodeName] = struct{}{}
+		normalized[i] = Node{
+			ID: id, Name: nodeName, ConnectorID: connectorID,
+			ModelID: modelID, PromptID: promptID, InputNodeIDs: inputs,
+		}
 	}
-	inDegree := make([]int, len(g.Nodes))
-	edges := make([][]int, len(g.Nodes))
-	for i, node := range g.Nodes {
-		id := strings.TrimSpace(node.ID)
-		info, err := catalog.Connector(strings.TrimSpace(node.ConnectorID))
+	inDegree := make([]int, len(normalized))
+	edges := make([][]int, len(normalized))
+	for i, node := range normalized {
+		info, err := catalog.Connector(node.ConnectorID)
+		if errors.Is(err, ErrMissingReference) {
+			return Graph{}, nil, ErrInvalid
+		}
 		if err != nil {
-			return nil, ErrInvalid
+			return Graph{}, nil, err
 		}
 		role := connectorRole(info.ProviderType)
 		if role == roleUnknown {
-			return nil, ErrInvalid
+			return Graph{}, nil, ErrInvalid
 		}
-		promptID := strings.TrimSpace(node.PromptID)
-		modelID := strings.TrimSpace(node.ModelID)
-		if err := validateConnectorFields(role, info.ProviderType, modelID, promptID, node.ConnectorID, catalog); err != nil {
-			return nil, err
+		if err := validateConnectorFields(role, info.ProviderType, node.ModelID, node.PromptID, node.ConnectorID, catalog); err != nil {
+			return Graph{}, nil, err
 		}
-		if err := validateInputs(role, id, node.InputNodeIDs, byID, &inDegree, &edges, i); err != nil {
-			return nil, err
+		if err := validateInputs(role, node.ID, node.InputNodeIDs, byID, &inDegree, &edges, i); err != nil {
+			return Graph{}, nil, err
 		}
-		_ = id
 	}
 	order, err := topologicalOrder(inDegree, edges)
 	if err != nil {
-		return nil, err
+		return Graph{}, nil, err
 	}
 	out := make([]string, len(order))
 	for i, idx := range order {
-		out[i] = strings.TrimSpace(g.Nodes[idx].ID)
+		out[i] = normalized[idx].ID
 	}
-	return out, nil
+	return Graph{Name: name, Nodes: normalized}, out, nil
+}
+
+func normalizeNode(node Node) (id, name, connectorID, modelID, promptID string, inputs []string, err error) {
+	for _, raw := range []string{node.ID, node.Name, node.ConnectorID, node.ModelID, node.PromptID} {
+		if strings.ContainsRune(raw, 0) {
+			return "", "", "", "", "", nil, ErrInvalid
+		}
+	}
+	id = strings.TrimSpace(node.ID)
+	name = strings.TrimSpace(node.Name)
+	connectorID = strings.TrimSpace(node.ConnectorID)
+	modelID = strings.TrimSpace(node.ModelID)
+	promptID = strings.TrimSpace(node.PromptID)
+	if node.InputNodeIDs == nil {
+		inputs = []string{}
+	} else {
+		inputs = make([]string, 0, len(node.InputNodeIDs))
+		for _, raw := range node.InputNodeIDs {
+			if strings.ContainsRune(raw, 0) {
+				return "", "", "", "", "", nil, ErrInvalid
+			}
+			trimmed := strings.TrimSpace(raw)
+			if trimmed == "" {
+				return "", "", "", "", "", nil, ErrInvalid
+			}
+			inputs = append(inputs, trimmed)
+		}
+	}
+	return id, name, connectorID, modelID, promptID, inputs, nil
+}
+
+func rejectText(text string, maxRunes int) error {
+	if text == "" || utf8.RuneCountInString(text) > maxRunes || strings.ContainsRune(text, 0) {
+		return ErrInvalid
+	}
+	return nil
 }
 
 type nodeRole int
@@ -149,7 +208,10 @@ func validateConnectorFields(role nodeRole, providerType, modelID, promptID, con
 				return ErrInvalid
 			}
 			enabled, err := catalog.ModelEnabled(connectorID, modelID)
-			if err != nil || !enabled {
+			if err != nil {
+				return err
+			}
+			if !enabled {
 				return ErrInvalid
 			}
 		} else if modelID != "" {
@@ -160,14 +222,20 @@ func validateConnectorFields(role nodeRole, providerType, modelID, promptID, con
 			return ErrInvalid
 		}
 		exists, err := catalog.PromptExists(promptID)
-		if err != nil || !exists {
+		if err != nil {
+			return err
+		}
+		if !exists {
 			return ErrInvalid
 		}
 		if !hasModels || modelID == "" {
 			return ErrInvalid
 		}
 		enabled, err := catalog.ModelEnabled(connectorID, modelID)
-		if err != nil || !enabled {
+		if err != nil {
+			return err
+		}
+		if !enabled {
 			return ErrInvalid
 		}
 	default:
@@ -188,11 +256,7 @@ func validateInputs(role nodeRole, selfID string, inputs []string, byID map[stri
 		}
 	}
 	seen := make(map[string]struct{}, len(inputs))
-	for _, raw := range inputs {
-		fromID := strings.TrimSpace(raw)
-		if fromID == "" {
-			return ErrInvalid
-		}
+	for _, fromID := range inputs {
 		if fromID == selfID {
 			return ErrInvalid
 		}
@@ -213,26 +277,32 @@ func validateInputs(role nodeRole, selfID string, inputs []string, byID map[stri
 func topologicalOrder(inDegree []int, edges [][]int) ([]int, error) {
 	n := len(inDegree)
 	deg := append([]int(nil), inDegree...)
-	var queue []int
+	ready := make([]int, 0, n)
 	for i, d := range deg {
 		if d == 0 {
-			queue = append(queue, i)
+			ready = append(ready, i)
 		}
 	}
 	order := make([]int, 0, n)
-	for len(queue) > 0 {
-		i := queue[0]
-		queue = queue[1:]
+	for len(order) < n {
+		if len(ready) == 0 {
+			return nil, ErrInvalid
+		}
+		bestPos := 0
+		for j := 1; j < len(ready); j++ {
+			if ready[j] < ready[bestPos] {
+				bestPos = j
+			}
+		}
+		i := ready[bestPos]
+		ready = append(ready[:bestPos], ready[bestPos+1:]...)
 		order = append(order, i)
 		for _, to := range edges[i] {
 			deg[to]--
 			if deg[to] == 0 {
-				queue = append(queue, to)
+				ready = append(ready, to)
 			}
 		}
-	}
-	if len(order) != n {
-		return nil, ErrInvalid
 	}
 	return order, nil
 }

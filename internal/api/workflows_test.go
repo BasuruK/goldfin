@@ -78,6 +78,45 @@ func TestAPICreatesWorkflow(t *testing.T) {
 	if got.ID == "" || got.Name != "Invoices" || len(got.Nodes) != 2 {
 		t.Fatalf("created: %+v", got)
 	}
+	if got.Nodes[0].InputNodeIDs == nil {
+		t.Fatal("inputNodeIds must not be null in API response")
+	}
+}
+
+func TestAPICreatesWorkflowWithOmittedInputNodeIds(t *testing.T) {
+	handler, _, _ := newAPI(t)
+	ocrID, llmID, promptID := seedOCRAndLLM(t, handler)
+	body := `{"name":"W","nodes":[
+		{"id":"n1","name":"OCR","connectorId":"` + ocrID + `"},
+		{"id":"n2","name":"Extract","connectorId":"` + llmID + `","modelId":"gpt-4o","promptId":"` + promptID + `","inputNodeIds":["n1"]}
+	]}`
+	created := request(t, handler, http.MethodPost, "/api/v1/workflows", body)
+	if created.Code != http.StatusCreated {
+		t.Fatalf("create: %d %s", created.Code, created.Body.String())
+	}
+	if !strings.Contains(created.Body.String(), `"inputNodeIds":[]`) {
+		t.Fatalf("want empty array for OCR node: %s", created.Body.String())
+	}
+}
+
+func TestAPICreatesWorkflowNormalizesPaddedFields(t *testing.T) {
+	handler, _, _ := newAPI(t)
+	ocrID, llmID, promptID := seedOCRAndLLM(t, handler)
+	body := `{"name":" Padded ","nodes":[
+		{"id":" n1 ","name":" OCR ","connectorId":" ` + ocrID + ` "},
+		{"id":"n2","name":"Extract","connectorId":"` + llmID + `","modelId":"gpt-4o","promptId":"` + promptID + `","inputNodeIds":[" n1 "]}
+	]}`
+	created := request(t, handler, http.MethodPost, "/api/v1/workflows", body)
+	if created.Code != http.StatusCreated {
+		t.Fatalf("create: %d %s", created.Code, created.Body.String())
+	}
+	var got workflowItem
+	if err := json.Unmarshal(created.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Name != "Padded" || got.Nodes[0].ID != "n1" || got.Nodes[0].ConnectorID != ocrID {
+		t.Fatalf("normalized: %+v", got)
+	}
 }
 
 func TestAPIListsAndGetsWorkflow(t *testing.T) {
@@ -201,5 +240,41 @@ func TestAPIPutRejectsEmptyNodesNotFound(t *testing.T) {
 	rec := request(t, handler, http.MethodPut, "/api/v1/workflows/missing", `{"name":"W","nodes":[]}`)
 	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "Invalid Workflow.") {
 		t.Fatalf("put invalid before 404: %d %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestAPIRejectsUnknownWorkflowFields(t *testing.T) {
+	handler, _, _ := newAPI(t)
+	ocrID, llmID, promptID := seedOCRAndLLM(t, handler)
+	cases := []struct {
+		name string
+		body string
+	}{
+		{"top_level", `{"name":"W","nodes":[],"extra":"x"}`},
+		{"node_level", `{"name":"W","nodes":[{"id":"n1","name":"OCR","connectorId":"` + ocrID + `","kind":"ocr"}]}`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := request(t, handler, http.MethodPost, "/api/v1/workflows", tc.body)
+			if rec.Code != http.StatusBadRequest {
+				t.Fatalf("post: %d %s", rec.Code, rec.Body.String())
+			}
+		})
+	}
+	put := request(t, handler, http.MethodPut, "/api/v1/workflows/missing", `{"name":"W","extra":1,"nodes":[
+		{"id":"n1","name":"OCR","connectorId":"`+ocrID+`"},
+		{"id":"n2","name":"Extract","connectorId":"`+llmID+`","modelId":"gpt-4o","promptId":"`+promptID+`","inputNodeIds":["n1"]}
+	]}`)
+	if put.Code != http.StatusBadRequest {
+		t.Fatalf("put unknown field: %d %s", put.Code, put.Body.String())
+	}
+}
+
+func TestAPIRejectsNULInWorkflowName(t *testing.T) {
+	handler, _, _ := newAPI(t)
+	ocrID, _, _ := seedOCRAndLLM(t, handler)
+	rec := request(t, handler, http.MethodPost, "/api/v1/workflows", `{"name":"Bad\u0000","nodes":[{"id":"n1","name":"OCR","connectorId":"`+ocrID+`"}]}`)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("nul name: %d %s", rec.Code, rec.Body.String())
 	}
 }
