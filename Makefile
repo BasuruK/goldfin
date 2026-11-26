@@ -1,4 +1,4 @@
-# Local dev. Requires: docker, go, pnpm, and a repo-root `.env` (cp .env.example .env).
+# Local dev. Requires: docker, portless, go, pnpm, and a repo-root `.env` (cp .env.example .env).
 # Checks also require golangci-lint, govulncheck, zizmor and gitleaks (CI installs pinned versions).
 # `make check` fails unless TEST_DATABASE_URL points to a disposable *_test or *_tests database.
 # Isolated test database (tmpfs, loopback-only, nothing persists; stop it to clean up):
@@ -13,6 +13,8 @@
 
 .PHONY: help check lint lint-go lint-types lint-ts up run watch down migrate logs
 
+COMPOSE := portless compose
+
 # `lint` runs its three groups in parallel; each group's lines still run in order.
 MAKEFLAGS += --jobs=3 --output-sync=target
 
@@ -22,7 +24,7 @@ help:
 	@echo "  make check    vet, lint, vulnerabilities, workflows, Go/unit tests, svelte-check, knip"
 	@echo "  make lint     build, vet, golangci-lint, svelte-check, eslint, dependency-cruiser, knip (pre-push hook)"
 	@echo "  make up       Start postgres, migrate, api; wait until api is healthy"
-	@echo "  make run      Vite on the host (after make up)"
+	@echo "  make run      Vite on the host via portless (after make up)"
 	@echo "  make watch    Rebuild api on Go changes"
 	@echo "  make down     Stop all services"
 	@echo "  make migrate  Apply migrations"
@@ -54,25 +56,26 @@ check: lint
 
 # Run migrate explicitly so the stack does not rely on an implicit migrate container for `up`.
 up:
-	docker compose up -d --build postgres
-	docker compose run --rm --build migrate
-	docker compose up -d --build --no-deps --wait api
+	$(COMPOSE) up -d --build postgres
+	$(COMPOSE) run --rm --build migrate
+	$(COMPOSE) up -d --build --no-deps --wait api
 
-# `run` does not call `up`; run `make up` first. Vite on 127.0.0.1:5174 (see package.json "dev").
-# If Vite logs never appear, `MAKEFLAGS` may be buffering (`--output-sync=target`); run `pnpm dev` instead.
+# `run` does not call `up`; run `make up` first. Vite at https://<worktree-prefix>goldfin.localhost (portless).
+# Set API_URL in `.env` to https://api.goldfin.localhost for the `/api` proxy. Postgres stays on 127.0.0.1:5432.
+# If Vite logs never appear, `MAKEFLAGS` may be buffering (`--output-sync=target`); run `portless run` instead.
 run:
-	pnpm dev
+	portless run
 
 watch: MAKEFLAGS += -Onone
 watch:
-	docker compose watch
+	$(COMPOSE) watch
 
 down:
-	docker compose down
+	$(COMPOSE) down
 
 migrate:
-	docker compose run --rm migrate
+	$(COMPOSE) run --rm migrate
 
 logs: MAKEFLAGS += -Onone
 logs:
-	docker compose logs -f api
+	$(COMPOSE) logs -f api
