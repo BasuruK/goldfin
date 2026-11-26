@@ -74,6 +74,10 @@ func TestWorkflowGoldenExtraction(t *testing.T) {
 		if err := json.Unmarshal(payload["instructions"], &instructions); err != nil || instructions != goldenPromptContent {
 			t.Fatalf("instructions not verbatim: err=%v got=%q", err, instructions)
 		}
+		var input string
+		if err := json.Unmarshal(payload["input"], &input); err != nil || input != wantOCR {
+			t.Fatalf("LLM input not OCR text: err=%v got len=%d", err, len(input))
+		}
 		return response(http.StatusOK, []byte(testLLMSuccessBody)), nil
 	})
 
@@ -185,8 +189,11 @@ func TestWorkflowGoldenIncompleteLLMNoRescue(t *testing.T) {
 			Text       string `json:"text"`
 		} `json:"nodes"`
 	}
-	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil || len(got.Nodes) != 2 {
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
 		t.Fatal(err)
+	}
+	if len(got.Nodes) != 2 {
+		t.Fatalf("probe response: nodes=%d", len(got.Nodes))
 	}
 	if got.Nodes[0].NodeID != "ocr" || got.Nodes[0].Status != "completed" {
 		t.Fatalf("OCR node: %+v", got.Nodes[0])
