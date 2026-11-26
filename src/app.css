@@ -8,6 +8,10 @@
 
 @import '$goldfin/goldfin.css';
 
+.note.error {
+  color: var(--bad);
+}
+
 :root {
   /* Shell geometry, per DESIGN.md. These describe this app, not the library.
      The sidebar was widened ~15% from 224px to fit the group headings and the
@@ -743,7 +747,8 @@
 /* ── Connectors ───────────────────────────────────────────────────────────── */
 
 .view:has(.connectors-page),
-.view:has(.playground-page) {
+.view:has(.playground-page),
+.view:has(.workflows-page) {
   max-inline-size: 1120px;
 }
 
