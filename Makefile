@@ -25,7 +25,7 @@ help:
 	@echo "  make lint     build, vet, golangci-lint, svelte-check, eslint, dependency-cruiser, knip (pre-push hook)"
 	@echo "  make up       Start postgres, migrate, api; wait until api is healthy"
 	@echo "  make run      Vite on the host via portless (after make up)"
-	@echo "  make watch    Rebuild api on Go changes"
+	@echo "  make watch    Rebuild api on Go changes (foreground; run make up after)"
 	@echo "  make down     Stop all services"
 	@echo "  make migrate  Apply migrations"
 	@echo "  make logs     Follow api logs"
@@ -66,9 +66,11 @@ up:
 run:
 	portless run
 
+# `portless compose watch` is a plain docker passthrough and drops portless port overrides on rebuild.
+# Foreground `up --watch` keeps the override model; exiting removes the route until `make up`.
 watch: MAKEFLAGS += -Onone
 watch:
-	$(COMPOSE) watch
+	$(COMPOSE) up --build --no-deps --watch api
 
 down:
 	$(COMPOSE) down
