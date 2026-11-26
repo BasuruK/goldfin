@@ -121,10 +121,10 @@ func (h *workflowHandler) serveWorkflowProbe(w http.ResponseWriter, r *http.Requ
 		node := byID[nodeID]
 		connectorID := strings.TrimSpace(node.ConnectorID)
 		modelID := strings.TrimSpace(node.ModelID)
+		started := time.Now()
 		kindCtx, kindCancel := context.WithTimeout(r.Context(), workflowResolveBudget)
 		kind, kindErr := h.nodeKind(kindCtx, connectorID)
 		kindCancel()
-		started := time.Now()
 		item := workflowNodeProbe{
 			NodeID:   nodeID,
 			NodeName: names[nodeID],
