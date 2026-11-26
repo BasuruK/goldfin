@@ -10,7 +10,7 @@
     "runtime": { "name": "node", "version": "^26.0.0", "onFail": "download" }
   },
   "scripts": {
-    "dev": "vite --host 127.0.0.1 --port 5174 --strictPort",
+    "dev": "vite",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1 --port 5174 --strictPort",
     "preview:test": "vite preview --host 127.0.0.1 --port 5175 --strictPort",

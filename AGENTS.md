@@ -11,14 +11,14 @@ Every change keeps these two. The ADRs hold the reasons.
 
 ## Repository layout
 
-Two containers over Postgres (ADR 0010 as amended by 0013; changing them needs an ADR): `web` (nginx + static SvelteKit) and `api` (Go). Migrations are `goose` files in `db/migrations/`, applied by `make migrate`, a one-shot Compose service. Local Compose runs `postgres`, `migrate` and `api`; the UI runs from `pnpm dev`.
+Two containers over Postgres (ADR 0010 as amended by 0013; changing them needs an ADR): `web` (nginx + static SvelteKit) and `api` (Go). Migrations are `goose` files in `db/migrations/`, applied by `make migrate`, a one-shot Compose service. Local Compose runs `postgres`, `migrate` and `api`; the UI runs from `make run` (`portless run`).
 
 - `cmd/goldfin/` is the `api` entry point. `internal/handler` mounts the routes; `internal/api` saves and lists Connectors; `internal/probe` runs synchronous Probes; `internal/azureocr` is the Azure Document Intelligence client; `internal/secretbox` encrypts Credentials; `internal/testdb` gives each DB test a disposable schema.
 - `src/lib/<surface>/` holds each surface's API client and store (`connectors`, `ocr`, `prompts`); files directly in `src/lib/` are shared; `src/routes/` holds pages; `Goldfin_Components/` is the design system. Code outside that package (`src/`, `tests/`) may import it only via `$goldfin/lib/index.js` and `$goldfin/goldfin.css` (no deep `$goldfin/…` paths); `make lint` runs `pnpm lint:boundaries` (dependency-cruiser) to enforce that, to let a surface import another surface only through its `api.ts`, and to forbid dependency cycles in the scanned graph.
 
 ## Commands
 
-- `make up` then `make run`: Postgres and `api` in Docker on `127.0.0.1:8080`, then Vite (`pnpm dev`) on `127.0.0.1:5174`. `make logs` tails the `api`; read it when a request fails and the page shows only a mapped message.
+- `make up` then `make run`: Postgres on `127.0.0.1:5432`, `api` at `https://api.goldfin.localhost` via portless compose, then Vite via `portless run` at a `*.goldfin.localhost` URL. `make logs` tails the `api`; read it when a request fails and the page shows only a mapped message.
 - **While iterating**, run only the tests that cover your change: `go test ./internal/probe/...`, `node --test tests/ocr/<file>.test.ts`, `pnpm exec playwright test tests/<file>.spec.ts`. DB-backed Go tests need `TEST_DATABASE_URL` pointing at a disposable database.
 - `make check` runs everything CI's `make check` job runs, and is green before you push. CI also runs the Playwright suite. `make lint` (ESLint, svelte-check, dependency-cruiser, knip, Go linters) is also the pre-push hook in `.githooks/`, which `pnpm install` enables.
 
@@ -31,6 +31,6 @@ Read the matching doc before editing that area:
 - **Domain** (`GLOSSARY.md`, `docs/agents/domain.md`): naming, adding, or changing a domain concept or schema.
 - **Workflow execution** (ADR 0014, 0003, 0009, the prototype above): Workflow graphs, Probes, LLM calls, Prompt versions, fused gateways.
 - **Connectors** (ADR 0005 and 0013 banners, ADR 0011): Credentials, Connector saves, model catalogs. ADR 0013 lists each deferred mechanism with the trigger that brings it back.
-- **UI** (`DESIGN.md`, `PRODUCT.md`): Svelte components, CSS, `Goldfin_Components/`, `src/routes/`. Build from `DESIGN.md` and the OpenDesign handoff; ask for the design artefact when it is absent. For live layout iteration run `pnpm dev` and `/impeccable live`, then remove the `src/routes/+layout.svelte` markers with `impeccable live-inject --remove`.
+- **UI** (`DESIGN.md`, `PRODUCT.md`): Svelte components, CSS, `Goldfin_Components/`, `src/routes/`. Build from `DESIGN.md` and the OpenDesign handoff; ask for the design artefact when it is absent. For live layout iteration run `make run` (or `portless run`) and `/impeccable live`, then remove the `src/routes/+layout.svelte` markers with `impeccable live-inject --remove`.
 - **Issues** (`docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`): GitHub issues and PRs via `gh`.
 - **Scoring & Runs** (ADR 0002, 0004, 0006, 0007, 0008): v2 and later. v1 builds none of it.

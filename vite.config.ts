@@ -16,8 +16,16 @@ const alias = { $goldfin: goldfin, $lib: lib };
 
 export default defineConfig(({ command, mode }) => {
   // Dev and preview proxy /api; `vite build` needs no API_URL.
+  const target = apiProxyTarget(loadEnv(mode, root, 'API_').API_URL);
   const proxy = command === 'serve'
-    ? { '/api': { target: apiProxyTarget(loadEnv(mode, root, 'API_').API_URL), changeOrigin: true } }
+    ? {
+        '/api': {
+          target,
+          changeOrigin: true,
+          // portless serves *.localhost with a local CA not trusted by Node by default.
+          secure: !new URL(target).hostname.endsWith('.localhost'),
+        },
+      }
     : undefined;
   return {
     plugins: [sveltekit({
