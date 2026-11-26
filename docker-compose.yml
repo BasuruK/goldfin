@@ -1,3 +1,4 @@
+# Fixed project name → stable portless host api.goldfin.localhost; Postgres volume goldfin_goldfin-pgdata.
 name: goldfin
 
 services:
