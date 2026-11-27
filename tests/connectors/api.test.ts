@@ -3,9 +3,13 @@ import { afterEach, describe, it, mock } from 'node:test';
 import { ApiError } from '../../src/lib/request-core.ts';
 import {
   createConnector,
+  deleteConnector,
   listConnectors,
+  planSave,
+  updateConnector,
   validateDraft
 } from '../../src/lib/connectors/api.ts';
+import { makeRecord } from './fixtures.ts';
 
 function jsonResponse(status: number, body: unknown) {
   return {
@@ -232,7 +236,111 @@ describe('listConnectors', () => {
   });
 });
 
+describe('updateConnector', () => {
+  it('puts trimmed fields and omits an absent Credential', async () => {
+    const fetchMock = mockFetch(async () => jsonResponse(200, saved));
+    await updateConnector('c1', { ...draft, name: ' Renamed ', baseUrl: ' https://renamed.example ' });
+    const [url, init] = firstRequest(fetchMock);
+    assert.equal(url, '/api/v1/connectors/c1');
+    assert.equal(init.method, 'PUT');
+    assert.deepEqual(sentBody(fetchMock), { name: 'Renamed', providerType: 'web_request', baseUrl: 'https://renamed.example' });
+  });
+
+  it('sends a rotated Credential and label', async () => {
+    const fetchMock = mockFetch(async () => jsonResponse(200, { ...saved, credentialLabel: 'New' }));
+    await updateConnector('c1', { ...draft, credential: ' rotated ', credentialLabel: ' New ' });
+    assert.deepEqual(sentBody(fetchMock), {
+      ...sentFields,
+      credential: ' rotated ',
+      credentialLabel: 'New'
+    });
+  });
+
+  it('URL-encodes the Connector id in the path', async () => {
+    const fetchMock = mockFetch(async () => jsonResponse(200, saved));
+    await updateConnector('c1/with space', draft);
+    const [url] = firstRequest(fetchMock);
+    assert.equal(url, '/api/v1/connectors/c1%2Fwith%20space');
+  });
+
+  it('maps malformed success bodies to malformed', async () => {
+    mockFetch(async () => jsonResponse(200, { id: 1 }));
+    await rejectsWith(updateConnector('c1', draft), 'malformed');
+  });
+});
+
+describe('deleteConnector', () => {
+  it('accepts a 204 without a JSON body', async () => {
+    mockFetch(async () => ({ ok: true, status: 204, async json() { return null; } }));
+    await deleteConnector('c1');
+    const [, init] = firstRequest(globalThis.fetch as ReturnType<typeof mockFetch>);
+    assert.equal(init.method, 'DELETE');
+  });
+
+  it('maps a 409 rejection to the server message', async () => {
+    mockFetch(async () => jsonResponse(409, { message: 'Cannot delete Connector because it is used by Workflow: A' }));
+    await assert.rejects(deleteConnector('c1'), {
+      name: 'ApiError',
+      kind: 'rejected',
+      message: 'Cannot delete Connector because it is used by Workflow: A'
+    });
+  });
+
+  it('maps a 503 to unavailable without echoing the body', async () => {
+    mockFetch(async () => jsonResponse(503, { message: 'raw db detail' }));
+    await assert.rejects(deleteConnector('c1'), error => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.kind, 'unavailable');
+      assert.doesNotMatch(error.message, /raw db detail/);
+      return true;
+    });
+  });
+
+  it('maps a network failure to unreachable', async () => {
+    mockFetch(async () => {
+      throw new TypeError('fetch failed');
+    });
+    await rejectsWith(deleteConnector('c1'), 'unreachable');
+  });
+});
+
+describe('planSave edit mode', () => {
+  it('allows a model-owning draft without apiKey when a Credential is already stored', () => {
+    const record = makeRecord({
+      providerType: 'openai',
+      name: 'OpenAI',
+      baseUrl: 'https://api.openai.com/v1',
+      apiKey: '',
+      credentialLabel: 'Prod',
+      llmApiMode: 'responses',
+      models: [{ id: 'gpt-4o', enabled: true, source: 'manual' }]
+    });
+    assert.deepEqual(planSave(record, { editing: true, hasStoredCredential: true }), {
+      kind: 'update',
+      request: {
+        name: 'OpenAI',
+        providerType: 'openai',
+        baseUrl: 'https://api.openai.com/v1',
+        apiVersion: undefined,
+        llmApiMode: 'responses',
+        models: [{ id: 'gpt-4o', enabled: true }],
+        credentialLabel: 'Prod'
+      }
+    });
+  });
+});
+
 describe('validateDraft', () => {
+  it('requires https on edit when a Credential is already stored', () => {
+    assert.deepEqual(
+      validateDraft(
+        { ...draft, baseUrl: 'http://example.com/extract', credential: '', credentialLabel: 'Prod' },
+        { hasStoredCredential: true }
+      ),
+      { field: 'baseUrl', message: 'Use https when a Credential is set.' }
+    );
+  });
+
   it('requires a name and a valid http(s) base URL', () => {
     assert.deepEqual(validateDraft({ ...draft, name: ' ' }), { field: 'name', message: 'Name is required.' });
     assert.deepEqual(validateDraft({ ...draft, baseUrl: ' ' }), { field: 'baseUrl', message: 'Base URL is required.' });

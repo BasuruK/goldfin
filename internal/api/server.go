@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"mime"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -39,6 +38,7 @@ func NewHandler(pool *pgxpool.Pool, box *secretbox.Box) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST "+ConnectorsPath, s.createConnector)
 	mux.HandleFunc("GET "+ConnectorsPath, s.listConnectors)
+	s.registerConnectorItemRoutes(mux)
 	s.registerPromptRoutes(mux)
 	s.registerWorkflowRoutes(mux)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -99,9 +99,13 @@ func defaultLLMApiMode(providerType string) string {
 	return llmModeResponses
 }
 
-// ponytail: create only, no save-time check; edits and a worker check return with their ADR 0013 triggers.
 func (s *server) createConnector(w http.ResponseWriter, r *http.Request) {
-	in, err := decodeConnector(w, r)
+	body, err := readConnectorBody(r)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"message": "Invalid Connector."})
+		return
+	}
+	in, err := decodeConnectorBody(body, nil)
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"message": "Invalid Connector."})
 		return
@@ -230,19 +234,8 @@ func (s *server) listConnectors(w http.ResponseWriter, r *http.Request) {
 	}{Connectors: out})
 }
 
-func decodeConnector(w http.ResponseWriter, r *http.Request) (connectorRequest, error) {
+func decodeConnectorBody(body []byte, edit *connectorEditContext) (connectorRequest, error) {
 	invalid := errors.New("invalid Connector")
-	mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
-	if err != nil || mediaType != "application/json" {
-		return connectorRequest{}, invalid
-	}
-	body, err := io.ReadAll(io.LimitReader(r.Body, 64<<10))
-	if err != nil {
-		return connectorRequest{}, invalid
-	}
-	if err := rejectDuplicateJSONKeys(body); err != nil {
-		return connectorRequest{}, invalid
-	}
 	var raw map[string]json.RawMessage
 	if err := json.Unmarshal(body, &raw); err != nil {
 		return connectorRequest{}, invalid
@@ -301,26 +294,38 @@ func decodeConnector(w http.ResponseWriter, r *http.Request) (connectorRequest, 
 		return connectorRequest{}, invalid
 	}
 	if modelsRaw, ok := raw["models"]; ok {
-		if in.Models, err = parseModels(modelsRaw); err != nil {
+		var parseErr error
+		if in.Models, parseErr = parseModels(modelsRaw); parseErr != nil {
 			return connectorRequest{}, invalid
 		}
 	}
 	in.Name = strings.TrimSpace(in.Name)
 	in.ProviderType = strings.TrimSpace(in.ProviderType)
+	if edit != nil && in.ProviderType == "" {
+		in.ProviderType = edit.existingProvider
+	}
+	if edit != nil && in.ProviderType != "" && in.ProviderType != edit.existingProvider {
+		return connectorRequest{}, invalid
+	}
 	in.BaseURL = strings.TrimSpace(in.BaseURL)
 	in.APIVersion = strings.TrimSpace(in.APIVersion)
 	in.CredentialLabel = strings.TrimSpace(in.CredentialLabel)
 	in.LLMApiMode = strings.TrimSpace(in.LLMApiMode)
-	if in.Name == "" || strings.ContainsFunc(in.Credential, unicode.IsControl) {
+	if in.Name == "" || strings.ContainsFunc(in.Credential, unicode.IsControl) ||
+		strings.ContainsRune(in.Name, 0) || strings.ContainsRune(in.CredentialLabel, 0) ||
+		strings.ContainsRune(in.APIVersion, 0) {
 		return connectorRequest{}, invalid
 	}
+	urlCred := credentialForURLCheck(in.Credential, edit)
 	switch in.ProviderType {
 	case "web_request":
-		if in.APIVersion != "" || in.LLMApiMode != "" || len(in.Models) > 0 ||
-			(in.Credential != "" && in.CredentialLabel == "") || (in.Credential == "" && in.CredentialLabel != "") {
+		if in.APIVersion != "" || in.LLMApiMode != "" || len(in.Models) > 0 {
 			return connectorRequest{}, invalid
 		}
-		if err := validateBaseURL(in.BaseURL, in.Credential, true); err != nil {
+		if !credentialFieldsValid(in, edit) {
+			return connectorRequest{}, invalid
+		}
+		if err := validateBaseURL(in.BaseURL, urlCred, true); err != nil {
 			return connectorRequest{}, invalid
 		}
 	case "azure_document_intelligence":
@@ -330,17 +335,17 @@ func decodeConnector(w http.ResponseWriter, r *http.Request) (connectorRequest, 
 		if in.APIVersion == "" {
 			in.APIVersion = defaultAzureAPIVersion
 		}
-		if in.Credential == "" || in.CredentialLabel == "" {
+		if storedCredentialRequired(in, edit) || !credentialFieldsValid(in, edit) {
 			return connectorRequest{}, invalid
 		}
-		if err := validateBaseURL(in.BaseURL, in.Credential, false); err != nil {
+		if err := validateBaseURL(in.BaseURL, urlCred, false); err != nil {
 			return connectorRequest{}, invalid
 		}
 	case "openai", "openai_compatible":
 		if in.APIVersion != "" {
 			return connectorRequest{}, invalid
 		}
-		if in.Credential == "" || in.CredentialLabel == "" {
+		if storedCredentialRequired(in, edit) || !credentialFieldsValid(in, edit) {
 			return connectorRequest{}, invalid
 		}
 		if in.LLMApiMode == "" {
@@ -352,20 +357,20 @@ func decodeConnector(w http.ResponseWriter, r *http.Request) (connectorRequest, 
 		if err := validateLLMModels(in.Models); err != nil {
 			return connectorRequest{}, invalid
 		}
-		if err := validateBaseURL(in.BaseURL, in.Credential, false); err != nil {
+		if err := validateBaseURL(in.BaseURL, urlCred, false); err != nil {
 			return connectorRequest{}, invalid
 		}
 	case "azure_foundry":
 		if in.APIVersion != "" || in.LLMApiMode != "" {
 			return connectorRequest{}, invalid
 		}
-		if in.Credential == "" || in.CredentialLabel == "" {
+		if storedCredentialRequired(in, edit) || !credentialFieldsValid(in, edit) {
 			return connectorRequest{}, invalid
 		}
 		if err := validateLLMModels(in.Models); err != nil {
 			return connectorRequest{}, invalid
 		}
-		if err := validateBaseURL(in.BaseURL, in.Credential, false); err != nil {
+		if err := validateBaseURL(in.BaseURL, urlCred, false); err != nil {
 			return connectorRequest{}, invalid
 		}
 	default:
@@ -403,7 +408,7 @@ func parseModels(raw json.RawMessage) ([]connectorModelRequest, error) {
 			return nil, invalid
 		}
 		id = strings.TrimSpace(id)
-		if id == "" {
+		if id == "" || strings.ContainsRune(id, 0) {
 			return nil, invalid
 		}
 		var enabled bool

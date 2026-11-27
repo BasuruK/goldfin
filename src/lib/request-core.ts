@@ -124,3 +124,14 @@ export async function requestJson(path: string, rejected: string, init: RequestI
   if (!record) throw malformed();
   return record;
 }
+
+/** DELETE and other routes that succeed with an empty body (for example 204 No Content). */
+export async function requestNoContent(path: string, rejected: string, init: RequestInit = {}): Promise<void> {
+  await fetchApiRequest({
+    path,
+    init,
+    timeoutMs: API_REQUEST_TIMEOUT_MS,
+    messages: { ...API_MESSAGES, rejected },
+    createError: (kind, message) => new ApiError(kind === 'canceled' ? 'malformed' : kind, message)
+  });
+}

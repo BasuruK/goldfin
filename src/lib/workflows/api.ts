@@ -2,7 +2,7 @@
  * Workflow API client (ADR 0014). Saves are synchronous; Probe runs may take minutes.
  */
 
-import { ApiError, fetchApiRequest, isJsonRecord, malformed, requestJson } from '../request-core.ts';
+import { ApiError, fetchApiRequest, isJsonRecord, malformed, requestJson, requestNoContent } from '../request-core.ts';
 
 const WORKFLOWS_PATH = '/api/v1/workflows';
 const REJECTED = 'The Workflow was rejected.';
@@ -222,18 +222,7 @@ export async function updateWorkflow(
 }
 
 export async function deleteWorkflow(id: string): Promise<void> {
-  await fetchApiRequest({
-    path: `${WORKFLOWS_PATH}/${encodeURIComponent(id)}`,
-    init: { method: 'DELETE' },
-    timeoutMs: 10_000,
-    messages: {
-      timeout: 'The request timed out. Try again.',
-      unreachable: 'Could not reach the API. Check that Goldfin is running, then try again.',
-      unavailable: 'Goldfin is unavailable right now. Try again.',
-      rejected: REJECTED
-    },
-    createError: (kind, message) => new ApiError(kind === 'canceled' ? 'malformed' : kind, message)
-  });
+  await requestNoContent(`${WORKFLOWS_PATH}/${encodeURIComponent(id)}`, REJECTED, { method: 'DELETE' });
 }
 
 export async function runWorkflowProbe(
