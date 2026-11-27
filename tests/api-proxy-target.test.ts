@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { apiProxyTarget } from '../api-proxy-target.ts';
+import { apiProxyTarget, devApiProxyTarget, PORTLESS_API_ORIGIN } from '../api-proxy-target.ts';
 
 describe('apiProxyTarget', () => {
   it('accepts an http(s) origin', () => {
@@ -39,5 +39,26 @@ describe('apiProxyTarget', () => {
         (err) => err instanceof TypeError && err.message.includes('API_URL') && err.message.includes(value)
       );
     }
+  });
+});
+
+describe('devApiProxyTarget', () => {
+  it('defaults missing API_URL to the portless api host', () => {
+    assert.equal(devApiProxyTarget(undefined), PORTLESS_API_ORIGIN);
+    assert.equal(devApiProxyTarget(''), PORTLESS_API_ORIGIN);
+    assert.equal(devApiProxyTarget('   '), PORTLESS_API_ORIGIN);
+  });
+
+  it('rewrites legacy loopback :8080 to the portless api host', () => {
+    assert.equal(devApiProxyTarget('http://127.0.0.1:8080'), PORTLESS_API_ORIGIN);
+    assert.equal(devApiProxyTarget('http://127.0.0.1:8080/'), PORTLESS_API_ORIGIN);
+  });
+
+  it('passes through an explicit portless origin', () => {
+    assert.equal(devApiProxyTarget('https://api.goldfin.localhost'), PORTLESS_API_ORIGIN);
+  });
+
+  it('passes through other explicit origins', () => {
+    assert.equal(devApiProxyTarget('https://api.example.com'), 'https://api.example.com');
   });
 });

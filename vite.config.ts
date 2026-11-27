@@ -2,7 +2,7 @@ import { fileURLToPath } from 'node:url';
 import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig, loadEnv } from 'vite';
-import { apiProxyTarget } from './api-proxy-target.ts';
+import { devApiProxyTarget } from './api-proxy-target.ts';
 
 // The component library is referenced from its source, never copied. `$goldfin`
 // points at the library's src, so `$goldfin/lib/index.js` and
@@ -16,7 +16,7 @@ const alias = { $goldfin: goldfin, $lib: lib };
 
 export default defineConfig(({ command, mode }) => {
   // Dev and preview proxy /api; `vite build` needs no API_URL.
-  const target = apiProxyTarget(loadEnv(mode, root, 'API_').API_URL);
+  const target = devApiProxyTarget(loadEnv(mode, root, 'API_').API_URL);
   const proxy = command === 'serve'
     ? {
         '/api': {
