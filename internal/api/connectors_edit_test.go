@@ -132,6 +132,16 @@ func TestAPIUpdatesConnectorModels(t *testing.T) {
 	}
 }
 
+func TestAPIUpdateRejectsOversizedBody(t *testing.T) {
+	handler, _, _ := newAPI(t)
+	created := createWebConnector(t, handler, `{"name":"A","providerType":"web_request","baseUrl":"https://example.com"}`)
+	oversized := `{"name":"` + strings.Repeat("a", 64<<10) + `","providerType":"web_request","baseUrl":"https://example.com"}`
+	resp := request(t, handler, http.MethodPut, "/api/v1/connectors/"+created.ID, oversized)
+	if resp.Code != http.StatusBadRequest {
+		t.Fatalf("update: %d %s", resp.Code, resp.Body.String())
+	}
+}
+
 func TestAPIUpdateRejectsInvalidConnector(t *testing.T) {
 	handler, _, _ := newAPI(t)
 	created := createWebConnector(t, handler, `{"name":"A","providerType":"web_request","baseUrl":"https://example.com"}`)
@@ -163,6 +173,9 @@ func TestAPIDeletesUnusedConnector(t *testing.T) {
 		t.Fatalf("delete: %d %s", deleted.Code, deleted.Body.String())
 	}
 	listed := request(t, handler, http.MethodGet, "/api/v1/connectors", "")
+	if listed.Code != http.StatusOK {
+		t.Fatalf("list: %d %s", listed.Code, listed.Body.String())
+	}
 	var list struct{ Connectors []connector }
 	if err := json.Unmarshal(listed.Body.Bytes(), &list); err != nil {
 		t.Fatal(err)

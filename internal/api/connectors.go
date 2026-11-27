@@ -279,14 +279,19 @@ func (s *server) deleteConnector(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+const connectorBodyLimit = 64 << 10
+
 func readConnectorBody(r *http.Request) ([]byte, error) {
 	mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 	if err != nil || mediaType != "application/json" {
 		return nil, errors.New("invalid content type")
 	}
-	body, err := io.ReadAll(io.LimitReader(r.Body, 64<<10))
+	body, err := io.ReadAll(io.LimitReader(r.Body, connectorBodyLimit+1))
 	if err != nil {
 		return nil, err
+	}
+	if len(body) > connectorBodyLimit {
+		return nil, errors.New("connector body too large")
 	}
 	if err := rejectDuplicateJSONKeys(body); err != nil {
 		return nil, err

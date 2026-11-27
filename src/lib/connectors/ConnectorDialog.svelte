@@ -157,9 +157,15 @@
               oninput={(e: Event) => fieldInput('apiKey', e)}
               type="password"
               autocomplete="off"
-              placeholder={editing ? 'Leave blank to keep the current key' : record.providerType === 'web_request' ? 'Optional' : 'Paste your key'}
+              placeholder={
+                editing && connectorStore.editingHasCredential
+                  ? 'Leave blank to keep the current key'
+                  : record.providerType === 'web_request'
+                    ? 'Optional'
+                    : 'Paste your key'
+              }
               description={
-                editing
+                editing && connectorStore.editingHasCredential
                   ? 'Enter a new key only when rotating the Credential.'
                   : record.providerType === 'web_request'
                     ? 'Optional for public endpoints.'

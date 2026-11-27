@@ -229,10 +229,13 @@ export async function removeConnector(id: string): Promise<void> {
   try {
     await deleteConnector(id);
     connectorStore.connectors = connectorStore.connectors.filter(connector => connector.id !== id);
+    connectorStore.deleteError = '';
     connectorStore.saveNotice = `${name} is deleted.`;
   } catch (error) {
-    connectorStore.deleteError =
+    const message =
       error instanceof ApiError ? error.message : 'Could not delete the Connector. Try again.';
+    const kind = error instanceof ApiError ? error.kind : 'unreachable';
+    throw new ApiError(kind === 'canceled' ? 'malformed' : kind, message);
   } finally {
     connectorStore.deletingId = null;
   }

@@ -64,8 +64,11 @@
       result.confirm();
       result.close();
       open = false;
-    } catch {
-      error = 'The action failed. Try again or cancel.';
+    } catch (caught) {
+      error =
+        caught instanceof Error && caught.message.trim() !== ''
+          ? caught.message
+          : 'The action failed. Try again or cancel.';
     } finally { busy = false; }
   }
   function holdWhileBusy(event: Event) {

@@ -133,7 +133,11 @@ test('a Workflow-in-use delete keeps the card and surfaces the error', async ({ 
   });
   await page.goto('/connectors/');
   await connectorCard(page, 'Gateway').getByRole('button', { name: 'Delete', exact: true }).click();
-  await page.getByRole('alertdialog').getByRole('button', { name: 'Delete', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('Cannot delete Connector because it is used by Workflow: Invoices');
+  const confirm = page.getByRole('alertdialog');
+  await confirm.getByRole('button', { name: 'Delete', exact: true }).click();
+  await expect(confirm).toBeVisible();
+  await expect(confirm.getByRole('alert')).toContainText(
+    'Cannot delete Connector because it is used by Workflow: Invoices'
+  );
   await expect(page.getByRole('heading', { name: 'Gateway', exact: true })).toBeVisible();
 });
