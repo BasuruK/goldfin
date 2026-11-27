@@ -43,22 +43,40 @@ describe('apiProxyTarget', () => {
 });
 
 describe('devApiProxyTarget', () => {
-  it('defaults missing API_URL to the portless api host', () => {
-    assert.equal(devApiProxyTarget(undefined), PORTLESS_API_ORIGIN);
-    assert.equal(devApiProxyTarget(''), PORTLESS_API_ORIGIN);
-    assert.equal(devApiProxyTarget('   '), PORTLESS_API_ORIGIN);
+  describe('with portlessActive true', () => {
+    it('defaults missing API_URL to the portless api host', () => {
+      assert.equal(devApiProxyTarget(undefined, true), PORTLESS_API_ORIGIN);
+      assert.equal(devApiProxyTarget('', true), PORTLESS_API_ORIGIN);
+      assert.equal(devApiProxyTarget('   ', true), PORTLESS_API_ORIGIN);
+    });
+
+    it('rewrites legacy loopback :8080 to the portless api host', () => {
+      assert.equal(devApiProxyTarget('http://127.0.0.1:8080', true), PORTLESS_API_ORIGIN);
+      assert.equal(devApiProxyTarget('http://127.0.0.1:8080/', true), PORTLESS_API_ORIGIN);
+    });
+
+    it('passes through an explicit portless origin', () => {
+      assert.equal(devApiProxyTarget('https://api.goldfin.localhost', true), PORTLESS_API_ORIGIN);
+    });
+
+    it('passes through other explicit origins', () => {
+      assert.equal(devApiProxyTarget('https://api.example.com', true), 'https://api.example.com');
+    });
   });
 
-  it('rewrites legacy loopback :8080 to the portless api host', () => {
-    assert.equal(devApiProxyTarget('http://127.0.0.1:8080'), PORTLESS_API_ORIGIN);
-    assert.equal(devApiProxyTarget('http://127.0.0.1:8080/'), PORTLESS_API_ORIGIN);
-  });
+  describe('with portlessActive false', () => {
+    it('rejects missing API_URL like apiProxyTarget', () => {
+      assert.throws(() => devApiProxyTarget(undefined, false), /API_URL is not set/);
+      assert.throws(() => devApiProxyTarget('', false), /API_URL is not set/);
+      assert.throws(() => devApiProxyTarget('   ', false), /API_URL is not set/);
+    });
 
-  it('passes through an explicit portless origin', () => {
-    assert.equal(devApiProxyTarget('https://api.goldfin.localhost'), PORTLESS_API_ORIGIN);
-  });
+    it('keeps legacy loopback :8080 without rewriting', () => {
+      assert.equal(devApiProxyTarget('http://127.0.0.1:8080', false), 'http://127.0.0.1:8080');
+    });
 
-  it('passes through other explicit origins', () => {
-    assert.equal(devApiProxyTarget('https://api.example.com'), 'https://api.example.com');
+    it('passes through other explicit origins', () => {
+      assert.equal(devApiProxyTarget('https://api.goldfin.localhost', false), PORTLESS_API_ORIGIN);
+    });
   });
 });

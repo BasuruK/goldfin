@@ -22,7 +22,8 @@ export function apiProxyTarget(value: string | undefined): string {
 }
 
 /** Resolves the Vite `/api` proxy target for local dev (portless compose + portless run). */
-export function devApiProxyTarget(value: string | undefined): string {
+export function devApiProxyTarget(value: string | undefined, portlessActive: boolean): string {
+  if (!portlessActive) return apiProxyTarget(value);
   const trimmed = value?.trim();
   if (!trimmed) return apiProxyTarget(PORTLESS_API_ORIGIN);
   const origin = apiProxyTarget(trimmed);

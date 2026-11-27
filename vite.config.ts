@@ -15,17 +15,21 @@ const lib = fileURLToPath(new URL('./src/lib', import.meta.url));
 const alias = { $goldfin: goldfin, $lib: lib };
 
 export default defineConfig(({ command, mode }) => {
-  // Dev and preview proxy /api; `vite build` needs no API_URL.
-  const target = devApiProxyTarget(loadEnv(mode, root, 'API_').API_URL);
+  // Dev and preview proxy /api; `vite build` must not require API_URL.
+  const apiUrl = loadEnv(mode, root, 'API_').API_URL;
+  const portlessActive = Boolean(process.env.PORTLESS_URL?.trim());
   const proxy = command === 'serve'
-    ? {
-        '/api': {
-          target,
-          changeOrigin: true,
-          // portless serves *.localhost with a local CA not trusted by Node by default.
-          secure: !new URL(target).hostname.endsWith('.localhost'),
-        },
-      }
+    ? (() => {
+        const target = devApiProxyTarget(apiUrl, portlessActive);
+        return {
+          '/api': {
+            target,
+            changeOrigin: true,
+            // portless serves *.localhost with a local CA not trusted by Node by default.
+            secure: !new URL(target).hostname.endsWith('.localhost'),
+          },
+        };
+      })()
     : undefined;
   return {
     plugins: [sveltekit({
