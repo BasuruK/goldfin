@@ -3,9 +3,13 @@ import { afterEach, describe, it, mock } from 'node:test';
 import { ApiError } from '../../src/lib/request-core.ts';
 import {
   createConnector,
+  deleteConnector,
   listConnectors,
+  planSave,
+  updateConnector,
   validateDraft
 } from '../../src/lib/connectors/api.ts';
+import { makeRecord } from './fixtures.ts';
 
 function jsonResponse(status: number, body: unknown) {
   return {
@@ -229,6 +233,72 @@ describe('listConnectors', () => {
       await rejectsWith(listConnectors(), 'malformed');
       mock.restoreAll();
     }
+  });
+});
+
+describe('updateConnector', () => {
+  it('puts trimmed fields and omits an absent Credential', async () => {
+    const fetchMock = mockFetch(async () => jsonResponse(200, saved));
+    await updateConnector('c1', { ...draft, name: ' Renamed ', baseUrl: ' https://renamed.example ' });
+    const [url, init] = firstRequest(fetchMock);
+    assert.equal(url, '/api/v1/connectors/c1');
+    assert.equal(init.method, 'PUT');
+    assert.deepEqual(sentBody(fetchMock), { name: 'Renamed', providerType: 'web_request', baseUrl: 'https://renamed.example' });
+  });
+
+  it('sends a rotated Credential and label', async () => {
+    const fetchMock = mockFetch(async () => jsonResponse(200, { ...saved, credentialLabel: 'New' }));
+    await updateConnector('c1', { ...draft, credential: ' rotated ', credentialLabel: ' New ' });
+    assert.deepEqual(sentBody(fetchMock), {
+      ...sentFields,
+      credential: ' rotated ',
+      credentialLabel: 'New'
+    });
+  });
+
+});
+
+describe('deleteConnector', () => {
+  it('accepts a 204 without a JSON body', async () => {
+    mockFetch(async () => ({ ok: true, status: 204, async json() { return null; } }));
+    await deleteConnector('c1');
+    const [, init] = firstRequest(globalThis.fetch as ReturnType<typeof mockFetch>);
+    assert.equal(init.method, 'DELETE');
+  });
+
+  it('maps a 409 rejection to the server message', async () => {
+    mockFetch(async () => jsonResponse(409, { message: 'Cannot delete Connector because it is used by Workflow: A' }));
+    await assert.rejects(deleteConnector('c1'), {
+      name: 'ApiError',
+      kind: 'rejected',
+      message: 'Cannot delete Connector because it is used by Workflow: A'
+    });
+  });
+});
+
+describe('planSave edit mode', () => {
+  it('allows a model-owning draft without apiKey when a Credential is already stored', () => {
+    const record = makeRecord({
+      providerType: 'openai',
+      name: 'OpenAI',
+      baseUrl: 'https://api.openai.com/v1',
+      apiKey: '',
+      credentialLabel: 'Prod',
+      llmApiMode: 'responses',
+      models: [{ id: 'gpt-4o', enabled: true, source: 'manual' }]
+    });
+    assert.deepEqual(planSave(record, { editing: true, hasStoredCredential: true }), {
+      kind: 'update',
+      request: {
+        name: 'OpenAI',
+        providerType: 'openai',
+        baseUrl: 'https://api.openai.com/v1',
+        apiVersion: undefined,
+        llmApiMode: 'responses',
+        models: [{ id: 'gpt-4o', enabled: true }],
+        credentialLabel: 'Prod'
+      }
+    });
   });
 });
 

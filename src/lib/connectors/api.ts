@@ -3,7 +3,7 @@
  * only in that request and is never persisted here.
  */
 
-import { isJsonRecord, malformed, requestJson } from '../request-core.ts';
+import { ApiError, fetchApiRequest, isJsonRecord, malformed, requestJson } from '../request-core.ts';
 import {
   AZURE_OCR_PROVIDER_TYPE,
   DEFAULT_AZURE_OCR_API_VERSION,
@@ -106,12 +106,12 @@ function parseSavedConnector(body: Record<string, unknown>): SavedConnector {
   return connector;
 }
 
-export async function createConnector(draft: SaveDraft): Promise<SavedConnector> {
-  const payload: Record<string, unknown> = {
-    name: draft.name.trim(),
-    providerType: draft.providerType,
-    baseUrl: draft.baseUrl.trim()
-  };
+export type UpdateDraft = Omit<SaveDraft, 'credential' | 'credentialLabel'> & {
+  credential?: string;
+  credentialLabel?: string;
+};
+
+function attachConnectorOptions(payload: Record<string, unknown>, draft: SaveDraft | UpdateDraft): void {
   if (draft.providerType === AZURE_OCR_PROVIDER_TYPE && draft.apiVersion?.trim()) {
     payload.apiVersion = draft.apiVersion.trim();
   }
@@ -121,14 +121,69 @@ export async function createConnector(draft: SaveDraft): Promise<SavedConnector>
   if (isModelOwningProvider(draft.providerType) && draft.models?.length) {
     payload.models = draft.models.map(model => ({ id: model.id, enabled: model.enabled }));
   }
-  if (draft.credential !== '') {
+}
+
+function attachCredentialFields(
+  payload: Record<string, unknown>,
+  draft: SaveDraft | UpdateDraft,
+  mode: 'create' | 'update'
+): void {
+  const credential = draft.credential?.trim() ?? '';
+  const label = draft.credentialLabel?.trim() ?? '';
+  if (mode === 'create') {
+    if (credential === '') return;
     payload.credential = draft.credential;
-    payload.credentialLabel = draft.credentialLabel.trim();
+    payload.credentialLabel = label;
+    return;
   }
+  if (credential) {
+    payload.credential = draft.credential;
+    if (label) payload.credentialLabel = label;
+    return;
+  }
+  if (label) payload.credentialLabel = label;
+}
+
+function connectorPayload(draft: SaveDraft | UpdateDraft, mode: 'create' | 'update'): Record<string, unknown> {
+  const payload: Record<string, unknown> = {
+    name: draft.name.trim(),
+    providerType: draft.providerType,
+    baseUrl: draft.baseUrl.trim()
+  };
+  attachConnectorOptions(payload, draft);
+  attachCredentialFields(payload, draft, mode);
+  return payload;
+}
+
+export async function updateConnector(id: string, draft: UpdateDraft): Promise<SavedConnector> {
+  const body = await requestJson(`${CONNECTORS_PATH}/${id}`, REJECTED, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(connectorPayload(draft, 'update'))
+  });
+  return parseSavedConnector(body);
+}
+
+export async function deleteConnector(id: string): Promise<void> {
+  await fetchApiRequest({
+    path: `${CONNECTORS_PATH}/${encodeURIComponent(id)}`,
+    init: { method: 'DELETE' },
+    timeoutMs: 10_000,
+    messages: {
+      timeout: 'The request timed out. Try again.',
+      unreachable: 'Could not reach the API. Check that Goldfin is running, then try again.',
+      unavailable: 'Goldfin is unavailable right now. Try again.',
+      rejected: 'Could not delete the Connector.'
+    },
+    createError: (kind, message) => new ApiError(kind === 'canceled' ? 'malformed' : kind, message)
+  });
+}
+
+export async function createConnector(draft: SaveDraft): Promise<SavedConnector> {
   const body = await requestJson(CONNECTORS_PATH, REJECTED, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
+    body: JSON.stringify(connectorPayload(draft, 'create'))
   });
   return parseSavedConnector(body);
 }
@@ -176,12 +231,20 @@ function baseUrlProblem(draft: SaveDraft): string | null {
 /**
  * Mirrors the API's rules so a rejection is field-level rather than opaque.
  */
-export function validateDraft(draft: SaveDraft): DraftValidationError | null {
+function draftCredentialError(
+  draft: SaveDraft,
+  hasStoredCredential = false
+): DraftValidationError | null {
+  const message = credentialRequiredMessage(draft.providerType);
+  if (!message || (hasStoredCredential && !draft.credential.trim())) return null;
+  if (!draft.credential.trim()) return { field: 'credential', message };
+  return null;
+}
+
+export function validateDraft(draft: SaveDraft, options?: { hasStoredCredential?: boolean }): DraftValidationError | null {
   if (!draft.name.trim()) return { field: 'name', message: 'Name is required.' };
-  const credentialRequired = credentialRequiredMessage(draft.providerType);
-  if (credentialRequired && !draft.credential.trim()) {
-    return { field: 'credential', message: credentialRequired };
-  }
+  const credentialError = draftCredentialError(draft, options?.hasStoredCredential);
+  if (credentialError) return credentialError;
   const urlProblem = baseUrlProblem(draft);
   if (urlProblem) return { field: 'baseUrl', message: urlProblem };
   if (/[\p{Cc}]/u.test(draft.credential)) {
@@ -195,7 +258,13 @@ export function validateDraft(draft: SaveDraft): DraftValidationError | null {
 
 export type SavePlan =
   | { kind: 'invalid'; field: SaveErrorField | null; message: string }
-  | { kind: 'save'; request: SaveDraft };
+  | { kind: 'save'; request: SaveDraft }
+  | { kind: 'update'; request: UpdateDraft };
+
+export interface PlanOptions {
+  editing?: boolean;
+  hasStoredCredential?: boolean;
+}
 
 function saveRequest(draft: ConnectorRecord): SaveDraft {
   const llm = isLlmProvider(draft.providerType);
@@ -215,19 +284,36 @@ function saveRequest(draft: ConnectorRecord): SaveDraft {
   };
 }
 
+function updateRequest(draft: ConnectorRecord): UpdateDraft {
+  const base = saveRequest(draft);
+  const request: UpdateDraft = {
+    name: base.name,
+    providerType: base.providerType,
+    baseUrl: base.baseUrl,
+    apiVersion: base.apiVersion,
+    llmApiMode: base.llmApiMode,
+    models: base.models
+  };
+  if (base.credential) request.credential = base.credential;
+  if (base.credentialLabel) request.credentialLabel = base.credentialLabel;
+  return request;
+}
+
 /** The request Save sends for this draft, or the first reason it cannot be sent yet. */
-export function planSave(draft: ConnectorRecord): SavePlan {
+export function planSave(draft: ConnectorRecord, options: PlanOptions = {}): SavePlan {
   if (!isSavableProvider(draft.providerType)) {
     return { kind: 'invalid', field: null, message: 'Saving is not available for this provider yet.' };
   }
   const modelOwning = isModelOwningProvider(draft.providerType);
-  if (modelOwning && !draft.apiKey.trim()) {
+  const hasStored = Boolean(options.hasStoredCredential);
+  if (modelOwning && !draft.apiKey.trim() && !hasStored) {
     return { kind: 'invalid', field: 'credential', message: 'API Key is required for this provider.' };
   }
   if (modelOwning && !draft.models.some(model => model.enabled)) {
     return { kind: 'invalid', field: 'models', message: 'Enable at least one model ID before saving.' };
   }
   const request = saveRequest(draft);
-  const invalid = validateDraft(request);
-  return invalid ? { kind: 'invalid', ...invalid } : { kind: 'save', request };
+  const invalid = validateDraft(request, { hasStoredCredential: hasStored });
+  if (invalid) return { kind: 'invalid', ...invalid };
+  return options.editing ? { kind: 'update', request: updateRequest(draft) } : { kind: 'save', request };
 }

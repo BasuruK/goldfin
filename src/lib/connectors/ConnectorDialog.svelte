@@ -67,6 +67,7 @@
     patchDraft({ [field]: target.value });
   }
 
+  const editing = $derived(connectorStore.dialogMode === 'edit');
   const saving = $derived(connectorStore.saving);
   const fieldsDisabled = $derived(saving);
   const savableProvider = $derived(record ? isSavableProvider(record.providerType) : false);
@@ -96,8 +97,8 @@
         <div class="modal connector-form-panel">
         <DialogHeader
           parts={Primitive}
-          title={record.name.trim() ? record.name : `Connect to ${provider.label}`}
-          description="Nothing is stored until you Save."
+          title={record.name.trim() ? record.name : editing ? `Edit ${provider.label}` : `Connect to ${provider.label}`}
+          description={editing ? 'Leave API Key blank to keep the current Credential.' : 'Nothing is stored until you Save.'}
           icon={provider.icon}
           close
         />
@@ -107,7 +108,7 @@
             discards the draft.
           </p>
           <div class="connector-form">
-            <Select label="Provider" items={PROVIDER_SELECT_ITEMS} bind:value={providerType} disabled={fieldsDisabled} />
+            <Select label="Provider" items={PROVIDER_SELECT_ITEMS} bind:value={providerType} disabled={fieldsDisabled || editing} />
             <Input
               label="Name"
               value={record.name}
@@ -153,12 +154,22 @@
               oninput={(e: Event) => fieldInput('apiKey', e)}
               type="password"
               autocomplete="off"
-              placeholder={record.providerType === 'web_request' ? 'Optional' : 'Paste your key'}
-              description={record.providerType === 'web_request' ? 'Optional for public endpoints.' : isAzureOcr ? 'Required for Azure Document Intelligence.' : showModels ? 'Required for this provider.' : ''}
+              placeholder={editing ? 'Leave blank to keep the current key' : record.providerType === 'web_request' ? 'Optional' : 'Paste your key'}
+              description={
+                editing
+                  ? 'Enter a new key only when rotating the Credential.'
+                  : record.providerType === 'web_request'
+                    ? 'Optional for public endpoints.'
+                    : isAzureOcr
+                      ? 'Required for Azure Document Intelligence.'
+                      : showModels
+                        ? 'Required for this provider.'
+                        : ''
+              }
               disabled={fieldsDisabled}
               error={fieldError('credential')}
             />
-            {#if record.apiKey}
+            {#if record.apiKey || (editing && record.credentialLabel)}
               <Input
                 label="Credential label"
                 inlineMessage
@@ -187,8 +198,8 @@
               type="button"
               variant="primary"
               busy={saving}
-              idle="Save"
-              working="Saving…"
+              idle={editing ? 'Save changes' : 'Save'}
+              working={editing ? 'Saving…' : 'Saving…'}
               disabled={saveUnavailable}
               onclick={() => saveDraft()}
             >

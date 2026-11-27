@@ -18,30 +18,108 @@ interface MockConnectorApiOptions {
   saveDelayMs?: number;
 }
 
-/** Intercepts the Connector API so specs never need a live server. */
-export async function mockConnectorApi(page: Page, options: MockConnectorApiOptions = {}) {
-  const state = {
-    connectors: [...(options.saved ?? [])],
-    posts: [] as Record<string, unknown>[]
+type MockConnectorState = {
+  connectors: SavedConnector[];
+  posts: Record<string, unknown>[];
+  puts: { id: string; body: Record<string, unknown> }[];
+  deletes: string[];
+};
+
+function textAt(body: Record<string, unknown>, key: string, existing?: string): string {
+  const value = body[key];
+  return typeof value === 'string' ? value : (existing ?? '');
+}
+
+function pickString(body: Record<string, unknown>, key: string, existing?: string): string | undefined {
+  const value = body[key];
+  return typeof value === 'string' ? value : existing;
+}
+
+function pickModels(body: Record<string, unknown>, existing?: SavedConnector['models']) {
+  return Array.isArray(body.models) ? (body.models as SavedConnector['models']) : existing;
+}
+
+function pickCredentialSetAt(body: Record<string, unknown>, existing?: string) {
+  return typeof body.credential === 'string' && body.credential ? new Date().toISOString() : existing;
+}
+
+function connectorFromBody(id: string, body: Record<string, unknown>, existing?: SavedConnector): SavedConnector {
+  return {
+    id,
+    name: textAt(body, 'name', existing?.name),
+    providerType: textAt(body, 'providerType', existing?.providerType),
+    baseUrl: textAt(body, 'baseUrl', existing?.baseUrl),
+    apiVersion: pickString(body, 'apiVersion', existing?.apiVersion),
+    llmApiMode: pickString(body, 'llmApiMode', existing?.llmApiMode),
+    models: pickModels(body, existing?.models),
+    credentialLabel: pickString(body, 'credentialLabel', existing?.credentialLabel),
+    credentialSetAt: pickCredentialSetAt(body, existing?.credentialSetAt)
   };
-  await page.route('**/api/v1/connectors', async route => {
-    const request = route.request();
-    if (request.method() === 'GET') return route.fulfill({ json: { connectors: state.connectors } });
-    if (request.method() !== 'POST') return route.fulfill({ status: 405, json: { message: 'Method not allowed.' } });
-    const body = JSON.parse(request.postData() ?? '{}') as Record<string, unknown>;
-    state.posts.push(body);
+}
+
+function connectorItemId(url: string): string | null {
+  const match = new URL(url).pathname.match(/\/api\/v1\/connectors\/([^/]+)$/);
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
+}
+
+async function fulfillConnectorItem(
+  route: Parameters<Page['route']>[1] extends (route: infer R, ...args: never[]) => void ? R : never,
+  state: MockConnectorState,
+  options: MockConnectorApiOptions,
+  id: string,
+  method: string
+) {
+  const index = state.connectors.findIndex(connector => connector.id === id);
+  if (method === 'PUT') {
+    const body = JSON.parse(route.request().postData() ?? '{}') as Record<string, unknown>;
+    state.puts.push({ id, body });
     await mockRouteDelay(options.saveDelayMs);
     if (options.reject) return route.fulfill({ status: options.reject.status, json: { message: options.reject.message } });
-    const saved: SavedConnector = {
-      id: `c${state.posts.length}`,
-      name: String(body.name),
-      providerType: String(body.providerType),
-      baseUrl: String(body.baseUrl)
-    };
-    if (typeof body.apiVersion === 'string') saved.apiVersion = body.apiVersion;
-    if (typeof body.credentialLabel === 'string') saved.credentialLabel = body.credentialLabel;
-    state.connectors = [...state.connectors, saved];
-    await route.fulfill({ status: 201, json: saved });
+    if (index < 0) return route.fulfill({ status: 404, json: { message: 'Connector not found.' } });
+    const updated = connectorFromBody(id, body, state.connectors[index]);
+    state.connectors = state.connectors.map((connector, i) => (i === index ? updated : connector));
+    return route.fulfill({ status: 200, json: updated });
+  }
+  if (method === 'DELETE') {
+    state.deletes.push(id);
+    if (index < 0) return route.fulfill({ status: 404, json: { message: 'Connector not found.' } });
+    if (options.reject) return route.fulfill({ status: options.reject.status, json: { message: options.reject.message } });
+    state.connectors = state.connectors.filter(connector => connector.id !== id);
+    return route.fulfill({ status: 204, body: '' });
+  }
+  return route.fulfill({ status: 405, json: { message: 'Method not allowed.' } });
+}
+
+async function fulfillConnectorCollection(
+  route: Parameters<Page['route']>[1] extends (route: infer R, ...args: never[]) => void ? R : never,
+  state: MockConnectorState,
+  options: MockConnectorApiOptions,
+  method: string
+) {
+  if (method === 'GET') return route.fulfill({ json: { connectors: state.connectors } });
+  if (method !== 'POST') return route.fulfill({ status: 405, json: { message: 'Method not allowed.' } });
+  const body = JSON.parse(route.request().postData() ?? '{}') as Record<string, unknown>;
+  state.posts.push(body);
+  await mockRouteDelay(options.saveDelayMs);
+  if (options.reject) return route.fulfill({ status: options.reject.status, json: { message: options.reject.message } });
+  const saved = connectorFromBody(`c${state.posts.length}`, body);
+  state.connectors = [...state.connectors, saved];
+  return route.fulfill({ status: 201, json: saved });
+}
+
+/** Intercepts the Connector API so specs never need a live server. */
+export async function mockConnectorApi(page: Page, options: MockConnectorApiOptions = {}) {
+  const state: MockConnectorState = {
+    connectors: [...(options.saved ?? [])],
+    posts: [],
+    puts: [],
+    deletes: []
+  };
+  await page.route('**/api/v1/connectors**', async route => {
+    const method = route.request().method();
+    const itemId = connectorItemId(route.request().url());
+    if (itemId) return fulfillConnectorItem(route, state, options, itemId, method);
+    return fulfillConnectorCollection(route, state, options, method);
   });
   return state;
 }

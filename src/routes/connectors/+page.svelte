@@ -42,6 +42,10 @@
     <p class="note" role="status">{connectorStore.saveNotice}</p>
   {/if}
 
+  {#if connectorStore.deleteError}
+    <p class="note error" role="alert">{connectorStore.deleteError}</p>
+  {/if}
+
   {#if connectorStore.listState === 'loading' || connectorStore.listState === 'idle'}
     <Section title="Connectors" id="connectors-loading">
       <p class="note" role="status">Loading Connectors…</p>
