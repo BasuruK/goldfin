@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { apiProxyTarget } from '../api-proxy-target.ts';
+import { apiProxyTarget, devApiProxyTarget, PORTLESS_API_ORIGIN } from '../api-proxy-target.ts';
 
 describe('apiProxyTarget', () => {
   it('accepts an http(s) origin', () => {
@@ -39,5 +39,44 @@ describe('apiProxyTarget', () => {
         (err) => err instanceof TypeError && err.message.includes('API_URL') && err.message.includes(value)
       );
     }
+  });
+});
+
+describe('devApiProxyTarget', () => {
+  describe('with portlessActive true', () => {
+    it('defaults missing API_URL to the portless api host', () => {
+      assert.equal(devApiProxyTarget(undefined, true), PORTLESS_API_ORIGIN);
+      assert.equal(devApiProxyTarget('', true), PORTLESS_API_ORIGIN);
+      assert.equal(devApiProxyTarget('   ', true), PORTLESS_API_ORIGIN);
+    });
+
+    it('rewrites legacy loopback :8080 to the portless api host', () => {
+      assert.equal(devApiProxyTarget('http://127.0.0.1:8080', true), PORTLESS_API_ORIGIN);
+      assert.equal(devApiProxyTarget('http://127.0.0.1:8080/', true), PORTLESS_API_ORIGIN);
+    });
+
+    it('passes through an explicit portless origin', () => {
+      assert.equal(devApiProxyTarget('https://api.goldfin.localhost', true), PORTLESS_API_ORIGIN);
+    });
+
+    it('passes through other explicit origins', () => {
+      assert.equal(devApiProxyTarget('https://api.example.com', true), 'https://api.example.com');
+    });
+  });
+
+  describe('with portlessActive false', () => {
+    it('rejects missing API_URL like apiProxyTarget', () => {
+      assert.throws(() => devApiProxyTarget(undefined, false), /API_URL is not set/);
+      assert.throws(() => devApiProxyTarget('', false), /API_URL is not set/);
+      assert.throws(() => devApiProxyTarget('   ', false), /API_URL is not set/);
+    });
+
+    it('keeps legacy loopback :8080 without rewriting', () => {
+      assert.equal(devApiProxyTarget('http://127.0.0.1:8080', false), 'http://127.0.0.1:8080');
+    });
+
+    it('passes through other explicit origins', () => {
+      assert.equal(devApiProxyTarget('https://api.goldfin.localhost', false), PORTLESS_API_ORIGIN);
+    });
   });
 });
