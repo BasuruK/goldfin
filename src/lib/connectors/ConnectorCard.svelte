@@ -47,7 +47,7 @@
       Edit
     </Button>
     <ConfirmDialog
-      trigger={`Delete ${displayName}`}
+      trigger="Delete"
       title={`Delete ${displayName}?`}
       description="This removes the Connector. Workflows that use it must pick another Connector first."
       action="Delete"

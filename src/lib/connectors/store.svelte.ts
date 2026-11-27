@@ -41,6 +41,7 @@ export interface ConnectorStoreState {
   saveNotice: string;
   deleteError: string;
   deletingId: string | null;
+  draftSession: number;
 }
 
 clearLegacyConnectors();
@@ -58,8 +59,13 @@ export const connectorStore = $state<ConnectorStoreState>({
   saveErrorField: null,
   saveNotice: '',
   deleteError: '',
-  deletingId: null
+  deletingId: null,
+  draftSession: 0
 });
+
+function beginDraftSession(): void {
+  connectorStore.draftSession += 1;
+}
 
 export async function loadConnectorList(): Promise<void> {
   connectorStore.listState = 'loading';
@@ -85,6 +91,8 @@ export function openAddDialog(): void {
   connectorStore.saveError = '';
   connectorStore.saveErrorField = null;
   connectorStore.saveNotice = '';
+  connectorStore.deleteError = '';
+  beginDraftSession();
   connectorStore.dialogOpen = true;
 }
 
@@ -111,6 +119,8 @@ export function openEditDialog(saved: SavedConnector): void {
   connectorStore.saveError = '';
   connectorStore.saveErrorField = null;
   connectorStore.saveNotice = '';
+  connectorStore.deleteError = '';
+  beginDraftSession();
   connectorStore.dialogOpen = true;
 }
 
@@ -120,12 +130,14 @@ export function closeDialog(): void {
   connectorStore.saving = false;
   connectorStore.saveError = '';
   connectorStore.saveErrorField = null;
+  beginDraftSession();
 }
 
 /** Leaving the page drops the draft and the notice. */
 export function disposeConnectorsPage(): void {
   closeDialog();
   connectorStore.saveNotice = '';
+  connectorStore.deleteError = '';
 }
 
 export function patchDraft(patch: Partial<ConnectorRecord>): void {
@@ -145,6 +157,7 @@ export function patchDraft(patch: Partial<ConnectorRecord>): void {
 }
 
 export function setDraftProviderType(providerType: ProviderType): void {
+  if (connectorStore.dialogMode === 'edit') return;
   const draft = connectorStore.draft;
   if (!draft || draft.providerType === providerType) return;
   const wasDefault = draft.baseUrl === defaultBaseUrlFor(draft.providerType);
@@ -190,12 +203,14 @@ export async function saveDraft(): Promise<void> {
   connectorStore.saving = true;
   connectorStore.saveError = '';
   connectorStore.saveErrorField = null;
-  const stillOpen = () => connectorStore.draft?.id === draft.id;
+  const session = connectorStore.draftSession;
+  const stillOpen = () => connectorStore.draftSession === session;
   try {
     const saved = await persistConnectorPlan(draft, plan);
     replaceConnectorInList(saved, plan.kind === 'save');
     if (!stillOpen()) return;
     closeDialog();
+    connectorStore.deleteError = '';
     connectorStore.saveNotice = editing ? `${saved.name} is updated.` : `${saved.name} is saved.`;
   } catch (error) {
     if (!stillOpen()) return;
@@ -209,6 +224,7 @@ export async function removeConnector(id: string): Promise<void> {
   if (connectorStore.deletingId) return;
   connectorStore.deletingId = id;
   connectorStore.deleteError = '';
+  connectorStore.saveNotice = '';
   const name = connectorStore.connectors.find(connector => connector.id === id)?.name ?? 'Connector';
   try {
     await deleteConnector(id);

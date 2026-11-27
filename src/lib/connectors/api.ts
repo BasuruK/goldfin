@@ -3,7 +3,7 @@
  * only in that request and is never persisted here.
  */
 
-import { ApiError, fetchApiRequest, isJsonRecord, malformed, requestJson } from '../request-core.ts';
+import { isJsonRecord, malformed, requestJson, requestNoContent } from '../request-core.ts';
 import {
   AZURE_OCR_PROVIDER_TYPE,
   DEFAULT_AZURE_OCR_API_VERSION,
@@ -156,7 +156,7 @@ function connectorPayload(draft: SaveDraft | UpdateDraft, mode: 'create' | 'upda
 }
 
 export async function updateConnector(id: string, draft: UpdateDraft): Promise<SavedConnector> {
-  const body = await requestJson(`${CONNECTORS_PATH}/${id}`, REJECTED, {
+  const body = await requestJson(`${CONNECTORS_PATH}/${encodeURIComponent(id)}`, REJECTED, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(connectorPayload(draft, 'update'))
@@ -165,17 +165,8 @@ export async function updateConnector(id: string, draft: UpdateDraft): Promise<S
 }
 
 export async function deleteConnector(id: string): Promise<void> {
-  await fetchApiRequest({
-    path: `${CONNECTORS_PATH}/${encodeURIComponent(id)}`,
-    init: { method: 'DELETE' },
-    timeoutMs: 10_000,
-    messages: {
-      timeout: 'The request timed out. Try again.',
-      unreachable: 'Could not reach the API. Check that Goldfin is running, then try again.',
-      unavailable: 'Goldfin is unavailable right now. Try again.',
-      rejected: 'Could not delete the Connector.'
-    },
-    createError: (kind, message) => new ApiError(kind === 'canceled' ? 'malformed' : kind, message)
+  await requestNoContent(`${CONNECTORS_PATH}/${encodeURIComponent(id)}`, 'Could not delete the Connector.', {
+    method: 'DELETE'
   });
 }
 
@@ -214,7 +205,11 @@ function parseHttpUrl(value: string): URL | null {
   }
 }
 
-function baseUrlProblem(draft: SaveDraft): string | null {
+function requiresHttpsWithCredential(draft: SaveDraft, hasStoredCredential: boolean): boolean {
+  return draft.credential.trim() !== '' || hasStoredCredential;
+}
+
+function baseUrlProblem(draft: SaveDraft, hasStoredCredential = false): string | null {
   const value = draft.baseUrl.trim();
   if (!value) return 'Base URL is required.';
   const url = parseHttpUrl(value);
@@ -224,7 +219,9 @@ function baseUrlProblem(draft: SaveDraft): string | null {
   if ([...url.searchParams.keys()].some(key => SECRET_QUERY_KEYS.includes(key.toLowerCase()))) {
     return 'Remove secret query parameters from the URL.';
   }
-  if (draft.credential !== '' && url.protocol !== 'https:') return 'Use https when a Credential is set.';
+  if (requiresHttpsWithCredential(draft, hasStoredCredential) && url.protocol !== 'https:') {
+    return 'Use https when a Credential is set.';
+  }
   return null;
 }
 
@@ -245,12 +242,12 @@ export function validateDraft(draft: SaveDraft, options?: { hasStoredCredential?
   if (!draft.name.trim()) return { field: 'name', message: 'Name is required.' };
   const credentialError = draftCredentialError(draft, options?.hasStoredCredential);
   if (credentialError) return credentialError;
-  const urlProblem = baseUrlProblem(draft);
+  const urlProblem = baseUrlProblem(draft, options?.hasStoredCredential);
   if (urlProblem) return { field: 'baseUrl', message: urlProblem };
   if (/[\p{Cc}]/u.test(draft.credential)) {
     return { field: 'credential', message: 'Remove control characters from the API Key.' };
   }
-  if (draft.credential !== '' && !draft.credentialLabel.trim()) {
+  if (draft.credential.trim() !== '' && !draft.credentialLabel.trim()) {
     return { field: 'credentialLabel', message: 'A label is required when a Credential is set.' };
   }
   return null;

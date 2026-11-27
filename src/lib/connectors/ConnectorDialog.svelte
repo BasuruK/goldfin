@@ -104,8 +104,11 @@
         />
         <DialogBody>
           <p id="connector-dialog-desc" class="sr-only">
-            Configure an LLM or HTTP Connector. Choose Save to store the Connector; Cancel
-            discards the draft.
+            {#if editing}
+              Edit a saved Connector. Save changes keeps your updates; Cancel closes without saving.
+            {:else}
+              Configure an LLM or HTTP Connector. Choose Save to store the Connector; Cancel discards the draft.
+            {/if}
           </p>
           <div class="connector-form">
             <Select label="Provider" items={PROVIDER_SELECT_ITEMS} bind:value={providerType} disabled={fieldsDisabled || editing} />
@@ -169,7 +172,7 @@
               disabled={fieldsDisabled}
               error={fieldError('credential')}
             />
-            {#if record.apiKey || (editing && record.credentialLabel)}
+            {#if record.apiKey || (editing && connectorStore.editingHasCredential)}
               <Input
                 label="Credential label"
                 inlineMessage
@@ -199,7 +202,7 @@
               variant="primary"
               busy={saving}
               idle={editing ? 'Save changes' : 'Save'}
-              working={editing ? 'Saving…' : 'Saving…'}
+              working="Saving…"
               disabled={saveUnavailable}
               onclick={() => saveDraft()}
             >

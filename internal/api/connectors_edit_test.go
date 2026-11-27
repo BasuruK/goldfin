@@ -206,3 +206,136 @@ func TestAPIDeleteMissingConnector(t *testing.T) {
 		t.Fatalf("delete: %d %s", deleted.Code, deleted.Body.String())
 	}
 }
+
+func TestAPIUpdateRejectsOrphanCredentialLabelOnCredentialLessConnector(t *testing.T) {
+	handler, pool, _ := newAPI(t)
+	created := createWebConnector(t, handler, `{"name":"A","providerType":"web_request","baseUrl":"https://example.com"}`)
+	resp := request(t, handler, http.MethodPut, "/api/v1/connectors/"+created.ID,
+		`{"name":"A","providerType":"web_request","baseUrl":"https://example.com","credentialLabel":"Orphan"}`)
+	if resp.Code != http.StatusBadRequest {
+		t.Fatalf("update: %d %s", resp.Code, resp.Body.String())
+	}
+	if n := countConnectors(t, pool); n != 1 {
+		t.Fatalf("rows: %d", n)
+	}
+}
+
+func TestAPIUpdateRejectsHTTPBaseURLWhenStoredCredentialExists(t *testing.T) {
+	handler, _, _ := newAPI(t)
+	secret := rand.Text()
+	created := createWebConnector(t, handler, `{
+		"name":"Gateway","providerType":"web_request","baseUrl":"https://example.com",
+		"credential":"`+secret+`","credentialLabel":"Prod key"
+	}`)
+	resp := request(t, handler, http.MethodPut, "/api/v1/connectors/"+created.ID,
+		`{"name":"Gateway","providerType":"web_request","baseUrl":"http://example.com"}`)
+	if resp.Code != http.StatusBadRequest {
+		t.Fatalf("update: %d %s", resp.Code, resp.Body.String())
+	}
+}
+
+func TestAPIUpdateRejectsNULBytesInConnectorFields(t *testing.T) {
+	handler, _, _ := newAPI(t)
+	created := createWebConnector(t, handler, `{"name":"A","providerType":"web_request","baseUrl":"https://example.com"}`)
+	for _, body := range []string{
+		`{"name":"A\u0000B","providerType":"web_request","baseUrl":"https://example.com"}`,
+		`{"name":"A","providerType":"web_request","baseUrl":"https://example.com","credentialLabel":"L\u0000"}`,
+	} {
+		resp := request(t, handler, http.MethodPut, "/api/v1/connectors/"+created.ID, body)
+		if resp.Code != http.StatusBadRequest {
+			t.Fatalf("update: %d %s", resp.Code, resp.Body.String())
+		}
+	}
+	llm := createWebConnector(t, handler, `{
+		"name":"LLM","providerType":"openai","baseUrl":"https://api.openai.com/v1",
+		"credential":"secret","credentialLabel":"Prod","llmApiMode":"responses",
+		"models":[{"id":"gpt-4o","enabled":true}]
+	}`)
+	resp := request(t, handler, http.MethodPut, "/api/v1/connectors/"+llm.ID, `{
+		"name":"LLM","providerType":"openai","baseUrl":"https://api.openai.com/v1","llmApiMode":"responses",
+		"models":[{"id":"gpt\u00004o","enabled":true}]
+	}`)
+	if resp.Code != http.StatusBadRequest {
+		t.Fatalf("model id: %d %s", resp.Code, resp.Body.String())
+	}
+}
+
+func TestAPIUpdateRotatesCredentialKeepingExistingLabel(t *testing.T) {
+	handler, pool, box := newAPI(t)
+	oldSecret := rand.Text()
+	created := createWebConnector(t, handler, `{
+		"name":"Gateway","providerType":"web_request","baseUrl":"https://example.com",
+		"credential":"`+oldSecret+`","credentialLabel":"Prod key"
+	}`)
+	newSecret := rand.Text()
+	updated := request(t, handler, http.MethodPut, "/api/v1/connectors/"+created.ID, `{
+		"name":"Gateway","providerType":"web_request","baseUrl":"https://example.com",
+		"credential":"`+newSecret+`"
+	}`)
+	if updated.Code != http.StatusOK {
+		t.Fatalf("update: %d %s", updated.Code, updated.Body.String())
+	}
+	var got connector
+	if err := json.Unmarshal(updated.Body.Bytes(), &got); err != nil || got.CredentialLabel != "Prod key" {
+		t.Fatalf("label: %+v", got)
+	}
+	var ciphertext []byte
+	if err := pool.QueryRow(t.Context(), `SELECT credential_ciphertext FROM connectors WHERE id = $1`, created.ID).Scan(&ciphertext); err != nil {
+		t.Fatal(err)
+	}
+	plain, err := box.Decrypt(ciphertext)
+	if err != nil || string(plain) != newSecret {
+		t.Fatal("rotated Credential does not round-trip")
+	}
+}
+
+func TestAPIUpdateRejectsCredentialWithoutLabelWhenNoneStored(t *testing.T) {
+	handler, _, _ := newAPI(t)
+	created := createWebConnector(t, handler, `{"name":"A","providerType":"web_request","baseUrl":"https://example.com"}`)
+	resp := request(t, handler, http.MethodPut, "/api/v1/connectors/"+created.ID,
+		`{"name":"A","providerType":"web_request","baseUrl":"https://example.com","credential":"secret"}`)
+	if resp.Code != http.StatusBadRequest {
+		t.Fatalf("update: %d %s", resp.Code, resp.Body.String())
+	}
+}
+
+func TestAPIDeleteListsMultipleWorkflowNames(t *testing.T) {
+	handler, _, _ := newAPI(t)
+	ocrID, _, _ := seedOCRAndLLM(t, handler)
+	ocrOnly := func(name string) string {
+		return `{"name":"` + name + `","nodes":[{"id":"n1","name":"OCR","connectorId":"` + ocrID + `","inputNodeIds":[]}]}`
+	}
+	for _, name := range []string{"Alpha", "Zebra"} {
+		resp := request(t, handler, http.MethodPost, "/api/v1/workflows", ocrOnly(name))
+		if resp.Code != http.StatusCreated {
+			t.Fatalf("workflow %s: %d %s", name, resp.Code, resp.Body.String())
+		}
+	}
+	conflict := request(t, handler, http.MethodDelete, "/api/v1/connectors/"+ocrID, "")
+	if conflict.Code != http.StatusConflict {
+		t.Fatalf("delete: %d %s", conflict.Code, conflict.Body.String())
+	}
+	if !strings.Contains(conflict.Body.String(), "Alpha, Zebra") {
+		t.Fatalf("message: %s", conflict.Body.String())
+	}
+}
+
+func TestAPIDeleteRemovesConnectorModels(t *testing.T) {
+	handler, pool, _ := newAPI(t)
+	created := createWebConnector(t, handler, `{
+		"name":"LLM","providerType":"openai","baseUrl":"https://api.openai.com/v1",
+		"credential":"secret","credentialLabel":"Prod","llmApiMode":"responses",
+		"models":[{"id":"gpt-4o","enabled":true}]
+	}`)
+	deleted := request(t, handler, http.MethodDelete, "/api/v1/connectors/"+created.ID, "")
+	if deleted.Code != http.StatusNoContent {
+		t.Fatalf("delete: %d %s", deleted.Code, deleted.Body.String())
+	}
+	var modelCount int
+	if err := pool.QueryRow(t.Context(), `SELECT count(*) FROM connector_models WHERE connector_id = $1`, created.ID).Scan(&modelCount); err != nil {
+		t.Fatal(err)
+	}
+	if modelCount != 0 {
+		t.Fatalf("model rows left: %d", modelCount)
+	}
+}

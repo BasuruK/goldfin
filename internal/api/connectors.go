@@ -39,49 +39,40 @@ func (s *server) registerConnectorItemRoutes(mux *http.ServeMux) {
 	mux.HandleFunc(connectorDeletePattern, s.deleteConnector)
 }
 
-func (s *server) loadStoredConnector(ctx context.Context, id string) (storedConnector, error) {
+func scanStoredConnector(row pgx.Row) (storedConnector, error) {
 	var c storedConnector
-	err := s.pool.QueryRow(ctx, `
-		SELECT id, name, provider_type, base_url, COALESCE(api_version, ''), COALESCE(llm_api_mode, ''),
-		       COALESCE(credential_label, ''), credential_ciphertext, credential_set_at
-		FROM connectors WHERE id = $1`, id,
-	).Scan(&c.ID, &c.Name, &c.ProviderType, &c.BaseURL, &c.APIVersion, &c.LLMApiMode,
+	err := row.Scan(&c.ID, &c.Name, &c.ProviderType, &c.BaseURL, &c.APIVersion, &c.LLMApiMode,
 		&c.CredentialLabel, &c.CredentialCiphertext, &c.CredentialSetAt)
 	return c, err
 }
 
-func (s *server) connectorModels(ctx context.Context, id string) ([]connectorModelResponse, error) {
-	rows, err := s.pool.Query(ctx, `
-		SELECT model_id, enabled FROM connector_models
-		WHERE connector_id = $1 ORDER BY model_id`, id)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []connectorModelResponse{}
-	for rows.Next() {
-		var model connectorModelResponse
-		if err := rows.Scan(&model.ID, &model.Enabled); err != nil {
-			return nil, err
-		}
-		out = append(out, model)
-	}
-	return out, rows.Err()
+const loadStoredConnectorSQL = `
+		SELECT id, name, provider_type, base_url, COALESCE(api_version, ''), COALESCE(llm_api_mode, ''),
+		       COALESCE(credential_label, ''), credential_ciphertext, credential_set_at
+		FROM connectors WHERE id = $1`
+
+func loadStoredConnectorForUpdate(ctx context.Context, tx pgx.Tx, id string) (storedConnector, error) {
+	return scanStoredConnector(tx.QueryRow(ctx, loadStoredConnectorSQL+" FOR UPDATE", id))
 }
 
-func storedToResponse(c storedConnector, models []connectorModelResponse) connectorResponse {
+func connectorResponseFromUpdate(id string, in connectorRequest, labelText string, setAt *time.Time) connectorResponse {
 	out := connectorResponse{
-		ID:              c.ID,
-		Name:            c.Name,
-		ProviderType:    c.ProviderType,
-		BaseURL:         c.BaseURL,
-		APIVersion:      c.APIVersion,
-		LLMApiMode:      c.LLMApiMode,
-		CredentialLabel: c.CredentialLabel,
-		CredentialSetAt: c.CredentialSetAt,
+		ID:              id,
+		Name:            in.Name,
+		ProviderType:    in.ProviderType,
+		BaseURL:         in.BaseURL,
+		APIVersion:      in.APIVersion,
+		LLMApiMode:      in.LLMApiMode,
+		CredentialSetAt: setAt,
 	}
-	if len(models) > 0 {
-		out.Models = models
+	if labelText != "" {
+		out.CredentialLabel = labelText
+	}
+	if hasManualModels(in.ProviderType) {
+		out.Models = make([]connectorModelResponse, len(in.Models))
+		for i, model := range in.Models {
+			out.Models[i] = connectorModelResponse(model)
+		}
 	}
 	return out
 }
@@ -102,12 +93,9 @@ func credentialFieldsValid(in connectorRequest, edit *connectorEditContext) bool
 			(in.Credential != "" && in.CredentialLabel != "")
 	}
 	if in.Credential != "" {
-		if in.CredentialLabel != "" {
-			return true
-		}
-		return edit.existingLabel != ""
+		return in.CredentialLabel != "" || edit.existingLabel != ""
 	}
-	return true
+	return in.CredentialLabel == "" || edit.hasStoredCredential
 }
 
 func storedCredentialRequired(in connectorRequest, edit *connectorEditContext) bool {
@@ -123,18 +111,26 @@ func (s *server) updateConnector(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusNotFound, map[string]string{"message": "Connector not found."})
 		return
 	}
-	existing, err := s.loadStoredConnector(r.Context(), id)
+	body, err := readConnectorBody(r)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"message": "Invalid Connector."})
+		return
+	}
+	ctx := r.Context()
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"message": "Could not update the Connector."})
+		return
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	existing, err := loadStoredConnectorForUpdate(ctx, tx, id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		writeJSON(w, http.StatusNotFound, map[string]string{"message": "Connector not found."})
 		return
 	}
 	if err != nil {
 		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"message": "Could not update the Connector."})
-		return
-	}
-	body, err := readConnectorBody(r)
-	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"message": "Invalid Connector."})
 		return
 	}
 	edit := &connectorEditContext{
@@ -147,22 +143,10 @@ func (s *server) updateConnector(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"message": "Invalid Connector."})
 		return
 	}
-	if in.ProviderType != "" && in.ProviderType != existing.ProviderType {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"message": "Invalid Connector."})
-		return
-	}
 	in.ProviderType = existing.ProviderType
-	tx, err := s.pool.Begin(r.Context())
-	if err != nil {
-		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"message": "Could not update the Connector."})
-		return
-	}
-	ctx := r.Context()
-	defer func() { _ = tx.Rollback(ctx) }()
 
-	var label *string
-	var ciphertext = existing.CredentialCiphertext
-	var setAt = existing.CredentialSetAt
+	ciphertext := existing.CredentialCiphertext
+	setAt := existing.CredentialSetAt
 	labelText := existing.CredentialLabel
 	if in.CredentialLabel != "" {
 		labelText = in.CredentialLabel
@@ -176,6 +160,7 @@ func (s *server) updateConnector(w http.ResponseWriter, r *http.Request) {
 		now := time.Now().UTC().Truncate(time.Microsecond)
 		setAt = &now
 	}
+	var label *string
 	if labelText != "" {
 		label = &labelText
 	}
@@ -219,17 +204,7 @@ func (s *server) updateConnector(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"message": "Could not update the Connector."})
 		return
 	}
-	updated, err := s.loadStoredConnector(ctx, id)
-	if err != nil {
-		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"message": "Could not update the Connector."})
-		return
-	}
-	models, err := s.connectorModels(ctx, id)
-	if err != nil {
-		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"message": "Could not update the Connector."})
-		return
-	}
-	writeJSON(w, http.StatusOK, storedToResponse(updated, models))
+	writeJSON(w, http.StatusOK, connectorResponseFromUpdate(id, in, labelText, setAt))
 }
 
 func (s *server) deleteConnector(w http.ResponseWriter, r *http.Request) {
@@ -238,7 +213,16 @@ func (s *server) deleteConnector(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusNotFound, map[string]string{"message": "Connector not found."})
 		return
 	}
-	_, err := s.loadStoredConnector(r.Context(), id)
+	ctx := r.Context()
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"message": "Could not delete the Connector."})
+		return
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var rowID string
+	err = tx.QueryRow(ctx, `SELECT id FROM connectors WHERE id = $1 FOR UPDATE`, id).Scan(&rowID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		writeJSON(w, http.StatusNotFound, map[string]string{"message": "Connector not found."})
 		return
@@ -247,9 +231,10 @@ func (s *server) deleteConnector(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"message": "Could not delete the Connector."})
 		return
 	}
-	rows, err := s.pool.Query(r.Context(), `
+	rows, err := tx.Query(ctx, `
 		SELECT name FROM workflows
-		WHERE EXISTS (
+		WHERE jsonb_typeof(nodes_json) = 'array'
+		AND EXISTS (
 			SELECT 1 FROM jsonb_array_elements(nodes_json) AS n(node)
 			WHERE n.node->>'connectorId' = $1
 		)
@@ -278,13 +263,17 @@ func (s *server) deleteConnector(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	tag, err := s.pool.Exec(r.Context(), `DELETE FROM connectors WHERE id = $1`, id)
+	tag, err := tx.Exec(ctx, `DELETE FROM connectors WHERE id = $1`, id)
 	if err != nil {
 		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"message": "Could not delete the Connector."})
 		return
 	}
 	if tag.RowsAffected() == 0 {
 		writeJSON(w, http.StatusNotFound, map[string]string{"message": "Connector not found."})
+		return
+	}
+	if err := tx.Commit(ctx); err != nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"message": "Could not delete the Connector."})
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

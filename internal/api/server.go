@@ -311,7 +311,9 @@ func decodeConnectorBody(body []byte, edit *connectorEditContext) (connectorRequ
 	in.APIVersion = strings.TrimSpace(in.APIVersion)
 	in.CredentialLabel = strings.TrimSpace(in.CredentialLabel)
 	in.LLMApiMode = strings.TrimSpace(in.LLMApiMode)
-	if in.Name == "" || strings.ContainsFunc(in.Credential, unicode.IsControl) {
+	if in.Name == "" || strings.ContainsFunc(in.Credential, unicode.IsControl) ||
+		strings.ContainsRune(in.Name, 0) || strings.ContainsRune(in.CredentialLabel, 0) ||
+		strings.ContainsRune(in.APIVersion, 0) {
 		return connectorRequest{}, invalid
 	}
 	urlCred := credentialForURLCheck(in.Credential, edit)
@@ -406,7 +408,7 @@ func parseModels(raw json.RawMessage) ([]connectorModelRequest, error) {
 			return nil, invalid
 		}
 		id = strings.TrimSpace(id)
-		if id == "" {
+		if id == "" || strings.ContainsRune(id, 0) {
 			return nil, invalid
 		}
 		var enabled bool
